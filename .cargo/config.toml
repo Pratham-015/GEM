@@ -1,0 +1,24 @@
+# Build parallelism cap for GEM.
+#
+# Why this file exists:
+#
+# The dependency tree pulls in mt-kahypar 0.2.0, whose build.rs does NOT use
+# the cmake crate -- it drives cc::Build directly over 180 C++ translation
+# units (138 mt-kahypar-sc + 42 vendored oneTBB) at -O3 -std=c++17. Those are
+# template-heavy and peak around 1-1.5 GB of RSS per cc1plus.
+#
+# cc-rs caps its own fan-out at $NUM_JOBS, which cargo derives from -j. So on
+# a 16-CPU WSL2 guest cargo picks -j16, cc-rs then runs 16 concurrent cc1plus
+# processes, and peak demand lands near 16-24 GB. Against WSL2's default
+# ceiling (50% of a 15.7 GB host, ~7.8 GB) that thrashes swap and looks like
+# a hang rather than a clean OOM kill.
+#
+# One lever fixes both halves, because the same NUM_JOBS bounds rustc's own
+# parallelism and the C++ sub-build. Paired with ~/.wslconfig raising the
+# guest to 11 GB + 16 GB swap, 6 x ~1.5 GB leaves comfortable headroom.
+#
+# Note: LTO and incremental compilation were investigated and ruled out --
+# Cargo.toml declares no [profile] section, so release defaults apply
+# (lto = false, incremental = false, codegen-units = 16).
+[build]
+jobs = 6
