@@ -5,20 +5,34 @@ WHAT THE REFERENCE IS -- read this before trusting the results.
 The authoritative reference for a Xilinx primitive is its UNISIM behavioural
 model, which ships only inside a Vivado installation.
 
-If Vivado is installed (see find_unisim_dir() below), CARRY4 and SRLC32E are
-ALSO run against the real UNISIM primitives -- CARRY4.v and SRLC32E.v, copied
-at runtime from the local Vivado install into the scratch build dir, never
-into this repo, since UNISIM sources are not redistributable. Both results
-are compared against the same Python golden model, so a real silicon
-divergence and a spec-vs-custom-ref divergence would show up as two
+If Vivado is installed (see find_unisim_dir() below), all three primitives are
+ALSO run against the real UNISIM primitives -- CARRY4.v, SRLC32E.v, and
+DSP48E2.v, copied at runtime from the local Vivado install into the scratch
+build dir, never into this repo, since UNISIM sources are not redistributable.
+All results are compared against the same Python golden model, so a real
+silicon divergence and a spec-vs-custom-ref divergence would show up as two
 independently-labelled FAILs, not one conflated one.
 
-DSP48E2 does NOT get this treatment yet. The real UNISIM DSP48E2 is the full
-parameterized silicon primitive (9-bit OPMODE, 4-bit ALUMODE, 5-bit INMODE,
-AREG/BREG/CREG/DREG/ADREG/MREG), and the problem statement's simplified
-2-bit `state`/`use_pre` encoding has no single documented mapping onto those
-buses -- guessing one would risk reporting a harness bug as a silicon
-divergence. See the report accompanying this harness.
+DSP48E2's real primitive is the full parameterized silicon block (9-bit
+OPMODE, 4-bit ALUMODE, 5-bit INMODE, AREG/BREG/CREG/DREG/ADREG/MREG). The
+problem statement's simplified 2-bit `state`/`use_pre` encoding maps onto it
+as follows -- derived by reading DSP48E2.v's behavioural model directly, not
+guessed from documentation prose, and empirically checked against hand
+-computed vectors before being wired into this harness (see
+tb_dsp48e2_unisim.v for the exact bit derivation):
+  - AREG=BREG=CREG=DREG=ADREG=MREG=ALUMODEREG=INMODEREG=OPMODEREG=
+    CARRYINSELREG=CARRYINREG=0, PREG=1 (matches dsp48e2_ref.v's pipeline).
+  - AMULTSEL="AD" routes the pre-adder output into the multiplier
+    unconditionally; INMODE[2] (0/1 per vector) toggles whether D
+    participates in that pre-adder sum, giving AD = use_pre ? A+D : A.
+  - OPMODE[8:0] selects state via the W/Z/Y/X operand muxes with ALUMODE
+    fixed at plain-add (4'b0000): state 0 (P<=C) drives Z=C with X=Y=W=0;
+    state 1 (P<=M) drives X=Y=the multiplier's U/V split product with Z=W=0;
+    state 2 (P<=P+M) is the same but with Z=P feedback instead of 0.
+  - CARRYINSEL=3'b000 with CARRYIN tied 0 keeps no stray carry-in.
+  - The real primitive's `glbl.GSR` startup pulse (100 ns per glbl.v) holds
+    every register in reset; the testbench waits past it before driving
+    vectors, or every result silently reads back as 0.
 
 The always-present reference is verif/rtl/xilinx_macros_ref.v: an independent
 LITERAL transcription of the equations in the problem statement, simulated with
@@ -34,8 +48,7 @@ Flow per primitive:
     2. run the Python golden model over it
     3. run the Verilog reference over the identical stimulus via iverilog
     4. compare every output signal, every cycle, bit-exact
-    5. (CARRY4, SRLC32E, when Vivado is present) repeat 3-4 against the real
-       UNISIM primitive
+    5. (when Vivado is present) repeat 3-4 against the real UNISIM primitive
 """
 
 import glob
@@ -81,8 +94,8 @@ def find_unisim_dir():
     """Locate a local Vivado install's UNISIM Verilog sources, if any.
 
     Checked, not assumed: a candidate only counts if CARRY4.v, SRLC32E.v,
-    and ../../glbl.v (needed for CARRY4's elaboration-time glbl.GSR
-    reference) are all actually present there.
+    DSP48E2.v, and ../../glbl.v (needed for CARRY4/DSP48E2's elaboration
+    -time glbl.GSR reference) are all actually present there.
     """
     candidates = []
     xv = os.environ.get("XILINX_VIVADO")
@@ -96,6 +109,7 @@ def find_unisim_dir():
         glbl = os.path.join(os.path.dirname(c), "glbl.v")
         if (os.path.isfile(os.path.join(c, "CARRY4.v"))
                 and os.path.isfile(os.path.join(c, "SRLC32E.v"))
+                and os.path.isfile(os.path.join(c, "DSP48E2.v"))
                 and os.path.isfile(glbl)):
             return c
     return None
@@ -124,8 +138,9 @@ def stage_setup():
         # copied into this repo (UNISIM is not redistributable).
         shutil.copy(os.path.join(UNISIM_DIR, "CARRY4.v"), STAGE)
         shutil.copy(os.path.join(UNISIM_DIR, "SRLC32E.v"), STAGE)
+        shutil.copy(os.path.join(UNISIM_DIR, "DSP48E2.v"), STAGE)
         shutil.copy(os.path.join(os.path.dirname(UNISIM_DIR), "glbl.v"), STAGE)
-        for f in ("tb_carry4_unisim.v", "tb_srlc32e_unisim.v"):
+        for f in ("tb_carry4_unisim.v", "tb_srlc32e_unisim.v", "tb_dsp48e2_unisim.v"):
             shutil.copy(os.path.join(TB, f), STAGE)
 
 
@@ -288,7 +303,21 @@ def test_dsp(rng):
         golden.append((dsp.read_P(),))
 
     actual = read_results("res_dsp.txt", 1)
-    return report("DSP48E2 (PREG=1)", golden, actual, ("P",))
+    r1 = report("DSP48E2 (PREG=1)", golden, actual, ("P",))
+
+    r2 = True
+    if UNISIM_DIR:
+        ok, out = compile_and_run("tb_dsp48e2_unisim.v", "tb_dsp48e2_unisim",
+                                   extra_srcs=["DSP48E2.v", "glbl.v"])
+        if not ok:
+            print("  DSP48E2 (real UNISIM) BUILD ERROR:\n" + out)
+            r2 = False
+        else:
+            actual_u = read_results("res_dsp_unisim.txt", 1)
+            r2 = report("DSP48E2 (real UNISIM)", golden, actual_u, ("P",))
+    else:
+        print("  %-24s SKIP   Vivado UNISIM not found" % "DSP48E2 (real UNISIM)")
+    return r1 and r2
 
 
 def test_srl(rng):
@@ -348,9 +377,7 @@ def main():
     print("Reference simulator : %s" % ver)
     print("Reference model     : verif/rtl/xilinx_macros_ref.v (spec-literal)")
     if UNISIM_DIR:
-        print("Real UNISIM         : %s (CARRY4, SRLC32E)" % UNISIM_DIR)
-        print("Real UNISIM DSP48E2 : NOT wired up -- OPMODE/ALUMODE/INMODE mapping"
-              " from the simplified state/use_pre encoding is undecided\n")
+        print("Real UNISIM         : %s (CARRY4, DSP48E2, SRLC32E)\n" % UNISIM_DIR)
     else:
         print("NOT Xilinx UNISIM   : Vivado unavailable in this environment\n")
 
