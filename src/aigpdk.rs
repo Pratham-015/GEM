@@ -60,6 +60,34 @@ impl LeafPinProvider for AIGPDKLeafPins {
              "PORT_R_RD_DATA",
              Some(0..=31)) => Direction::O,
 
+            // Xilinx macro cells GEM evaluates natively on the GPU rather
+            // than flattening into AIG gates (see csrc/gem_macros.cuh).
+            // Pin interfaces match the validated reference models in
+            // verif/rtl/xilinx_macros_ref.v exactly, NOT the full-width
+            // real UNISIM primitives (e.g. DSP48E2 here is the simplified
+            // subset: STATE/USE_PRE instead of OPMODE/ALUMODE/INMODE).
+            //
+            // This is pin recognition only -- teaching netlistdb
+            // construction how to parse these cells. Scheduling and AIG
+            // integration (a DriverType::XilinxMacro variant analogous to
+            // DriverType::SRAM above, staging.rs/flatten.rs storage
+            // layout, pe.rs dispatch) is NOT implemented yet; see the
+            // module doc for details.
+            ("CARRY4", "CI" | "CYINIT", None) => Direction::I,
+            ("CARRY4", "DI" | "S", Some(0..=3)) => Direction::I,
+            ("CARRY4", "CO" | "O", Some(0..=3)) => Direction::O,
+
+            ("DSP48E2", "CLK" | "USE_PRE", None) => Direction::I,
+            ("DSP48E2", "A" | "D", Some(0..=26)) => Direction::I,
+            ("DSP48E2", "B", Some(0..=17)) => Direction::I,
+            ("DSP48E2", "C", Some(0..=47)) => Direction::I,
+            ("DSP48E2", "STATE", Some(0..=1)) => Direction::I,
+            ("DSP48E2", "P", Some(0..=47)) => Direction::O,
+
+            ("SRLC32E", "CLK" | "CE" | "D", None) => Direction::I,
+            ("SRLC32E", "A", Some(0..=4)) => Direction::I,
+            ("SRLC32E", "Q" | "Q31", None) => Direction::O,
+
             _ => {
                 use netlistdb::{GeneralPinName, HierName};
                 panic!("Cannot recognize pin type {}, please make sure the verilog netlist is synthesized in GEM's aigpdk.",
@@ -88,6 +116,19 @@ impl LeafPinProvider for AIGPDKLeafPins {
             ("$__RAMGEM_SYNC_",
              "PORT_W_WR_EN" | "PORT_W_WR_DATA" | "PORT_R_RD_DATA")
                 => Some(SVerilogRange(31, 0)),
+
+            ("CARRY4", "CI" | "CYINIT") => None,
+            ("CARRY4", "DI" | "S" | "CO" | "O") => Some(SVerilogRange(3, 0)),
+
+            ("DSP48E2", "CLK" | "USE_PRE") => None,
+            ("DSP48E2", "A" | "D") => Some(SVerilogRange(26, 0)),
+            ("DSP48E2", "B") => Some(SVerilogRange(17, 0)),
+            ("DSP48E2", "C" | "P") => Some(SVerilogRange(47, 0)),
+            ("DSP48E2", "STATE") => Some(SVerilogRange(1, 0)),
+
+            ("SRLC32E", "CLK" | "CE" | "D" | "Q" | "Q31") => None,
+            ("SRLC32E", "A") => Some(SVerilogRange(4, 0)),
+
             _ => None
         }
     }
