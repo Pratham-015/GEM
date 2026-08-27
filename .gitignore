@@ -3,3 +3,7 @@
 /compile_commands.json
 .cache
 /verif/golden/__pycache__/
+# Simulation scratch output, and (when UNISIM_DIR is found) copies of
+# non-redistributable Xilinx vendor sources staged here at runtime by
+# verif/host/diff_harness.py. Never commit this directory.
+/build/

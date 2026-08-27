@@ -3,25 +3,42 @@
 WHAT THE REFERENCE IS -- read this before trusting the results.
 
 The authoritative reference for a Xilinx primitive is its UNISIM behavioural
-model, which ships only inside a Vivado installation. Vivado is NOT installed
-in this environment and the UNISIM sources are not redistributable, so they
-are unavailable here (see the report accompanying this harness).
+model, which ships only inside a Vivado installation.
 
-The reference actually used is verif/rtl/xilinx_macros_ref.v: an independent
+If Vivado is installed (see find_unisim_dir() below), CARRY4 and SRLC32E are
+ALSO run against the real UNISIM primitives -- CARRY4.v and SRLC32E.v, copied
+at runtime from the local Vivado install into the scratch build dir, never
+into this repo, since UNISIM sources are not redistributable. Both results
+are compared against the same Python golden model, so a real silicon
+divergence and a spec-vs-custom-ref divergence would show up as two
+independently-labelled FAILs, not one conflated one.
+
+DSP48E2 does NOT get this treatment yet. The real UNISIM DSP48E2 is the full
+parameterized silicon primitive (9-bit OPMODE, 4-bit ALUMODE, 5-bit INMODE,
+AREG/BREG/CREG/DREG/ADREG/MREG), and the problem statement's simplified
+2-bit `state`/`use_pre` encoding has no single documented mapping onto those
+buses -- guessing one would risk reporting a harness bug as a silicon
+divergence. See the report accompanying this harness.
+
+The always-present reference is verif/rtl/xilinx_macros_ref.v: an independent
 LITERAL transcription of the equations in the problem statement, simulated with
 Icarus Verilog. This is a genuine differential test -- the Verilog ripples the
 carry chain bit by bit while the Python model is free to use closed-form
 arithmetic, and the two implementations share no code -- but it validates
 against the SPEC, not against Xilinx silicon. Any place where the spec itself
-diverges from real DSP48E2/CARRY4/SRLC32E behaviour will not be caught here.
+diverges from real DSP48E2/CARRY4/SRLC32E behaviour will not be caught here
+without the real-UNISIM leg above.
 
 Flow per primitive:
     1. build stimulus (directed edge cases first, then randomized)
     2. run the Python golden model over it
     3. run the Verilog reference over the identical stimulus via iverilog
     4. compare every output signal, every cycle, bit-exact
+    5. (CARRY4, SRLC32E, when Vivado is present) repeat 3-4 against the real
+       UNISIM primitive
 """
 
+import glob
 import os
 import random
 import shutil
@@ -59,6 +76,33 @@ os.makedirs(SIM_OUT, exist_ok=True)
 def stim_path(name):
     return os.path.join(SIM_OUT, name)
 
+
+def find_unisim_dir():
+    """Locate a local Vivado install's UNISIM Verilog sources, if any.
+
+    Checked, not assumed: a candidate only counts if CARRY4.v, SRLC32E.v,
+    and ../../glbl.v (needed for CARRY4's elaboration-time glbl.GSR
+    reference) are all actually present there.
+    """
+    candidates = []
+    xv = os.environ.get("XILINX_VIVADO")
+    if xv:
+        candidates.append(os.path.join(os.path.dirname(os.path.dirname(
+            xv.rstrip("/"))), "data", "verilog", "src", "unisims"))
+    candidates += sorted(
+        glob.glob(os.path.expanduser("~/Vivado/*/data/verilog/src/unisims")),
+        reverse=True)
+    for c in candidates:
+        glbl = os.path.join(os.path.dirname(c), "glbl.v")
+        if (os.path.isfile(os.path.join(c, "CARRY4.v"))
+                and os.path.isfile(os.path.join(c, "SRLC32E.v"))
+                and os.path.isfile(glbl)):
+            return c
+    return None
+
+
+UNISIM_DIR = find_unisim_dir()
+
 CHAIN_BLOCKS = 15
 CHAIN_BITS = CHAIN_BLOCKS * 4
 N_RANDOM = 2000
@@ -75,11 +119,20 @@ def stage_setup():
     shutil.copy(os.path.join(RTL, "xilinx_macros_ref.v"), STAGE)
     for f in ("tb_carry4.v", "tb_dsp48e2.v", "tb_srlc32e.v"):
         shutil.copy(os.path.join(TB, f), STAGE)
+    if UNISIM_DIR:
+        # Vendor sources: staged into the scratch build dir only, never
+        # copied into this repo (UNISIM is not redistributable).
+        shutil.copy(os.path.join(UNISIM_DIR, "CARRY4.v"), STAGE)
+        shutil.copy(os.path.join(UNISIM_DIR, "SRLC32E.v"), STAGE)
+        shutil.copy(os.path.join(os.path.dirname(UNISIM_DIR), "glbl.v"), STAGE)
+        for f in ("tb_carry4_unisim.v", "tb_srlc32e_unisim.v"):
+            shutil.copy(os.path.join(TB, f), STAGE)
 
 
-def compile_and_run(tb_file, top):
+def compile_and_run(tb_file, top, extra_srcs=()):
     vvp_out = top + ".vvp"
-    r = run([IVERILOG, "-g2012", "-I", ".", "-s", top, "-o", vvp_out, tb_file], STAGE)
+    r = run([IVERILOG, "-g2012", "-I", ".", "-s", top, "-o", vvp_out, tb_file]
+            + list(extra_srcs), STAGE)
     if r.returncode != 0:
         return False, "iverilog failed:\n" + r.stdout
     r = run([VVP, vvp_out], STAGE)
@@ -175,7 +228,23 @@ def test_carry4(rng):
     g_fused = [eval_carry_chain_fused(s, di, cyi, CHAIN_BITS)
                for (s, di, cyi) in chain_vecs]
     r3 = report("  fused-add (CUDA form)", g_fused, v_chain, ("O", "CO"))
-    return r1 and r2 and r3
+
+    r4 = True
+    if UNISIM_DIR:
+        ok, out = compile_and_run("tb_carry4_unisim.v", "tb_carry4_unisim",
+                                   extra_srcs=["CARRY4.v", "glbl.v"])
+        if not ok:
+            print("  CARRY4 (real UNISIM) BUILD ERROR:\n" + out)
+            r4 = False
+        else:
+            v_slice_u = read_results("res_carry4_unisim.txt", 2)
+            ru1 = report("CARRY4 slice (real UNISIM)", g_slice, v_slice_u, ("O", "CO"))
+            v_chain_u = read_results("res_chain_unisim.txt", 2)
+            ru2 = report("CARRY4 chain (real UNISIM)", g_ripple, v_chain_u, ("O", "CO"))
+            r4 = ru1 and ru2
+    else:
+        print("  %-24s SKIP   Vivado UNISIM not found" % "CARRY4 (real UNISIM)")
+    return r1 and r2 and r3 and r4
 
 
 def test_dsp(rng):
@@ -255,7 +324,21 @@ def test_srl(rng):
         golden.append((q, q31, srl.SRL))
 
     actual = read_results("res_srl.txt", 3)
-    return report("SRLC32E", golden, actual, ("Q", "Q31", "SRL"))
+    r1 = report("SRLC32E", golden, actual, ("Q", "Q31", "SRL"))
+
+    r2 = True
+    if UNISIM_DIR:
+        ok, out = compile_and_run("tb_srlc32e_unisim.v", "tb_srlc32e_unisim",
+                                   extra_srcs=["SRLC32E.v"])
+        if not ok:
+            print("  SRLC32E (real UNISIM) BUILD ERROR:\n" + out)
+            r2 = False
+        else:
+            actual_u = read_results("res_srl_unisim.txt", 3)
+            r2 = report("SRLC32E (real UNISIM)", golden, actual_u, ("Q", "Q31", "SRL"))
+    else:
+        print("  %-24s SKIP   Vivado UNISIM not found" % "SRLC32E (real UNISIM)")
+    return r1 and r2
 
 
 def main():
@@ -264,7 +347,12 @@ def main():
     ver = run([IVERILOG, "-V"], STAGE).stdout.splitlines()[0]
     print("Reference simulator : %s" % ver)
     print("Reference model     : verif/rtl/xilinx_macros_ref.v (spec-literal)")
-    print("NOT Xilinx UNISIM   : Vivado unavailable in this environment\n")
+    if UNISIM_DIR:
+        print("Real UNISIM         : %s (CARRY4, SRLC32E)" % UNISIM_DIR)
+        print("Real UNISIM DSP48E2 : NOT wired up -- OPMODE/ALUMODE/INMODE mapping"
+              " from the simplified state/use_pre encoding is undecided\n")
+    else:
+        print("NOT Xilinx UNISIM   : Vivado unavailable in this environment\n")
 
     results = []
     results.append(("CARRY4", test_carry4(rng)))
