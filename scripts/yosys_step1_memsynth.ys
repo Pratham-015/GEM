@@ -1,0 +1,29 @@
+# Reproducible baseline: usage.md Step 1 (memory synthesis), unmodified.
+#
+# This is a literal transcription of usage.md's documented Step 1 commands
+# into a checked-in, reusable script rather than something pasted into an
+# interactive Yosys shell by hand each time. Edit the four placeholders
+# below for your design, then run:
+#
+#   yosys scripts/yosys_step1_memsynth.ys
+#
+# This script does not touch DSP48E2/CARRY4/SRLC32E handling in any way --
+# see yosys_step2_logicsynth.ys (unmodified baseline) and
+# yosys_step2_logicsynth_macropreserve.ys (macro-preserving variant, adds
+# ONE extra read_verilog argument, nothing else) for that.
+
+# replace with paths to your RTL code; add -I, -D etc. as needed
+read_verilog -sv xx.v yy.v top.v
+
+# replace TOP_MODULE with your top module name
+hierarchy -check -top TOP_MODULE
+
+# simplify design before mapping
+proc;;
+opt_expr; opt_dff; opt_clean
+memory -nomap
+
+# map the rams; point -lib at aigpdk/memlib_yosys.txt
+memory_libmap -lib path/to/memlib_yosys.txt -logic-cost-rom 100 -logic-cost-ram 100
+
+write_verilog memory_mapped.v

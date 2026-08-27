@@ -1,0 +1,29 @@
+# Reproducible baseline: usage.md Step 2 (logic synthesis via Yosys),
+# unmodified. Produces gatelevel.gv where DSP48E2/CARRY4/SRLC32E (if any
+# are instantiated in the design) end up fully flattened into ordinary
+# AND2_*/DFF/INV cells, exactly like any other RTL logic -- this is the
+# TRUE baseline the macro-preserving path is compared against.
+#
+# Edit the placeholders below, then run:
+#   yosys scripts/yosys_step2_logicsynth.ys
+#
+# (If you exited Yosys after Step 1, uncomment the two read-back lines.)
+
+# read_verilog memory_mapped.v
+# hierarchy -check -top TOP_MODULE
+
+# synthesis
+synth -flatten
+delete t:$print
+
+# change path/to/aigpdk_nomem.lib to a correct path; same for other commands
+dfflibmap -liberty path/to/aigpdk_nomem.lib
+opt_clean -purge
+abc -liberty path/to/aigpdk_nomem.lib
+opt_clean -purge
+techmap
+abc -liberty path/to/aigpdk_nomem.lib
+opt_clean -purge
+
+write_verilog gatelevel.gv
+stat
