@@ -49,6 +49,12 @@ Flow per primitive:
     3. run the Verilog reference over the identical stimulus via iverilog
     4. compare every output signal, every cycle, bit-exact
     5. (when Vivado is present) repeat 3-4 against the real UNISIM primitive
+    6. (when nvcc is present) run csrc/gem_macros.cuh -- the GPU-side macro
+       evaluator GEM will actually use -- over the identical stimulus via
+       verif/csrc/test_gem_macros.cu, compiled and executed for real on the
+       GPU, and diff that against the same Python golden model too. This is
+       what proves the CUDA header agrees with the Verilog/silicon reference,
+       not just that it compiles.
 """
 
 import glob
@@ -62,6 +68,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 GOLDEN = os.path.abspath(os.path.join(HERE, "..", "golden"))
 RTL = os.path.abspath(os.path.join(HERE, "..", "rtl"))
 TB = os.path.abspath(os.path.join(HERE, "..", "tb"))
+CSRC = os.path.abspath(os.path.join(HERE, "..", "csrc"))
+GEM_CSRC = os.path.abspath(os.path.join(HERE, "..", "..", "csrc"))
 sys.path.insert(0, GOLDEN)
 
 from bitops import mask, to_signed
@@ -75,6 +83,8 @@ from srlc32e import SRLC32E
 # DEVNULL to avoid it swallowing our own input.
 IVERILOG = "iverilog"
 VVP = "vvp"
+NVCC = shutil.which("nvcc") or "/usr/local/cuda/bin/nvcc"
+CUDA_AVAILABLE = os.path.isfile(NVCC) if os.path.isabs(NVCC) else bool(shutil.which(NVCC))
 STAGE = "/home/pratham_sharma/gem/build/gemdiff"
 # The testbenches open every file -- stimulus in, results out, VCD -- relative
 # to their own cwd, under sim_out/, so the stimulus this harness generates has
@@ -370,6 +380,83 @@ def test_srl(rng):
     return r1 and r2
 
 
+def read_stim(name, ncol):
+    """Read back a stimulus file the harness already wrote, so the CUDA leg
+    can rebuild golden results from the exact vectors that were actually run
+    -- no dependency on rng call order versus the Python-side tests."""
+    rows = []
+    with open(stim_path(name)) as f:
+        for line in f:
+            parts = line.split()
+            if len(parts) == ncol:
+                rows.append(tuple(int(p, 16) for p in parts))
+    return rows
+
+
+def compile_cuda_test():
+    exe = os.path.join(STAGE, "test_gem_macros")
+    r = run([NVCC, "-O2", "-arch=sm_89", "-I", GEM_CSRC, "-o", exe,
+             os.path.join(CSRC, "test_gem_macros.cu")], STAGE)
+    if r.returncode != 0:
+        return None, "nvcc failed:\n" + r.stdout
+    return exe, r.stdout
+
+
+def test_cuda_macros():
+    """Run csrc/gem_macros.cuh -- the actual GPU macro evaluator, not a
+    reimplementation of it -- against the exact stimulus the Verilog/Python
+    legs above already ran, executed for real via verif/csrc/test_gem_macros.cu.
+    Reuses stim_chain.txt/stim_dsp.txt/stim_srl.txt, which test_carry4()/
+    test_dsp()/test_srl() have already written to SIM_OUT by the time this
+    runs (see main()).
+    """
+    if not CUDA_AVAILABLE:
+        print("  %-24s SKIP   nvcc not found" % "gem_macros.cuh (CUDA)")
+        return True
+
+    exe, out = compile_cuda_test()
+    if exe is None:
+        print("  gem_macros.cuh (CUDA) BUILD ERROR:\n" + out)
+        return False
+
+    r = run([exe, SIM_OUT], STAGE)
+    if r.returncode != 0:
+        print("  gem_macros.cuh (CUDA) RUN ERROR:\n" + r.stdout)
+        return False
+    print(r.stdout.rstrip("\n"))
+
+    allok = True
+
+    chain_vecs = [(s, di, cyi) for (s, di, cyi) in read_stim("stim_chain.txt", 3)]
+    g_fused = [eval_carry_chain_fused(s, di, cyi, CHAIN_BITS)
+               for (s, di, cyi) in chain_vecs]
+    v_chain_cuda = read_results("res_chain_cuda.txt", 2)
+    allok &= report("CARRYCHAIN (CUDA, GPU)", g_fused, v_chain_cuda, ("O", "CO"))
+
+    dsp_vecs = read_stim("stim_dsp.txt", 6)
+    dsp = DSP48E2()
+    g_dsp = []
+    for a, d, b, c, st, up in dsp_vecs:
+        p_next = dsp.eval_comb(A=a, D=d, B=b, C=c, state=st, use_pre=up)
+        dsp.tick(p_next)
+        g_dsp.append((dsp.read_P(),))
+    v_dsp_cuda = read_results("res_dsp_cuda.txt", 1)
+    allok &= report("DSP48E2 (CUDA, GPU)", g_dsp, v_dsp_cuda, ("P",))
+
+    srl_vecs = read_stim("stim_srl.txt", 3)
+    srl = SRLC32E()
+    g_srl = []
+    for d, ce, a in srl_vecs:
+        q, q31 = srl.eval_comb(a)
+        ns = srl.eval_next_state(d, ce)
+        srl.tick(ns)
+        g_srl.append((q, q31, srl.SRL))
+    v_srl_cuda = read_results("res_srl_cuda.txt", 3)
+    allok &= report("SRLC32E (CUDA, GPU)", g_srl, v_srl_cuda, ("Q", "Q31", "SRL"))
+
+    return allok
+
+
 def main():
     rng = random.Random(20260827)
     stage_setup()
@@ -377,14 +464,21 @@ def main():
     print("Reference simulator : %s" % ver)
     print("Reference model     : verif/rtl/xilinx_macros_ref.v (spec-literal)")
     if UNISIM_DIR:
-        print("Real UNISIM         : %s (CARRY4, DSP48E2, SRLC32E)\n" % UNISIM_DIR)
+        print("Real UNISIM         : %s (CARRY4, DSP48E2, SRLC32E)" % UNISIM_DIR)
     else:
-        print("NOT Xilinx UNISIM   : Vivado unavailable in this environment\n")
+        print("NOT Xilinx UNISIM   : Vivado unavailable in this environment")
+    if CUDA_AVAILABLE:
+        print("CUDA macros         : %s (csrc/gem_macros.cuh, executed on GPU)\n" % NVCC)
+    else:
+        print("NOT CUDA macros     : nvcc unavailable in this environment\n")
 
     results = []
     results.append(("CARRY4", test_carry4(rng)))
     results.append(("DSP48E2", test_dsp(rng)))
     results.append(("SRLC32E", test_srl(rng)))
+    # Runs after the three above so stim_chain.txt/stim_dsp.txt/stim_srl.txt
+    # already exist in SIM_OUT for it to reuse.
+    results.append(("gem_macros.cuh (GPU)", test_cuda_macros()))
 
     print("\n--- summary ---")
     allok = True
