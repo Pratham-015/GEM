@@ -138,20 +138,40 @@ def run(cmd, cwd):
                           text=True)
 
 
+def stage_copy(src, dst_dir):
+    """shutil.copy that tolerates a previously-staged destination with the
+    source's own (often read-only) mode bits.
+
+    The real UNISIM sources are shipped 444 (r--r--r--), and shutil.copy
+    propagates that mode onto the staged copy. That's fine the first time
+    STAGE is populated, but on every run after, opening the now-444
+    destination for writing fails with PermissionError -- even for its
+    owner, since the owner-write bit itself is simply unset. This is a
+    file-mode bug, not an ownership/sudo issue: removing the stale
+    destination first (which only needs write permission on STAGE, not on
+    the file) sidesteps it entirely.
+    """
+    dst = os.path.join(dst_dir, os.path.basename(src))
+    if os.path.exists(dst):
+        os.chmod(dst, 0o644)
+        os.remove(dst)
+    shutil.copy(src, dst_dir)
+
+
 def stage_setup():
     os.makedirs(STAGE, exist_ok=True)
-    shutil.copy(os.path.join(RTL, "xilinx_macros_ref.v"), STAGE)
+    stage_copy(os.path.join(RTL, "xilinx_macros_ref.v"), STAGE)
     for f in ("tb_carry4.v", "tb_dsp48e2.v", "tb_srlc32e.v"):
-        shutil.copy(os.path.join(TB, f), STAGE)
+        stage_copy(os.path.join(TB, f), STAGE)
     if UNISIM_DIR:
         # Vendor sources: staged into the scratch build dir only, never
         # copied into this repo (UNISIM is not redistributable).
-        shutil.copy(os.path.join(UNISIM_DIR, "CARRY4.v"), STAGE)
-        shutil.copy(os.path.join(UNISIM_DIR, "SRLC32E.v"), STAGE)
-        shutil.copy(os.path.join(UNISIM_DIR, "DSP48E2.v"), STAGE)
-        shutil.copy(os.path.join(os.path.dirname(UNISIM_DIR), "glbl.v"), STAGE)
+        stage_copy(os.path.join(UNISIM_DIR, "CARRY4.v"), STAGE)
+        stage_copy(os.path.join(UNISIM_DIR, "SRLC32E.v"), STAGE)
+        stage_copy(os.path.join(UNISIM_DIR, "DSP48E2.v"), STAGE)
+        stage_copy(os.path.join(os.path.dirname(UNISIM_DIR), "glbl.v"), STAGE)
         for f in ("tb_carry4_unisim.v", "tb_srlc32e_unisim.v", "tb_dsp48e2_unisim.v"):
-            shutil.copy(os.path.join(TB, f), STAGE)
+            stage_copy(os.path.join(TB, f), STAGE)
 
 
 def compile_and_run(tb_file, top, extra_srcs=()):
