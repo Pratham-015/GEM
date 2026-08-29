@@ -1,0 +1,960 @@
+
+ /----------------------------------------------------------------------------\
+ |  yosys -- Yosys Open SYnthesis Suite                                       |
+ |  Copyright (C) 2012 - 2026  Claire Xenia Wolf <claire@yosyshq.com>         |
+ |  Distributed under an ISC-like license, type "license" to see terms        |
+ \----------------------------------------------------------------------------/
+ Yosys 0.68 (git sha1 38e001a6f, Release, GNU /usr/bin/c++ 13.3.0)
+
+-- Running command `
+read_verilog -lib aigpdk/memlib_yosys_behavior_oneport.v
+read_verilog verif/rtl/memory_mapped_sync.v
+hierarchy -check -top top
+
+synth -flatten
+delete t:$print
+
+dfflibmap -liberty aigpdk/aigpdk_nomem.lib
+opt_clean -purge
+abc -liberty aigpdk/aigpdk_nomem.lib
+opt_clean -purge
+techmap
+abc -liberty aigpdk/aigpdk_nomem.lib
+opt_clean -purge
+
+write_verilog verif/rtl/gatelevel.gv
+' --
+
+1. Executing Verilog-2005 frontend: aigpdk/memlib_yosys_behavior_oneport.v
+Parsing Verilog input from `aigpdk/memlib_yosys_behavior_oneport.v' to AST representation.
+Generating RTLIL representation for module `\$__RAMGEM_SYNC_'.
+Successfully finished Verilog frontend.
+
+2. Executing Verilog-2005 frontend: verif/rtl/memory_mapped_sync.v
+Parsing Verilog input from `verif/rtl/memory_mapped_sync.v' to AST representation.
+Generating RTLIL representation for module `\ram_sync'.
+Generating RTLIL representation for module `\top'.
+Successfully finished Verilog frontend.
+
+3. Executing HIERARCHY pass (managing design hierarchy).
+
+3.1. Analyzing design hierarchy..
+Top module:  \top
+Used module:     \ram_sync
+
+3.2. Analyzing design hierarchy..
+Top module:  \top
+Used module:     \ram_sync
+Removed 0 unused modules.
+
+4. Executing SYNTH pass.
+
+4.1. Executing HIERARCHY pass (managing design hierarchy).
+Attribute `top' found on module `top'. Setting top module to top.
+
+4.1.1. Analyzing design hierarchy..
+Top module:  \top
+Used module:     \ram_sync
+
+4.1.2. Analyzing design hierarchy..
+Top module:  \top
+Used module:     \ram_sync
+Removed 0 unused modules.
+
+4.2. Executing PROC pass (convert processes to netlists).
+
+4.2.1. Executing PROC_CLEAN pass (remove empty switches from decision trees).
+Found and cleaned up 1 empty switch in `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:310$34'.
+Cleaned up 1 empty switch.
+
+4.2.2. Executing PROC_RMDEAD pass (remove dead branches from decision trees).
+Removed a total of 0 dead cases.
+
+4.2.3. Executing PROC_PRUNE pass (remove redundant assignments in processes).
+Removed 1 redundant assignment.
+Promoted 38 assignments to connections.
+
+4.2.4. Executing PROC_INIT pass (extract init attributes).
+
+4.2.5. Executing PROC_ARST pass (detect async resets in processes).
+
+4.2.6. Executing PROC_ROM pass (convert switches to ROMs).
+Converted 0 switches.
+
+4.2.7. Executing PROC_MUX pass (convert decision trees to multiplexers).
+Creating decoders for process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:450$137'.
+Creating decoders for process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:448$136'.
+Creating decoders for process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:446$135'.
+Creating decoders for process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:443$133'.
+Creating decoders for process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:441$132'.
+Creating decoders for process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:407$99'.
+Creating decoders for process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:405$98'.
+Creating decoders for process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:403$97'.
+Creating decoders for process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:401$96'.
+Creating decoders for process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:399$95'.
+Creating decoders for process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:397$94'.
+Creating decoders for process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:395$93'.
+Creating decoders for process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:393$92'.
+Creating decoders for process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:391$91'.
+Creating decoders for process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:389$90'.
+Creating decoders for process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:387$89'.
+Creating decoders for process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:385$88'.
+Creating decoders for process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:383$87'.
+Creating decoders for process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:381$86'.
+Creating decoders for process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:379$85'.
+Creating decoders for process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:377$84'.
+Creating decoders for process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:375$83'.
+Creating decoders for process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:373$82'.
+Creating decoders for process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:371$81'.
+Creating decoders for process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:369$80'.
+Creating decoders for process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:367$79'.
+Creating decoders for process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:365$78'.
+Creating decoders for process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:363$77'.
+Creating decoders for process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:361$76'.
+Creating decoders for process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:359$75'.
+Creating decoders for process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:357$74'.
+Creating decoders for process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:355$73'.
+Creating decoders for process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:353$72'.
+Creating decoders for process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:351$71'.
+Creating decoders for process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:349$70'.
+Creating decoders for process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:347$69'.
+Creating decoders for process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:345$68'.
+Creating decoders for process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:310$34'.
+
+4.2.8. Executing PROC_DLATCH pass (convert process syncs to latches).
+
+4.2.9. Executing PROC_DFF pass (convert process syncs to FFs).
+Creating register for signal `\ram_sync.\_055_' using process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:450$137'.
+  created $dff cell `$procdff$354' with positive edge clock.
+Creating register for signal `\ram_sync.\_054_' using process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:448$136'.
+  created $dff cell `$procdff$355' with positive edge clock.
+Creating register for signal `\ram_sync.\_053_' using process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:446$135'.
+  created $dff cell `$procdff$356' with positive edge clock.
+Creating register for signal `\ram_sync.\_051_' using process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:443$133'.
+  created $dff cell `$procdff$357' with positive edge clock.
+Creating register for signal `\ram_sync.\_052_' using process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:441$132'.
+  created $dff cell `$procdff$358' with positive edge clock.
+Creating register for signal `\ram_sync.\_049_' using process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:407$99'.
+  created $dff cell `$procdff$359' with positive edge clock.
+Creating register for signal `\ram_sync.\_048_' using process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:405$98'.
+  created $dff cell `$procdff$360' with positive edge clock.
+Creating register for signal `\ram_sync.\_047_' using process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:403$97'.
+  created $dff cell `$procdff$361' with positive edge clock.
+Creating register for signal `\ram_sync.\_046_' using process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:401$96'.
+  created $dff cell `$procdff$362' with positive edge clock.
+Creating register for signal `\ram_sync.\_045_' using process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:399$95'.
+  created $dff cell `$procdff$363' with positive edge clock.
+Creating register for signal `\ram_sync.\_044_' using process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:397$94'.
+  created $dff cell `$procdff$364' with positive edge clock.
+Creating register for signal `\ram_sync.\_043_' using process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:395$93'.
+  created $dff cell `$procdff$365' with positive edge clock.
+Creating register for signal `\ram_sync.\_042_' using process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:393$92'.
+  created $dff cell `$procdff$366' with positive edge clock.
+Creating register for signal `\ram_sync.\_041_' using process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:391$91'.
+  created $dff cell `$procdff$367' with positive edge clock.
+Creating register for signal `\ram_sync.\_040_' using process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:389$90'.
+  created $dff cell `$procdff$368' with positive edge clock.
+Creating register for signal `\ram_sync.\_039_' using process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:387$89'.
+  created $dff cell `$procdff$369' with positive edge clock.
+Creating register for signal `\ram_sync.\_038_' using process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:385$88'.
+  created $dff cell `$procdff$370' with positive edge clock.
+Creating register for signal `\ram_sync.\_037_' using process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:383$87'.
+  created $dff cell `$procdff$371' with positive edge clock.
+Creating register for signal `\ram_sync.\_036_' using process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:381$86'.
+  created $dff cell `$procdff$372' with positive edge clock.
+Creating register for signal `\ram_sync.\_035_' using process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:379$85'.
+  created $dff cell `$procdff$373' with positive edge clock.
+Creating register for signal `\ram_sync.\_034_' using process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:377$84'.
+  created $dff cell `$procdff$374' with positive edge clock.
+Creating register for signal `\ram_sync.\_033_' using process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:375$83'.
+  created $dff cell `$procdff$375' with positive edge clock.
+Creating register for signal `\ram_sync.\_032_' using process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:373$82'.
+  created $dff cell `$procdff$376' with positive edge clock.
+Creating register for signal `\ram_sync.\_031_' using process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:371$81'.
+  created $dff cell `$procdff$377' with positive edge clock.
+Creating register for signal `\ram_sync.\_030_' using process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:369$80'.
+  created $dff cell `$procdff$378' with positive edge clock.
+Creating register for signal `\ram_sync.\_029_' using process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:367$79'.
+  created $dff cell `$procdff$379' with positive edge clock.
+Creating register for signal `\ram_sync.\_028_' using process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:365$78'.
+  created $dff cell `$procdff$380' with positive edge clock.
+Creating register for signal `\ram_sync.\_027_' using process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:363$77'.
+  created $dff cell `$procdff$381' with positive edge clock.
+Creating register for signal `\ram_sync.\_026_' using process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:361$76'.
+  created $dff cell `$procdff$382' with positive edge clock.
+Creating register for signal `\ram_sync.\_025_' using process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:359$75'.
+  created $dff cell `$procdff$383' with positive edge clock.
+Creating register for signal `\ram_sync.\_024_' using process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:357$74'.
+  created $dff cell `$procdff$384' with positive edge clock.
+Creating register for signal `\ram_sync.\_023_' using process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:355$73'.
+  created $dff cell `$procdff$385' with positive edge clock.
+Creating register for signal `\ram_sync.\_022_' using process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:353$72'.
+  created $dff cell `$procdff$386' with positive edge clock.
+Creating register for signal `\ram_sync.\_021_' using process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:351$71'.
+  created $dff cell `$procdff$387' with positive edge clock.
+Creating register for signal `\ram_sync.\_020_' using process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:349$70'.
+  created $dff cell `$procdff$388' with positive edge clock.
+Creating register for signal `\ram_sync.\_019_' using process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:347$69'.
+  created $dff cell `$procdff$389' with positive edge clock.
+Creating register for signal `\ram_sync.\_018_' using process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:345$68'.
+  created $dff cell `$procdff$390' with positive edge clock.
+Creating register for signal `\ram_sync.\_016_' using process `\ram_sync.$proc$verif/rtl/memory_mapped_sync.v:310$34'.
+  created $dff cell `$procdff$391' with positive edge clock.
+
+4.2.10. Executing PROC_MEMWR pass (convert process memory writes to cells).
+
+4.2.11. Executing PROC_CLEAN pass (remove empty switches from decision trees).
+Removing empty process `ram_sync.$proc$verif/rtl/memory_mapped_sync.v:450$137'.
+Removing empty process `ram_sync.$proc$verif/rtl/memory_mapped_sync.v:448$136'.
+Removing empty process `ram_sync.$proc$verif/rtl/memory_mapped_sync.v:446$135'.
+Removing empty process `ram_sync.$proc$verif/rtl/memory_mapped_sync.v:443$133'.
+Removing empty process `ram_sync.$proc$verif/rtl/memory_mapped_sync.v:441$132'.
+Removing empty process `ram_sync.$proc$verif/rtl/memory_mapped_sync.v:407$99'.
+Removing empty process `ram_sync.$proc$verif/rtl/memory_mapped_sync.v:405$98'.
+Removing empty process `ram_sync.$proc$verif/rtl/memory_mapped_sync.v:403$97'.
+Removing empty process `ram_sync.$proc$verif/rtl/memory_mapped_sync.v:401$96'.
+Removing empty process `ram_sync.$proc$verif/rtl/memory_mapped_sync.v:399$95'.
+Removing empty process `ram_sync.$proc$verif/rtl/memory_mapped_sync.v:397$94'.
+Removing empty process `ram_sync.$proc$verif/rtl/memory_mapped_sync.v:395$93'.
+Removing empty process `ram_sync.$proc$verif/rtl/memory_mapped_sync.v:393$92'.
+Removing empty process `ram_sync.$proc$verif/rtl/memory_mapped_sync.v:391$91'.
+Removing empty process `ram_sync.$proc$verif/rtl/memory_mapped_sync.v:389$90'.
+Removing empty process `ram_sync.$proc$verif/rtl/memory_mapped_sync.v:387$89'.
+Removing empty process `ram_sync.$proc$verif/rtl/memory_mapped_sync.v:385$88'.
+Removing empty process `ram_sync.$proc$verif/rtl/memory_mapped_sync.v:383$87'.
+Removing empty process `ram_sync.$proc$verif/rtl/memory_mapped_sync.v:381$86'.
+Removing empty process `ram_sync.$proc$verif/rtl/memory_mapped_sync.v:379$85'.
+Removing empty process `ram_sync.$proc$verif/rtl/memory_mapped_sync.v:377$84'.
+Removing empty process `ram_sync.$proc$verif/rtl/memory_mapped_sync.v:375$83'.
+Removing empty process `ram_sync.$proc$verif/rtl/memory_mapped_sync.v:373$82'.
+Removing empty process `ram_sync.$proc$verif/rtl/memory_mapped_sync.v:371$81'.
+Removing empty process `ram_sync.$proc$verif/rtl/memory_mapped_sync.v:369$80'.
+Removing empty process `ram_sync.$proc$verif/rtl/memory_mapped_sync.v:367$79'.
+Removing empty process `ram_sync.$proc$verif/rtl/memory_mapped_sync.v:365$78'.
+Removing empty process `ram_sync.$proc$verif/rtl/memory_mapped_sync.v:363$77'.
+Removing empty process `ram_sync.$proc$verif/rtl/memory_mapped_sync.v:361$76'.
+Removing empty process `ram_sync.$proc$verif/rtl/memory_mapped_sync.v:359$75'.
+Removing empty process `ram_sync.$proc$verif/rtl/memory_mapped_sync.v:357$74'.
+Removing empty process `ram_sync.$proc$verif/rtl/memory_mapped_sync.v:355$73'.
+Removing empty process `ram_sync.$proc$verif/rtl/memory_mapped_sync.v:353$72'.
+Removing empty process `ram_sync.$proc$verif/rtl/memory_mapped_sync.v:351$71'.
+Removing empty process `ram_sync.$proc$verif/rtl/memory_mapped_sync.v:349$70'.
+Removing empty process `ram_sync.$proc$verif/rtl/memory_mapped_sync.v:347$69'.
+Removing empty process `ram_sync.$proc$verif/rtl/memory_mapped_sync.v:345$68'.
+Removing empty process `ram_sync.$proc$verif/rtl/memory_mapped_sync.v:310$34'.
+Cleaned up 0 empty switches.
+
+4.2.12. Executing OPT_EXPR pass (perform const folding).
+Optimizing module top.
+Optimizing module ram_sync.
+
+4.3. Executing CHECK pass (checking for obvious problems).
+Checking module top...
+Checking module ram_sync...
+Found and reported 0 problems.
+
+4.4. Executing FLATTEN pass (flatten design).
+Deleting now unused module ram_sync.
+<suppressed ~1 debug messages>
+
+4.5. Executing OPT_EXPR pass (perform const folding).
+Optimizing module top.
+
+4.6. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \top..
+Removed 0 unused cells and 320 unused wires.
+<suppressed ~1 debug messages>
+
+4.7. Executing CHECK pass (checking for obvious problems).
+Checking module top...
+Found and reported 0 problems.
+
+4.8. Executing OPT pass (performing simple optimizations).
+
+4.8.1. Executing OPT_EXPR pass (perform const folding).
+Optimizing module top.
+
+4.8.2. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\top'.
+Computing hashes of 322 cells of `\top'.
+Finding duplicate cells in `\top'.
+Removed a total of 0 cells.
+
+4.8.3. Executing OPT_MUXTREE pass (detect dead branches in mux trees).
+Running muxtree optimizer on module \top..
+  Creating internal representation of mux trees.
+  Evaluating internal representation of mux trees.
+  Analyzing evaluation results.
+    dead port 2/2 on $mux $flatten\u_ram.$ternary$verif/rtl/memory_mapped_sync.v:645$331.
+    dead port 2/2 on $mux $flatten\u_ram.$ternary$verif/rtl/memory_mapped_sync.v:647$333.
+    dead port 2/2 on $mux $flatten\u_ram.$ternary$verif/rtl/memory_mapped_sync.v:657$343.
+    dead port 2/2 on $mux $flatten\u_ram.$ternary$verif/rtl/memory_mapped_sync.v:659$345.
+    dead port 2/2 on $mux $flatten\u_ram.$ternary$verif/rtl/memory_mapped_sync.v:661$347.
+    dead port 2/2 on $mux $flatten\u_ram.$ternary$verif/rtl/memory_mapped_sync.v:663$349.
+    dead port 2/2 on $mux $flatten\u_ram.$ternary$verif/rtl/memory_mapped_sync.v:665$351.
+    dead port 2/2 on $mux $flatten\u_ram.$ternary$verif/rtl/memory_mapped_sync.v:667$353.
+Removed 8 multiplexer ports.
+<suppressed ~578 debug messages>
+
+4.8.4. Executing OPT_REDUCE pass (consolidate $*mux and $reduce_* inputs).
+  Optimizing cells in module \top.
+Performed a total of 0 changes.
+
+4.8.5. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\top'.
+Computing hashes of 314 cells of `\top'.
+Finding duplicate cells in `\top'.
+Removed a total of 0 cells.
+
+4.8.6. Executing OPT_DFF pass (perform DFF optimizations).
+
+4.8.7. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \top..
+
+4.8.8. Executing OPT_EXPR pass (perform const folding).
+Optimizing module top.
+
+4.8.9. Rerunning OPT passes. (Maybe there is more to do..)
+
+4.8.10. Executing OPT_MUXTREE pass (detect dead branches in mux trees).
+Running muxtree optimizer on module \top..
+  Creating internal representation of mux trees.
+  Evaluating internal representation of mux trees.
+  Analyzing evaluation results.
+Removed 0 multiplexer ports.
+<suppressed ~442 debug messages>
+
+4.8.11. Executing OPT_REDUCE pass (consolidate $*mux and $reduce_* inputs).
+  Optimizing cells in module \top.
+Performed a total of 0 changes.
+
+4.8.12. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\top'.
+Computing hashes of 314 cells of `\top'.
+Finding duplicate cells in `\top'.
+Removed a total of 0 cells.
+
+4.8.13. Executing OPT_DFF pass (perform DFF optimizations).
+
+4.8.14. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \top..
+
+4.8.15. Executing OPT_EXPR pass (perform const folding).
+Optimizing module top.
+
+4.8.16. Finished fast OPT passes. (There is nothing left to do.)
+
+4.9. Executing FSM pass (extract and optimize FSM).
+
+4.9.1. Executing FSM_DETECT pass (finding FSMs in design).
+
+4.9.2. Executing FSM_EXTRACT pass (extracting FSM from design).
+
+4.9.3. Executing FSM_OPT pass (simple optimizations of FSMs).
+
+4.9.4. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \top..
+
+4.9.5. Executing FSM_OPT pass (simple optimizations of FSMs).
+
+4.9.6. Executing FSM_RECODE pass (re-assigning FSM state encoding).
+
+4.9.7. Executing FSM_INFO pass (dumping all available information on FSM cells).
+
+4.9.8. Executing FSM_MAP pass (mapping FSMs to basic logic).
+
+4.10. Executing OPT pass (performing simple optimizations).
+
+4.10.1. Executing OPT_EXPR pass (perform const folding).
+Optimizing module top.
+
+4.10.2. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\top'.
+Computing hashes of 314 cells of `\top'.
+Finding duplicate cells in `\top'.
+Removed a total of 0 cells.
+
+4.10.3. Executing OPT_MUXTREE pass (detect dead branches in mux trees).
+Running muxtree optimizer on module \top..
+  Creating internal representation of mux trees.
+  Evaluating internal representation of mux trees.
+  Analyzing evaluation results.
+Removed 0 multiplexer ports.
+<suppressed ~442 debug messages>
+
+4.10.4. Executing OPT_REDUCE pass (consolidate $*mux and $reduce_* inputs).
+  Optimizing cells in module \top.
+Performed a total of 0 changes.
+
+4.10.5. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\top'.
+Computing hashes of 314 cells of `\top'.
+Finding duplicate cells in `\top'.
+Removed a total of 0 cells.
+
+4.10.6. Executing OPT_DFF pass (perform DFF optimizations).
+
+4.10.7. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \top..
+
+4.10.8. Executing OPT_EXPR pass (perform const folding).
+Optimizing module top.
+
+4.10.9. Finished fast OPT passes. (There is nothing left to do.)
+
+4.11. Executing WREDUCE pass (reducing word size of cells).
+Removed top 16 bits (of 32) from mux cell top.$flatten\u_ram.$ternary$verif/rtl/memory_mapped_sync.v:664$350 ($mux).
+Removed top 8 bits (of 32) from mux cell top.$flatten\u_ram.$ternary$verif/rtl/memory_mapped_sync.v:660$346 ($mux).
+Removed top 16 bits (of 32) from mux cell top.$flatten\u_ram.$ternary$verif/rtl/memory_mapped_sync.v:652$338 ($mux).
+Removed top 8 bits (of 32) from mux cell top.$flatten\u_ram.$ternary$verif/rtl/memory_mapped_sync.v:650$336 ($mux).
+Removed top 24 bits (of 32) from mux cell top.$flatten\u_ram.$ternary$verif/rtl/memory_mapped_sync.v:644$330 ($mux).
+
+4.12. Executing PEEPOPT pass (run peephole optimizers).
+
+4.13. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \top..
+
+4.14. Executing ALUMACC pass (create $alu and $macc cells).
+Extracting $alu and $macc cells in module top:
+  created 0 $alu and 0 $macc cells.
+
+4.15. Executing SHARE pass (SAT-based resource sharing).
+
+4.16. Executing OPT pass (performing simple optimizations).
+
+4.16.1. Executing OPT_EXPR pass (perform const folding).
+Optimizing module top.
+<suppressed ~48 debug messages>
+
+4.16.2. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\top'.
+Computing hashes of 266 cells of `\top'.
+Finding duplicate cells in `\top'.
+Removed a total of 0 cells.
+
+4.16.3. Executing OPT_MUXTREE pass (detect dead branches in mux trees).
+Running muxtree optimizer on module \top..
+  Creating internal representation of mux trees.
+  Evaluating internal representation of mux trees.
+  Analyzing evaluation results.
+Removed 0 multiplexer ports.
+<suppressed ~370 debug messages>
+
+4.16.4. Executing OPT_REDUCE pass (consolidate $*mux and $reduce_* inputs).
+  Optimizing cells in module \top.
+Performed a total of 0 changes.
+
+4.16.5. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\top'.
+Computing hashes of 266 cells of `\top'.
+Finding duplicate cells in `\top'.
+Removed a total of 0 cells.
+
+4.16.6. Executing OPT_DFF pass (perform DFF optimizations).
+
+4.16.7. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \top..
+
+4.16.8. Executing OPT_EXPR pass (perform const folding).
+Optimizing module top.
+
+4.16.9. Finished fast OPT passes. (There is nothing left to do.)
+
+4.17. Executing MEMORY pass.
+
+4.17.1. Executing OPT_MEM pass (optimize memories).
+Performed a total of 0 transformations.
+
+4.17.2. Executing OPT_MEM_PRIORITY pass (removing unnecessary memory write priority relations).
+Performed a total of 0 transformations.
+
+4.17.3. Executing OPT_MEM_FEEDBACK pass (finding memory read-to-write feedback paths).
+
+4.17.4. Executing MEMORY_BMUX2ROM pass (converting muxes to ROMs).
+
+4.17.5. Executing MEMORY_DFF pass (merging $dff cells to $memrd).
+
+4.17.6. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \top..
+
+4.17.7. Executing MEMORY_SHARE pass (consolidating $memrd/$memwr cells).
+
+4.17.8. Executing OPT_MEM_WIDEN pass (optimize memories where all ports are wide).
+Performed a total of 0 transformations.
+
+4.17.9. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \top..
+
+4.17.10. Executing MEMORY_COLLECT pass (generating $mem cells).
+
+4.18. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \top..
+
+4.19. Executing OPT pass (performing simple optimizations).
+
+4.19.1. Executing OPT_EXPR pass (perform const folding).
+Optimizing module top.
+<suppressed ~8 debug messages>
+
+4.19.2. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\top'.
+Computing hashes of 258 cells of `\top'.
+Finding duplicate cells in `\top'.
+Removed a total of 0 cells.
+
+4.19.3. Executing OPT_DFF pass (perform DFF optimizations).
+Adding SRST signal on $flatten\u_ram.$procdff$356 ($dff) from module top (D = \u_ram._006_ [24], Q = \u_ram._053_ [24], rval = 1'0).
+Adding SRST signal on $flatten\u_ram.$procdff$356 ($dff) from module top (D = \u_ram._006_ [25], Q = \u_ram._053_ [25], rval = 1'0).
+Adding SRST signal on $flatten\u_ram.$procdff$356 ($dff) from module top (D = \u_ram._006_ [26], Q = \u_ram._053_ [26], rval = 1'0).
+Adding SRST signal on $flatten\u_ram.$procdff$356 ($dff) from module top (D = \u_ram._006_ [27], Q = \u_ram._053_ [27], rval = 1'0).
+Adding SRST signal on $flatten\u_ram.$procdff$356 ($dff) from module top (D = \u_ram._006_ [28], Q = \u_ram._053_ [28], rval = 1'0).
+Adding SRST signal on $flatten\u_ram.$procdff$356 ($dff) from module top (D = \u_ram._006_ [29], Q = \u_ram._053_ [29], rval = 1'0).
+Adding SRST signal on $flatten\u_ram.$procdff$356 ($dff) from module top (D = \u_ram._006_ [30], Q = \u_ram._053_ [30], rval = 1'0).
+Adding SRST signal on $flatten\u_ram.$procdff$356 ($dff) from module top (D = \u_ram._006_ [31], Q = \u_ram._053_ [31], rval = 1'0).
+
+4.19.4. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \top..
+Removed 8 unused cells and 8 unused wires.
+<suppressed ~16 debug messages>
+
+4.19.5. Rerunning OPT passes. (Removed registers in this run.)
+
+4.19.6. Executing OPT_EXPR pass (perform const folding).
+Optimizing module top.
+<suppressed ~64 debug messages>
+
+4.19.7. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\top'.
+Computing hashes of 210 cells of `\top'.
+Finding duplicate cells in `\top'.
+Removed a total of 0 cells.
+
+4.19.8. Executing OPT_DFF pass (perform DFF optimizations).
+
+4.19.9. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \top..
+
+4.19.10. Finished fast OPT passes.
+
+4.20. Executing MEMORY_MAP pass (converting memories to logic and flip-flops).
+
+4.21. Executing OPT pass (performing simple optimizations).
+
+4.21.1. Executing OPT_EXPR pass (perform const folding).
+Optimizing module top.
+
+4.21.2. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\top'.
+Computing hashes of 210 cells of `\top'.
+Finding duplicate cells in `\top'.
+Removed a total of 0 cells.
+
+4.21.3. Executing OPT_MUXTREE pass (detect dead branches in mux trees).
+Running muxtree optimizer on module \top..
+  Creating internal representation of mux trees.
+  Evaluating internal representation of mux trees.
+  Analyzing evaluation results.
+Removed 0 multiplexer ports.
+<suppressed ~46 debug messages>
+
+4.21.4. Executing OPT_REDUCE pass (consolidate $*mux and $reduce_* inputs).
+  Optimizing cells in module \top.
+    Consolidated identical input bits for $mux cell $flatten\u_ram.$ternary$verif/rtl/memory_mapped_sync.v:644$330:
+      Old ports: A=8'00000000, B=8'11111111, Y=\u_ram._009_ [7:0]
+      New ports: A=1'0, B=1'1, Y=\u_ram._009_ [0]
+      New connections: \u_ram._009_ [7:1] = { \u_ram._009_ [0] \u_ram._009_ [0] \u_ram._009_ [0] \u_ram._009_ [0] \u_ram._009_ [0] \u_ram._009_ [0] \u_ram._009_ [0] }
+    Consolidated identical input bits for $mux cell $flatten\u_ram.$ternary$verif/rtl/memory_mapped_sync.v:654$340:
+      Old ports: A=0, B={ 24'000000000000000000000000 \u_ram._009_ [7:0] }, Y=\u_ram._001_
+      New ports: A=8'00000000, B=\u_ram._009_ [7:0], Y=\u_ram._001_ [7:0]
+      New connections: \u_ram._001_ [31:8] = 24'000000000000000000000000
+    Consolidated identical input bits for $mux cell $flatten\u_ram.$ternary$verif/rtl/memory_mapped_sync.v:656$342:
+      Old ports: A=0, B=32'11111111000000000000000000000000, Y=\u_ram._015_
+      New ports: A=1'0, B=1'1, Y=\u_ram._015_ [24]
+      New connections: { \u_ram._015_ [31:25] \u_ram._015_ [23:0] } = { \u_ram._015_ [24] \u_ram._015_ [24] \u_ram._015_ [24] \u_ram._015_ [24] \u_ram._015_ [24] \u_ram._015_ [24] \u_ram._015_ [24] 24'000000000000000000000000 }
+    Consolidated identical input bits for $mux cell $flatten\u_ram.$ternary$verif/rtl/memory_mapped_sync.v:660$346:
+      Old ports: A=24'000000000000000000000000, B=24'111111110000000000000000, Y=\u_ram._013_ [23:0]
+      New ports: A=1'0, B=1'1, Y=\u_ram._013_ [16]
+      New connections: { \u_ram._013_ [23:17] \u_ram._013_ [15:0] } = { \u_ram._013_ [16] \u_ram._013_ [16] \u_ram._013_ [16] \u_ram._013_ [16] \u_ram._013_ [16] \u_ram._013_ [16] \u_ram._013_ [16] 16'0000000000000000 }
+    Consolidated identical input bits for $mux cell $flatten\u_ram.$ternary$verif/rtl/memory_mapped_sync.v:664$350:
+      Old ports: A=16'0000000000000000, B=16'1111111100000000, Y=\u_ram._011_ [15:0]
+      New ports: A=1'0, B=1'1, Y=\u_ram._011_ [8]
+      New connections: { \u_ram._011_ [15:9] \u_ram._011_ [7:0] } = { \u_ram._011_ [8] \u_ram._011_ [8] \u_ram._011_ [8] \u_ram._011_ [8] \u_ram._011_ [8] \u_ram._011_ [8] \u_ram._011_ [8] 8'00000000 }
+  Optimizing cells in module \top.
+    Consolidated identical input bits for $mux cell $flatten\u_ram.$ternary$verif/rtl/memory_mapped_sync.v:648$334:
+      Old ports: A=0, B=\u_ram._015_, Y=\u_ram._007_
+      New ports: A=1'0, B=\u_ram._015_ [24], Y=\u_ram._007_ [24]
+      New connections: { \u_ram._007_ [31:25] \u_ram._007_ [23:0] } = { \u_ram._007_ [24] \u_ram._007_ [24] \u_ram._007_ [24] \u_ram._007_ [24] \u_ram._007_ [24] \u_ram._007_ [24] \u_ram._007_ [24] 24'000000000000000000000000 }
+    Consolidated identical input bits for $mux cell $flatten\u_ram.$ternary$verif/rtl/memory_mapped_sync.v:650$336:
+      Old ports: A=24'000000000000000000000000, B=\u_ram._013_ [23:0], Y=\u_ram._005_ [23:0]
+      New ports: A=1'0, B=\u_ram._013_ [16], Y=\u_ram._005_ [16]
+      New connections: { \u_ram._005_ [23:17] \u_ram._005_ [15:0] } = { \u_ram._005_ [16] \u_ram._005_ [16] \u_ram._005_ [16] \u_ram._005_ [16] \u_ram._005_ [16] \u_ram._005_ [16] \u_ram._005_ [16] 16'0000000000000000 }
+    Consolidated identical input bits for $mux cell $flatten\u_ram.$ternary$verif/rtl/memory_mapped_sync.v:652$338:
+      Old ports: A=16'0000000000000000, B=\u_ram._011_ [15:0], Y=\u_ram._003_ [15:0]
+      New ports: A=1'0, B=\u_ram._011_ [8], Y=\u_ram._003_ [8]
+      New connections: { \u_ram._003_ [15:9] \u_ram._003_ [7:0] } = { \u_ram._003_ [8] \u_ram._003_ [8] \u_ram._003_ [8] \u_ram._003_ [8] \u_ram._003_ [8] \u_ram._003_ [8] \u_ram._003_ [8] 8'00000000 }
+    Consolidated identical input bits for $mux cell $flatten\u_ram.$ternary$verif/rtl/memory_mapped_sync.v:654$340:
+      Old ports: A=8'00000000, B=\u_ram._009_ [7:0], Y=\u_ram._001_ [7:0]
+      New ports: A=1'0, B=\u_ram._009_ [0], Y=\u_ram._001_ [0]
+      New connections: \u_ram._001_ [7:1] = { \u_ram._001_ [0] \u_ram._001_ [0] \u_ram._001_ [0] \u_ram._001_ [0] \u_ram._001_ [0] \u_ram._001_ [0] \u_ram._001_ [0] }
+  Optimizing cells in module \top.
+Performed a total of 9 changes.
+
+4.21.5. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\top'.
+Computing hashes of 210 cells of `\top'.
+Finding duplicate cells in `\top'.
+Computing hashes of 182 cells of `\top'.
+Finding duplicate cells in `\top'.
+Computing hashes of 161 cells of `\top'.
+Finding duplicate cells in `\top'.
+Computing hashes of 147 cells of `\top'.
+Finding duplicate cells in `\top'.
+<suppressed ~189 debug messages>
+Removed a total of 63 cells.
+
+4.21.6. Executing OPT_SHARE pass.
+
+4.21.7. Executing OPT_DFF pass (perform DFF optimizations).
+
+4.21.8. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \top..
+
+4.21.9. Executing OPT_EXPR pass (perform const folding).
+Optimizing module top.
+<suppressed ~17 debug messages>
+
+4.21.10. Rerunning OPT passes. (Maybe there is more to do..)
+
+4.21.11. Executing OPT_MUXTREE pass (detect dead branches in mux trees).
+Running muxtree optimizer on module \top..
+  Creating internal representation of mux trees.
+  Evaluating internal representation of mux trees.
+  Analyzing evaluation results.
+Removed 0 multiplexer ports.
+<suppressed ~34 debug messages>
+
+4.21.12. Executing OPT_REDUCE pass (consolidate $*mux and $reduce_* inputs).
+  Optimizing cells in module \top.
+Performed a total of 0 changes.
+
+4.21.13. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\top'.
+Computing hashes of 134 cells of `\top'.
+Finding duplicate cells in `\top'.
+Removed a total of 0 cells.
+
+4.21.14. Executing OPT_SHARE pass.
+
+4.21.15. Executing OPT_DFF pass (perform DFF optimizations).
+
+4.21.16. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \top..
+
+4.21.17. Executing OPT_EXPR pass (perform const folding).
+Optimizing module top.
+
+4.21.18. Finished fast OPT passes. (There is nothing left to do.)
+
+4.22. Executing TECHMAP pass (map to technology primitives).
+
+4.22.1. Executing Verilog-2005 frontend: /home/pratham_sharma/.local/bin/../share/yosys/techmap.v
+Parsing Verilog input from `/home/pratham_sharma/.local/bin/../share/yosys/techmap.v' to AST representation.
+Generating RTLIL representation for module `\_90_simplemap_bool_ops'.
+Generating RTLIL representation for module `\_90_simplemap_reduce_ops'.
+Generating RTLIL representation for module `\_90_simplemap_logic_ops'.
+Generating RTLIL representation for module `\_90_simplemap_compare_ops'.
+Generating RTLIL representation for module `\_90_simplemap_various'.
+Generating RTLIL representation for module `\_90_simplemap_registers'.
+Generating RTLIL representation for module `\_90_shift_ops_shr_shl_sshl_sshr'.
+Generating RTLIL representation for module `\_90_shift_shiftx'.
+Generating RTLIL representation for module `\_90_fa'.
+Generating RTLIL representation for module `\_90_lcu_brent_kung'.
+Generating RTLIL representation for module `\_90_alu'.
+Generating RTLIL representation for module `\_90_macc'.
+Generating RTLIL representation for module `\_90_alumacc'.
+Generating RTLIL representation for module `$__div_mod_u'.
+Generating RTLIL representation for module `$__div_mod_trunc'.
+Generating RTLIL representation for module `\_90_div'.
+Generating RTLIL representation for module `\_90_mod'.
+Generating RTLIL representation for module `$__div_mod_floor'.
+Generating RTLIL representation for module `\_90_divfloor'.
+Generating RTLIL representation for module `\_90_modfloor'.
+Generating RTLIL representation for module `\_90_pow'.
+Generating RTLIL representation for module `\_90_demux'.
+Generating RTLIL representation for module `\_90_lut'.
+Generating RTLIL representation for module `$connect'.
+Generating RTLIL representation for module `$input_port'.
+Successfully finished Verilog frontend.
+
+4.22.2. Continuing TECHMAP pass.
+Using extmapper simplemap for cells of type $dff.
+Using extmapper simplemap for cells of type $sdff.
+Using extmapper simplemap for cells of type $and.
+Using extmapper simplemap for cells of type $mux.
+Using extmapper simplemap for cells of type $eq.
+No more expansions possible.
+<suppressed ~209 debug messages>
+
+4.23. Executing OPT pass (performing simple optimizations).
+
+4.23.1. Executing OPT_EXPR pass (perform const folding).
+Optimizing module top.
+
+4.23.2. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\top'.
+Computing hashes of 318 cells of `\top'.
+Finding duplicate cells in `\top'.
+Computing hashes of 290 cells of `\top'.
+Finding duplicate cells in `\top'.
+Computing hashes of 262 cells of `\top'.
+Finding duplicate cells in `\top'.
+Computing hashes of 234 cells of `\top'.
+Finding duplicate cells in `\top'.
+<suppressed ~252 debug messages>
+Removed a total of 84 cells.
+
+4.23.3. Executing OPT_DFF pass (perform DFF optimizations).
+
+4.23.4. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \top..
+Removed 0 unused cells and 1 unused wires.
+<suppressed ~1 debug messages>
+
+4.23.5. Finished fast OPT passes.
+
+4.24. Executing ABC pass (technology mapping using ABC).
+
+4.24.1. Extracting gate netlist of module `\top' to `<abc-temp-dir>/input.blif'..
+
+4.24.1.1. Executed ABC.
+Extracted 114 gates and 266 wires to a netlist network with 152 inputs and 56 outputs.
+Running ABC script: <abc-temp-dir>/abc.script
+ABC: UC Berkeley, ABC 1.01 (compiled Aug 26 2026 13:07:29)
+ABC: abc 01> empty
+ABC: abc 01> source <abc-temp-dir>/abc.script
+ABC: + read_blif <abc-temp-dir>/input.blif 
+ABC: + read_library <abc-temp-dir>/stdcells.genlib 
+ABC: + strash 
+ABC: + &get -n 
+ABC: + &fraig -x 
+ABC: + &put 
+ABC: + scorr 
+ABC: Warning: The network is combinational (run "fraig" or "fraig_sweep").
+ABC: + dc2 
+ABC: + dretime 
+ABC: + strash 
+ABC: + &get -n 
+ABC: + &dch -f 
+ABC: + &nf 
+ABC: + &put 
+ABC: + write_blif <abc-temp-dir>/output.blif 
+ABC: 
+ABC: YOSYS_ABC_DONE 
+
+4.24.1.2. Re-integrating ABC results.
+ABC RESULTS:               AND cells:       38
+ABC RESULTS:               MUX cells:       64
+ABC RESULTS:             ORNOT cells:        4
+ABC RESULTS:              XNOR cells:       11
+ABC RESULTS:        internal signals:       58
+ABC RESULTS:           input signals:      152
+ABC RESULTS:          output signals:       56
+Removing temp directory.
+Removing global temp directory.
+
+4.25. Executing OPT pass (performing simple optimizations).
+
+4.25.1. Executing OPT_EXPR pass (perform const folding).
+Optimizing module top.
+
+4.25.2. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\top'.
+Computing hashes of 237 cells of `\top'.
+Finding duplicate cells in `\top'.
+Removed a total of 0 cells.
+
+4.25.3. Executing OPT_DFF pass (perform DFF optimizations).
+
+4.25.4. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \top..
+Removed 0 unused cells and 215 unused wires.
+<suppressed ~3 debug messages>
+
+4.25.5. Finished fast OPT passes.
+
+4.26. Executing HIERARCHY pass (managing design hierarchy).
+Attribute `top' found on module `top'. Setting top module to top.
+
+4.26.1. Analyzing design hierarchy..
+Top module:  \top
+
+4.26.2. Analyzing design hierarchy..
+Top module:  \top
+Removed 0 unused modules.
+
+4.27. Printing statistics.
+
+=== top ===
+
+        +----------Local Count, excluding submodules.
+        | 
+      357 wires
+     1477 wire bits
+      296 public wires
+     1416 public wire bits
+        8 ports
+       97 port bits
+      237 cells
+       38   $_AND_
+      110   $_DFF_P_
+       64   $_MUX_
+        4   $_ORNOT_
+        8   $_SDFF_PN0_
+       11   $_XNOR_
+        1   $scopeinfo
+        1   \$__RAMGEM_SYNC_
+
+4.28. Executing CHECK pass (checking for obvious problems).
+Checking module top...
+Found and reported 0 problems.
+
+5. Executing DFFLIBMAP pass (mapping DFF cells to sequential cells from liberty file).
+  cell DFF (noninv, pins=3, area=100.00) is a direct match for cell type $_DFF_P_.
+  cell DFFSR (noninv, pins=5, area=176.00) is a direct match for cell type $_DFFSR_PNN_.
+  final dff cell mappings:
+    unmapped dff cell: $_DFF_N_
+    \DFF _DFF_P_ (.CLK( C), .D( D), .Q( Q));
+    unmapped dff cell: $_DFF_NN0_
+    unmapped dff cell: $_DFF_NN1_
+    unmapped dff cell: $_DFF_NP0_
+    unmapped dff cell: $_DFF_NP1_
+    unmapped dff cell: $_DFF_PN0_
+    unmapped dff cell: $_DFF_PN1_
+    unmapped dff cell: $_DFF_PP0_
+    unmapped dff cell: $_DFF_PP1_
+    unmapped dff cell: $_DFFE_NN_
+    unmapped dff cell: $_DFFE_NP_
+    unmapped dff cell: $_DFFE_PN_
+    unmapped dff cell: $_DFFE_PP_
+    unmapped dff cell: $_DFFSR_NNN_
+    unmapped dff cell: $_DFFSR_NNP_
+    unmapped dff cell: $_DFFSR_NPN_
+    unmapped dff cell: $_DFFSR_NPP_
+    \DFFSR _DFFSR_PNN_ (.CLK( C), .D( D), .Q( Q), .R( R), .S( S));
+    unmapped dff cell: $_DFFSR_PNP_
+    unmapped dff cell: $_DFFSR_PPN_
+    unmapped dff cell: $_DFFSR_PPP_
+
+5.1. Executing DFFLEGALIZE pass (convert FFs to types supported by the target).
+Mapping DFF cells in module `\top':
+  mapped 118 $_DFF_P_ cells to \DFF cells.
+
+6. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \top..
+Removed 1 unused cells and 253 unused wires.
+<suppressed ~254 debug messages>
+
+7. Executing ABC pass (technology mapping using ABC).
+
+7.1. Extracting gate netlist of module `\top' to `<abc-temp-dir>/input.blif'..
+
+7.1.1. Executed ABC.
+Extracted 125 gates and 286 wires to a netlist network with 160 inputs and 64 outputs.
+Running ABC script: <abc-temp-dir>/abc.script
+ABC: UC Berkeley, ABC 1.01 (compiled Aug 26 2026 13:07:29)
+ABC: abc 01> empty
+ABC: abc 01> source <abc-temp-dir>/abc.script
+ABC: + read_blif <abc-temp-dir>/input.blif 
+ABC: + read_scl /tmp/yosys-liberty-scl-cache/yosys_merged_f2876dc8.scl 
+ABC: + strash 
+ABC: + &get -n 
+ABC: + &fraig -x 
+ABC: + &put 
+ABC: + scorr 
+ABC: Warning: The network is combinational (run "fraig" or "fraig_sweep").
+ABC: + dc2 
+ABC: + dretime 
+ABC: + strash 
+ABC: + &get -n 
+ABC: + &dch -f 
+ABC: + &nf 
+ABC: + &put 
+ABC: + write_blif <abc-temp-dir>/output.blif 
+ABC: 
+ABC: YOSYS_ABC_DONE 
+
+7.1.2. Re-integrating ABC results.
+ABC RESULTS:         AND2_00_0 cells:      111
+ABC RESULTS:         AND2_01_0 cells:       82
+ABC RESULTS:         AND2_11_0 cells:       12
+ABC RESULTS:         AND2_11_1 cells:       70
+ABC RESULTS:        internal signals:       62
+ABC RESULTS:           input signals:      160
+ABC RESULTS:          output signals:       64
+Removing temp directory.
+Removing global temp directory.
+
+8. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \top..
+Removed 0 unused cells and 285 unused wires.
+<suppressed ~1 debug messages>
+
+9. Executing TECHMAP pass (map to technology primitives).
+
+9.1. Executing Verilog-2005 frontend: /home/pratham_sharma/.local/bin/../share/yosys/techmap.v
+Parsing Verilog input from `/home/pratham_sharma/.local/bin/../share/yosys/techmap.v' to AST representation.
+Generating RTLIL representation for module `\_90_simplemap_bool_ops'.
+Generating RTLIL representation for module `\_90_simplemap_reduce_ops'.
+Generating RTLIL representation for module `\_90_simplemap_logic_ops'.
+Generating RTLIL representation for module `\_90_simplemap_compare_ops'.
+Generating RTLIL representation for module `\_90_simplemap_various'.
+Generating RTLIL representation for module `\_90_simplemap_registers'.
+Generating RTLIL representation for module `\_90_shift_ops_shr_shl_sshl_sshr'.
+Generating RTLIL representation for module `\_90_shift_shiftx'.
+Generating RTLIL representation for module `\_90_fa'.
+Generating RTLIL representation for module `\_90_lcu_brent_kung'.
+Generating RTLIL representation for module `\_90_alu'.
+Generating RTLIL representation for module `\_90_macc'.
+Generating RTLIL representation for module `\_90_alumacc'.
+Generating RTLIL representation for module `$__div_mod_u'.
+Generating RTLIL representation for module `$__div_mod_trunc'.
+Generating RTLIL representation for module `\_90_div'.
+Generating RTLIL representation for module `\_90_mod'.
+Generating RTLIL representation for module `$__div_mod_floor'.
+Generating RTLIL representation for module `\_90_divfloor'.
+Generating RTLIL representation for module `\_90_modfloor'.
+Generating RTLIL representation for module `\_90_pow'.
+Generating RTLIL representation for module `\_90_demux'.
+Generating RTLIL representation for module `\_90_lut'.
+Generating RTLIL representation for module `$connect'.
+Generating RTLIL representation for module `$input_port'.
+Successfully finished Verilog frontend.
+
+9.2. Continuing TECHMAP pass.
+No more expansions possible.
+<suppressed ~77 debug messages>
+
+10. Executing ABC pass (technology mapping using ABC).
+
+10.1. Extracting gate netlist of module `\top' to `<abc-temp-dir>/input.blif'..
+ABC: using cached merged SCL: /tmp/yosys-liberty-scl-cache/yosys_merged_f2876dc8.scl (1 files)
+
+10.1.1. Executed ABC.
+Extracted 0 gates and 0 wires to a netlist network with 0 inputs and 0 outputs.
+Don't call ABC as there is nothing to map.
+Removing temp directory.
+Removing global temp directory.
+
+11. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \top..
+
+12. Executing Verilog backend.
+
+12.1. Executing BMUXMAP pass.
+
+12.2. Executing DEMUXMAP pass.
+Dumping module `\top'.
+
+End of script. Logfile hash: 0ceb3cbf70, time: 0.27s, user: 0.13s, system: 0.01s, MEM: 27.82 MB peak
+Yosys 0.68 (git sha1 38e001a6f, Release, GNU /usr/bin/c++ 13.3.0)
+Time spent: 56% 3x abc (0 sec), 12% 6x read_verilog (0 sec), ...

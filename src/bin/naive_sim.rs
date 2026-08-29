@@ -207,6 +207,13 @@ fn main() {
 
     let mut vcd2inp = HashMap::new();
     let mut inp_port_given = HashSet::new();
+    // Full declared bit width of each VCD code, keyed by its numeric id.
+    // Needed because VCD writers (e.g. Icarus Verilog) truncate `b...`
+    // value changes to only the significant bits, dropping leading
+    // (MSB) zeros -- so a later value's bit count can be shorter than
+    // the signal's declared width, and must be right-aligned (treated
+    // as zero-extended on the MSB side) rather than assumed full-width.
+    let mut code_width: HashMap<u64, usize> = HashMap::new();
 
     let mut match_one_input = |var: &Var, i: Option<isize>, vcd_pos: usize| {
         let key = (VCDHier::empty(), var.reference.as_str(), i);
@@ -220,6 +227,7 @@ fn main() {
     };
     for scope_item in &top_scope.children[..] {
         if let ScopeItem::Var(var) = scope_item {
+            code_width.insert(var.code.0, var.size as usize);
             use vcd_ng::ReferenceIndex::*;
             match var.index {
                 None => match var.size {
@@ -527,7 +535,21 @@ fn main() {
                 }
             },
             FastFlowToken::Value(FFValueChange { id, bits }) => {
-                for (pos, &b) in bits.iter().enumerate() {
+                // A `b...` value may carry fewer characters than the
+                // signal's declared width: VCD writers drop leading
+                // (MSB) zero bits. Right-align (LSB-anchor) the received
+                // bits against the full width, and explicitly zero the
+                // omitted leading (MSB) positions -- the value change
+                // reasserts the *entire* new value, not just a suffix.
+                let width = code_width.get(&id.0).copied().unwrap_or(bits.len());
+                let offset = width.saturating_sub(bits.len());
+                for pos in 0..offset {
+                    if let Some(&pin) = vcd2inp.get(&(id.0, pos)) {
+                        circ_state[pin] = 0;
+                    }
+                }
+                for (local_pos, &b) in bits.iter().enumerate() {
+                    let pos = offset + local_pos;
                     if let Some(&pin) = vcd2inp.get(
                         &(id.0, pos)
                     ) {

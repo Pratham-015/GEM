@@ -1,0 +1,68 @@
+/* Gate-level structural Verilog netlist with standard AIG cells and intact macros */
+module mixed_top (
+    clk, ce, use_pre, state, a, b, c, d,
+    carry_s, carry_di, carry_ci,
+    srl_addr, srl_d,
+    dsp_p, carry_o, carry_co, srl_q, srl_q31, status_flag
+);
+
+input clk;
+input ce;
+input use_pre;
+input [1:0] state;
+input [26:0] a;
+input [17:0] b;
+input [47:0] c;
+input [26:0] d;
+input [3:0] carry_s;
+input [3:0] carry_di;
+input carry_ci;
+input [4:0] srl_addr;
+input srl_d;
+
+output [47:0] dsp_p;
+output [3:0] carry_o;
+output [3:0] carry_co;
+output srl_q;
+output srl_q31;
+output status_flag;
+
+wire [7:0] counter_q;
+wire [7:0] counter_d;
+wire n_status;
+
+DSP48E2 dsp_u0 (
+    .CLK(clk),
+    .USE_PRE(use_pre),
+    .STATE(state),
+    .A(a),
+    .B(b),
+    .C(c),
+    .D(d),
+    .P(dsp_p)
+);
+
+CARRY4 carry_u0 (
+    .CO(carry_co),
+    .O(carry_o),
+    .CI(carry_ci),
+    .CYINIT(1'b0),
+    .DI(carry_di),
+    .S(carry_s)
+);
+
+SRLC32E srl_u0 (
+    .CLK(clk),
+    .CE(ce),
+    .D(srl_d),
+    .A(srl_addr),
+    .Q(srl_q),
+    .Q31(srl_q31)
+);
+
+DFF dff_0 (.CLK(clk), .D(counter_d[0]), .Q(counter_q[0]));
+INV inv_0 (.A(counter_q[0]), .Y(counter_d[0]));
+AND2_00_0 and_status (.A(counter_q[0]), .B(srl_q), .Y(status_flag));
+
+endmodule
+

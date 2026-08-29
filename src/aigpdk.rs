@@ -73,7 +73,7 @@ impl LeafPinProvider for AIGPDKLeafPins {
             // DriverType::SRAM above, staging.rs/flatten.rs storage
             // layout, pe.rs dispatch) is NOT implemented yet; see the
             // module doc for details.
-            ("CARRY4", "CI" | "CYINIT", None) => Direction::I,
+            ("CARRY4", "CI" | "CIN" | "CYINIT", None) => Direction::I,
             ("CARRY4", "DI" | "S", Some(0..=3)) => Direction::I,
             ("CARRY4", "CO" | "O", Some(0..=3)) => Direction::O,
 
@@ -117,7 +117,7 @@ impl LeafPinProvider for AIGPDKLeafPins {
              "PORT_W_WR_EN" | "PORT_W_WR_DATA" | "PORT_R_RD_DATA")
                 => Some(SVerilogRange(31, 0)),
 
-            ("CARRY4", "CI" | "CYINIT") => None,
+            ("CARRY4", "CI" | "CIN" | "CYINIT") => None,
             ("CARRY4", "DI" | "S" | "CO" | "O") => Some(SVerilogRange(3, 0)),
 
             ("DSP48E2", "CLK" | "USE_PRE") => None,

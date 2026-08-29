@@ -1,0 +1,32 @@
+# Macro-preserving logic synthesis via Yosys.
+# Ingests SystemVerilog design and intercepts explicitly named DSP48E2,
+# CARRY4, and SRLC32E primitives, preventing synth, techmap, and abc passes
+# from flattening them into 1-bit boolean And-Inverter Graph (AIG) gates.
+#
+# Usage:
+#   yosys scripts/yosys_step2_logicsynth_macropreserve.ys
+#
+# (If you exited Yosys after Step 1, uncomment the read-back lines.)
+
+# Read design and blackbox definitions
+# read_verilog -sv memory_mapped.v
+read_verilog -lib aigpdk/aigpdk_macros_bb.v
+# hierarchy -check -top TOP_MODULE
+
+# Synthesis with macro preservation
+synth -flatten
+delete t:$print
+
+# Standard cell mapping for fine-grained logic
+dfflibmap -liberty aigpdk/aigpdk_nomem.lib
+opt_clean -purge
+abc -liberty aigpdk/aigpdk_nomem.lib
+opt_clean -purge
+techmap
+abc -liberty aigpdk/aigpdk_nomem.lib
+opt_clean -purge
+
+# Write out structural Verilog netlist containing AIG gates + intact macros
+write_verilog -noexpr -nodec gatelevel.gv
+stat
+

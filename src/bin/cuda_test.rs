@@ -487,6 +487,13 @@ fn main() {
 
     let mut vcd2inp = HashMap::new();
     let mut inp_port_given = HashSet::new();
+    // Full declared bit width of each VCD code, keyed by its numeric id.
+    // Needed because VCD writers (e.g. Icarus Verilog) truncate `b...`
+    // value changes to only the significant bits, dropping leading
+    // (MSB) zeros -- so a later value's bit count can be shorter than
+    // the signal's declared width, and must be right-aligned (treated
+    // as zero-extended on the MSB side) rather than assumed full-width.
+    let mut code_width: HashMap<u64, usize> = HashMap::new();
 
     let mut match_one_input = |var: &Var, i: Option<isize>, vcd_pos: usize| {
         let key = (VCDHier::empty(), var.reference.as_str(), i);
@@ -500,6 +507,7 @@ fn main() {
     };
     for scope_item in &top_scope.children[..] {
         if let ScopeItem::Var(var) = scope_item {
+            code_width.insert(var.code.0, var.size as usize);
             use vcd_ng::ReferenceIndex::*;
             match var.index {
                 None => match var.size {
@@ -632,37 +640,53 @@ fn main() {
                 }
             },
             FastFlowToken::Value(FFValueChange { id, bits }) => {
-                for (pos, b) in bits.iter().enumerate() {
-                    if let Some(&pin) = vcd2inp.get(
-                        &(id.0, pos)
-                    ) {
-                        let aigpin = aig.pin2aigpin_iv[pin];
-                        assert_eq!(aigpin & 1, 0);
-                        let aigpin = aigpin >> 1;
-                        let pos = match script.input_map.get(&aigpin).copied() {
-                            Some(pos) => pos,
-                            None => {
-                                panic!("input pin {:?} (netlist id {}, aigpin {}) not found in output map.", netlistdb.pinnames[pin].dbg_fmt_pin(), pin, aigpin);
+                // A `b...` value may carry fewer characters than the
+                // signal's declared width: VCD writers drop leading
+                // (MSB) zero bits. Right-align (LSB-anchor) the received
+                // bits against the full width, and explicitly process
+                // the omitted leading (MSB) positions as `0` -- the
+                // value change reasserts the *entire* new value, not
+                // just a suffix.
+                let width = code_width.get(&id.0).copied().unwrap_or(bits.len());
+                let offset = width.saturating_sub(bits.len());
+                macro_rules! process_bit {
+                    ($vcd_pos:expr, $b:expr) => {
+                        if let Some(&pin) = vcd2inp.get(
+                            &(id.0, $vcd_pos)
+                        ) {
+                            let aigpin = aig.pin2aigpin_iv[pin];
+                            assert_eq!(aigpin & 1, 0);
+                            let aigpin = aigpin >> 1;
+                            let pos = match script.input_map.get(&aigpin).copied() {
+                                Some(pos) => pos,
+                                None => {
+                                    panic!("input pin {:?} (netlist id {}, aigpin {}) not found in output map.", netlistdb.pinnames[pin].dbg_fmt_pin(), pin, aigpin);
+                                }
+                            };
+                            let old_value = state[(pos >> 5) as usize] >> (pos & 31) & 1;
+                            if old_value != match $b { b'1' => 1, _ => 0 } {
+                                if let Some((pe, ne)) = aig.clock_pin2aigpins.get(&pin).copied() {
+                                    if pe != usize::MAX && old_value == 0 {
+                                        last_vcd_time_active = true;
+                                        let p = *script.input_map.get(&pe).unwrap();
+                                        state[p as usize >> 5] |= 1 << (p & 31);
+                                    }
+                                    if ne != usize::MAX && old_value == 1 {
+                                        last_vcd_time_active = true;
+                                        let p = *script.input_map.get(&ne).unwrap();
+                                        state[p as usize >> 5] |= 1 << (p & 31);
+                                    }
+                                }
+                                delayed_bit_changes.insert(pos);
                             }
-                        };
-                        let old_value = state[(pos >> 5) as usize] >> (pos & 31) & 1;
-                        if old_value == match b { b'1' => 1, _ => 0 } {
-                            continue
                         }
-                        if let Some((pe, ne)) = aig.clock_pin2aigpins.get(&pin).copied() {
-                            if pe != usize::MAX && old_value == 0 {
-                                last_vcd_time_active = true;
-                                let p = *script.input_map.get(&pe).unwrap();
-                                state[p as usize >> 5] |= 1 << (p & 31);
-                            }
-                            if ne != usize::MAX && old_value == 1 {
-                                last_vcd_time_active = true;
-                                let p = *script.input_map.get(&ne).unwrap();
-                                state[p as usize >> 5] |= 1 << (p & 31);
-                            }
-                        }
-                        delayed_bit_changes.insert(pos);
                     }
+                }
+                for vcd_pos in 0..offset {
+                    process_bit!(vcd_pos, b'0');
+                }
+                for (local_pos, &b) in bits.iter().enumerate() {
+                    process_bit!(offset + local_pos, b);
                 }
             }
         }
