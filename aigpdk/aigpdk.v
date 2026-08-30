@@ -18,7 +18,7 @@ output Y ;
 
 endmodule // AND2_01_0
 
-module AND2_10_0 (A, B, Y);c
+module AND2_10_0 (A, B, Y);
 input  A ;
 input  B ;
 output Y ;
