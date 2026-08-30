@@ -15,20 +15,6 @@ module half_adder(A, B, Sum, Carry);
   (* src = "verif/rtl/test_designs/half_adder.sv:6.12-6.17" *)
   output Carry;
   wire Carry;
-  wire _0_;
-  AND2_00_0 _1_ (
-    .A(A),
-    .B(B),
-    .Y(Carry)
-  );
-  AND2_11_1 _2_ (
-    .A(A),
-    .B(B),
-    .Y(_0_)
-  );
-  AND2_10_0 _3_ (
-    .A(Carry),
-    .B(_0_),
-    .Y(Sum)
-  );
+  assign Carry = A & (* src = "verif/rtl/test_designs/half_adder.sv:10.20-10.25" *) B;
+  assign Sum = A ^ (* src = "verif/rtl/test_designs/half_adder.sv:9.20-9.25" *) B;
 endmodule

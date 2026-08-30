@@ -1,0 +1,31 @@
+# ============================================================
+# FLOW A (BASELINE): Flatten everything including CARRY4.
+# CARRY4 is replaced with a plain behavioral inline model so
+# Yosys/ABC can see its logic and reduce it to AIG cells.
+# ============================================================
+
+# ---- Read a behavioral (whitebox) CARRY4 model so synth can see through it ----
+read_verilog test1/carry4_behavioral.v
+
+# ---- Read the test circuit ----
+read_verilog test1/test_circuit.v
+
+# ---- Elaborate ----
+hierarchy -check -top test_circuit
+
+# ---- Flatten all logic including CARRY4 ----
+synth -flatten
+delete t:$print
+
+# ---- Map to AIG PDK ----
+dfflibmap -liberty aigpdk/aigpdk_nomem.lib
+opt_clean -purge
+abc -liberty aigpdk/aigpdk_nomem.lib
+opt_clean -purge
+techmap
+abc -liberty aigpdk/aigpdk_nomem.lib
+opt_clean -purge
+
+# ---- Output ----
+write_verilog -noexpr -nodec test1/gatelevel_baseline.gv
+stat

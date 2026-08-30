@@ -6,9 +6,11 @@ use crate::aig::{AIG, EndpointGroup, DriverType};
 use crate::aigpdk::AIGPDK_SRAM_ADDR_WIDTH;
 use crate::pe::{Partition, BOOMERANG_NUM_STAGES};
 use crate::staging::StagedAIG;
+use crate::macro_layout::{MacroInstance, MacroStorageLayout};
 use indexmap::IndexMap;
 use std::collections::BTreeMap;
 use ulib::UVec;
+
 
 pub const NUM_THREADS_V1: usize = 1 << (BOOMERANG_NUM_STAGES - 5);
 
@@ -105,6 +107,11 @@ pub struct FlattenedScriptV1 {
     /// (for debug purpose) the relation between major stage, block and
     /// part indices as given in construction.
     pub stages_blocks_parts: Vec<Vec<Vec<usize>>>,
+    /// 64-bit aligned VRAM layout for all word-level hardware macros.
+    ///
+    /// Built from the AIG's macro instances during script construction
+    /// and passed to the CUDA kernel as `macro_state_data`/`macro_io_data`.
+    pub macro_storage: MacroStorageLayout,
 }
 
 fn map_global_read_to_rounds(
@@ -273,8 +280,15 @@ impl FlatteningPart {
                             dff.en_iv << 1 | (dff.d_iv & 1),
                             None);
                 },
+                EndpointGroup::Macro(m) => {
+                    for &pin in &m.input_pins {
+                        comb_outputs_activations.entry(pin)
+                            .or_default().insert(2, None);
+                    }
+                }
             }
         }
+
         self.num_duplicate_writeouts = ((
             comb_outputs_activations.values()
                 .map(|v| v.len() - 1).sum::<usize>()
@@ -456,8 +470,17 @@ impl FlatteningPart {
                     output_map.insert(dff.d_iv, pos);
                     input_map.insert(dff.q, pos);
                 },
+                EndpointGroup::Macro(m) => {
+                    for &pin in &m.input_pins {
+                        let pos = self.state_start * 32 + self.get_or_place_output_with_activation(
+                            pin << 1, 1
+                        ) as u32;
+                        output_map.insert(pin << 1, pos);
+                    }
+                }
             }
         }
+
         assert_eq!(cur_sram_id, self.num_srams);
         assert_eq!((self.cnt_placed_duplicate_permute + 31) / 32, self.num_duplicate_writeouts);
 
@@ -831,6 +854,9 @@ fn build_flattened_script_v1(
     clilog::info!("Built script for {} blocks, reg/io state size {}, sram size {}, script size {}",
                   num_blocks, sum_state_start, sum_srams_start, blocks_data.len());
 
+    let macro_instances: Vec<MacroInstance> = aig.macros.values().cloned().collect();
+    let macro_storage = MacroStorageLayout::build(macro_instances);
+
     FlattenedScriptV1 {
         num_blocks,
         num_major_stages,
@@ -842,8 +868,10 @@ fn build_flattened_script_v1(
         input_map,
         output_map,
         stages_blocks_parts,
+        macro_storage,
     }
 }
+
 
 impl FlattenedScriptV1 {
     /// build a flattened script.

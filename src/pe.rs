@@ -533,8 +533,14 @@ impl Partition {
                 EndpointGroup::StagedIOPin(pin) => {
                     comb_outputs_activations.entry(pin).or_default().insert(2);
                 },
+                EndpointGroup::Macro(m) => {
+                    for &pin in &m.input_pins {
+                        comb_outputs_activations.entry(pin).or_default().insert(2);
+                    }
+                }
             }
         }
+
         let num_output_dups = comb_outputs_activations.iter()
             .map(|(_, ckens)| ckens.len() - 1)
             .sum::<usize>();

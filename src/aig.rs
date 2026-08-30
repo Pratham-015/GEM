@@ -7,6 +7,8 @@
 use netlistdb::{NetlistDB, GeneralPinName, Direction};
 use indexmap::{IndexMap, IndexSet};
 use crate::aigpdk::AIGPDK_SRAM_ADDR_WIDTH;
+use crate::macro_layout::{MacroInstance, MacroKind};
+
 
 /// A DFF.
 #[derive(Debug, Default, Clone)]
@@ -45,13 +47,18 @@ pub struct RAMBlock {
 /// For RAMBlocks, the task is to simulate a sync SRAM.
 /// A StagedIOPin indicates a temporary live pin between different
 /// major stages but reside in the same simulated cycle.
+/// A Macro indicates a word-level hardware macro (DSP48E2, CARRYCHAIN,
+/// SRLC32E) that is evaluated natively on the GPU without flattening
+/// into 1-bit AIG gates.
 #[derive(Debug, Copy, Clone)]
 pub enum EndpointGroup<'i> {
     PrimaryOutput(usize),
     DFF(&'i DFF),
     RAMBlock(&'i RAMBlock),
     StagedIOPin(usize),
+    Macro(&'i MacroInstance),
 }
+
 
 impl EndpointGroup<'_> {
     /// Enumerate all related aigpin inputs for this endpoint group.
@@ -79,9 +86,24 @@ impl EndpointGroup<'_> {
                 }
             },
             Self::StagedIOPin(idx) => f(idx),
+            Self::Macro(m) => {
+                // All boolean input pins (word-level AIG pins driving 64-bit
+                // inputs of this macro) are enumerated as combinational inputs
+                // to the partition scheduler so the Boomerang hierarchy can
+                // realise them.  The output pins are primary inputs to the
+                // *next* cycle (for SEQ macros) or to downstream logic in the
+                // same cycle (for COMB macros).
+                for &pin in &m.input_pins {
+                    f(pin);
+                }
+                if let Some(clk) = m.clock_pin {
+                    f(clk >> 1);
+                }
+            }
         }
     }
 }
+
 
 /// The driver type of an AIG pin.
 #[derive(Debug, Clone)]
@@ -101,6 +123,12 @@ pub enum DriverType {
     DFF(usize),
     /// Driven by a 13-bit by 32-bit RAM block (with its index)
     SRAM(usize),
+    /// Driven by a word-level hardware macro (with cell_id and output port index).
+    ///
+    /// From the AIG's perspective this is identical to a DFF output: a value
+    /// that is available at the start of the cycle (for SEQ macros) or that
+    /// is produced at a mid-cycle evaluation barrier (for COMB macros).
+    Macro(usize, usize),
     /// Tie0: tied to zero. Only the 0-th aig pin is allowed to have this.
     Tie0
 }
@@ -140,11 +168,19 @@ pub struct AIG {
     pub dffs: IndexMap<usize, DFF>,
     /// The SRAMs, indexed by cell id
     pub srams: IndexMap<usize, RAMBlock>,
+    /// Word-level hardware macros (DSP48E2, CARRYCHAIN, SRLC32E), indexed by cell id.
+    ///
+    /// These are scheduled as opaque word-level nodes: their outputs are
+    /// registered as AIG pins driven by DriverType::Macro, and the GPU
+    /// kernel evaluates them via the gem_macros.cuh device functions.
+    pub macros: IndexMap<usize, MacroInstance>,
     /// The fanout CSR start array.
     pub fanouts_start: Vec<usize>,
     /// The fanout CSR array.
     pub fanouts: Vec<usize>,
 }
+
+
 
 impl AIG {
     fn add_aigpin(&mut self, driver: DriverType) -> usize {
@@ -372,6 +408,53 @@ impl AIG {
             let sram = self.srams.entry(cellid).or_default();
             sram.port_r_rd_data[netlistdb.pinnames[pinid].2.unwrap() as usize] = o;
         }
+        else if matches!(celltype, "CARRY4" | "DSP48E2" | "SRLC32E") {
+            // Word-level hardware macro: register each output port as an AIG
+            // pin driven by DriverType::Macro(cell_id, port_index).
+            //
+            // We only handle output pins here (the DFS visits input pins as
+            // well, but input pin p2a mappings are set up during the
+            // post-processing pass below together with DFF/SRAM).  For now
+            // we only need to stamp an AIG pin for the output so that
+            // downstream cells that consume the macro's output can look it up
+            // via pin2aigpin_iv.
+            let pin_name = netlistdb.pinnames[pinid].1.as_str();
+            let is_output = matches!(
+                (celltype, pin_name),
+                ("CARRY4",  "O" | "CO") |
+                ("DSP48E2", "P")         |
+                ("SRLC32E", "Q" | "Q31")
+            );
+            if is_output {
+                // Use pin bit-index as port index for DriverType::Macro.
+                let port_idx = netlistdb.pinnames[pinid].2
+                    .map(|i| i as usize).unwrap_or(0);
+                let aigpin = self.add_aigpin(DriverType::Macro(cellid, port_idx));
+                self.pin2aigpin_iv[pinid] = aigpin << 1;
+                // Register the macro instance entry (output_pins populated in post-pass).
+                self.macros.entry(cellid).or_insert_with(|| {
+                    let kind = match celltype {
+                        "CARRY4"  => MacroKind::CarryChain,
+                        "DSP48E2" => MacroKind::DSP48E2,
+                        "SRLC32E" => MacroKind::SRLC32E,
+                        _ => unreachable!()
+                    };
+                    MacroInstance {
+                        kind,
+                        instance_id: 0,
+                        cell_id: cellid,
+                        input_pins: vec![],
+                        output_pins: vec![],
+                        clock_pin: None,
+                        state_offset: None,
+                        io_offset: 0,
+                    }
+                });
+                let m = self.macros.get_mut(&cellid).unwrap();
+                m.output_pins.push(aigpin);
+            }
+        }
+
         else if celltype == "CKLNQD" {
             let mut prev_cp = usize::MAX;
             let mut prev_en = usize::MAX;
@@ -448,7 +531,7 @@ impl AIG {
 
         for cellid in 1..netlistdb.num_cells {
             if !matches!(netlistdb.celltypes[cellid].as_str(),
-                         "DFF" | "DFFSR" | "$__RAMGEM_SYNC_") {
+                         "DFF" | "DFFSR" | "$__RAMGEM_SYNC_" | "DSP48E2" | "SRLC32E") {
                 continue
             }
             for pinid in netlistdb.cell2pin.iter_set(cellid) {
@@ -470,6 +553,7 @@ impl AIG {
                 }
             }
         }
+
         for (&clk, &(flagr, flagf)) in &aig.clock_pin2aigpins {
             clilog::info!(
                 "inferred clock port {} ({})",
@@ -565,7 +649,60 @@ impl AIG {
                 }
                 *aig.srams.get_mut(&cellid).unwrap() = sram;
             }
+            else if matches!(netlistdb.celltypes[cellid].as_str(),
+                             "CARRY4" | "DSP48E2" | "SRLC32E")
+            {
+                let celltype = netlistdb.celltypes[cellid].as_str();
+                let mut clock_pin = None;
+                let mut input_pins_map: std::collections::BTreeMap<String, usize> = Default::default();
+
+                for pinid in netlistdb.cell2pin.iter_set(cellid) {
+                    let pin_name = netlistdb.pinnames[pinid].1.as_str();
+                    let pin_bit  = netlistdb.pinnames[pinid].2;
+                    let pin_iv   = aig.pin2aigpin_iv[pinid];
+                    let is_output = matches!(
+                        (celltype, pin_name),
+                        ("CARRY4",  "O" | "CO") |
+                        ("DSP48E2", "P")         |
+                        ("SRLC32E", "Q" | "Q31")
+                    );
+                    if is_output { continue }
+                    match pin_name {
+                        "CLK" => {
+                            let clk_iv = aig.trace_clock_pin(netlistdb, pinid, false, false).unwrap();
+                            clock_pin = Some(clk_iv >> 1);
+                        }
+                        _ => {
+                            let key = format!("{}{}", pin_name,
+                                pin_bit.map(|b| format!("{:04}", b)).unwrap_or_default());
+                            input_pins_map.insert(key, pin_iv >> 1);
+                        }
+                    }
+                }
+
+                let m = aig.macros.entry(cellid).or_insert_with(|| MacroInstance {
+                    kind: match celltype {
+                        "CARRY4"  => MacroKind::CarryChain,
+                        "DSP48E2" => MacroKind::DSP48E2,
+                        "SRLC32E" => MacroKind::SRLC32E,
+                        _ => unreachable!()
+                    },
+                    instance_id: 0,
+                    cell_id: cellid,
+                    input_pins: vec![],
+                    output_pins: vec![],
+                    clock_pin: None,
+                    state_offset: None,
+                    io_offset: 0,
+                });
+                m.clock_pin = clock_pin;
+                m.input_pins = input_pins_map.into_values().collect();
+
+                clilog::info!("Registered macro: {:?} cell_id={} inputs={} outputs={}",
+                    m.kind, m.cell_id, m.input_pins.len(), m.output_pins.len());
+            }
         }
+
 
         aig.fanouts_start = vec![0; aig.num_aigpins + 2];
         for (_i, driver) in aig.drivers.iter().enumerate() {
@@ -638,7 +775,7 @@ impl AIG {
     }
 
     pub fn num_endpoint_groups(&self) -> usize {
-        self.primary_outputs.len() + self.dffs.len() + self.srams.len()
+        self.primary_outputs.len() + self.dffs.len() + self.srams.len() + self.macros.len()
     }
 
     pub fn get_endpoint_group(&self, endpt_id: usize) -> EndpointGroup {
@@ -648,8 +785,12 @@ impl AIG {
         else if endpt_id < self.primary_outputs.len() + self.dffs.len() {
             EndpointGroup::DFF(&self.dffs[endpt_id - self.primary_outputs.len()])
         }
-        else {
+        else if endpt_id < self.primary_outputs.len() + self.dffs.len() + self.srams.len() {
             EndpointGroup::RAMBlock(&self.srams[endpt_id - self.primary_outputs.len() - self.dffs.len()])
+        }
+        else {
+            EndpointGroup::Macro(&self.macros[endpt_id - self.primary_outputs.len() - self.dffs.len() - self.srams.len()])
         }
     }
 }
+

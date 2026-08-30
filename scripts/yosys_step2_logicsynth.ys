@@ -16,14 +16,15 @@
 synth -flatten
 delete t:$print
 
-# change path/to/aigpdk_nomem.lib to a correct path; same for other commands
-dfflibmap -liberty path/to/aigpdk_nomem.lib
+# Standard cell mapping using AIG PDK
+dfflibmap -liberty aigpdk/aigpdk_nomem.lib
 opt_clean -purge
-abc -liberty path/to/aigpdk_nomem.lib
+abc -liberty aigpdk/aigpdk_nomem.lib
 opt_clean -purge
 techmap
-abc -liberty path/to/aigpdk_nomem.lib
+abc -liberty aigpdk/aigpdk_nomem.lib
 opt_clean -purge
+
 
 write_verilog gatelevel.gv
 stat

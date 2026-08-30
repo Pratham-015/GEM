@@ -1,0 +1,31 @@
+# ============================================================
+# FLOW B (GEM Deliverable A): Macro-preserving synthesis.
+# CARRY4 is blackboxed with (* blackbox, keep *).
+# synth/techmap/abc never see its internals; it survives intact.
+# ============================================================
+
+# ---- Read blackbox definitions FIRST ----
+read_verilog -lib aigpdk/aigpdk_macros_bb.v
+
+# ---- Read the test circuit ----
+read_verilog test1/test_circuit.v
+
+# ---- Elaborate ----
+hierarchy -check -top test_circuit
+
+# ---- Synthesise surrounding logic only; macro is opaque ----
+synth -flatten
+delete t:$print
+
+# ---- Map surrounding AIG logic to PDK cells ----
+dfflibmap -liberty aigpdk/aigpdk_nomem.lib
+opt_clean -purge
+abc -liberty aigpdk/aigpdk_nomem.lib
+opt_clean -purge
+techmap
+abc -liberty aigpdk/aigpdk_nomem.lib
+opt_clean -purge
+
+# ---- Output: should contain CARRY4 cell intact ----
+write_verilog -noexpr -nodec test1/gatelevel_macropreserve.gv
+stat

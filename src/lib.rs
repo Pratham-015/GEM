@@ -11,3 +11,6 @@ pub mod repcut;
 pub mod pe;
 
 pub mod flatten;
+
+pub mod macro_layout;
+
