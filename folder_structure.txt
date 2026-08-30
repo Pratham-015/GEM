@@ -163,6 +163,14 @@
 │   └── staging.rs
 ├── synth
 │   └── memlib_yosys.txt
+├── test1
+│   ├── carry4_behavioral.v
+│   ├── compare_flows.py
+│   ├── gatelevel_baseline.gv
+│   ├── gatelevel_macropreserve.gv
+│   ├── synth_baseline_flatten.ys
+│   ├── synth_macropreserve.ys
+│   └── test_circuit.v
 ├── tests
 │   ├── half_adder_aig_test.rs
 │   ├── macro_memory_layout_test.rs
@@ -226,4 +234,4 @@
         ├── tb_srlc32e_unisim.v
         └── tb_stimulus.v
 
-46 directories, 181 files
+47 directories, 188 files
