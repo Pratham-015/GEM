@@ -4,6 +4,8 @@
 ├── .gitattributes
 ├── .gitignore
 ├── .gitmodules
+├── .vscode
+│   └── settings.json
 ├── Cargo.lock
 ├── Cargo.toml
 ├── LICENSE
@@ -137,8 +139,6 @@
 │           └── write.rs
 ├── folder_structure.txt
 ├── scripts
-│   ├── half_adder_step1_memsynth.ys
-│   ├── half_adder_step2_logicsynth.ys
 │   ├── macro_intent_mapper.py
 │   ├── yosys_step1_memsynth.ys
 │   ├── yosys_step2_logicsynth.ys
@@ -163,7 +163,15 @@
 │   └── staging.rs
 ├── synth
 │   └── memlib_yosys.txt
+├── test0
+│   ├── half_adder.sv
+│   ├── half_adder_gatelevel.gv
+│   ├── half_adder_memory_mapped.v
+│   ├── half_adder_step1_memsynth.ys
+│   ├── half_adder_step2_logicsynth.ys
+│   └── half_adder_tb.sv
 ├── test1
+│   ├── aktestA.py
 │   ├── carry4_behavioral.v
 │   ├── compare_flows.py
 │   ├── gatelevel_baseline.gv
@@ -171,10 +179,20 @@
 │   ├── synth_baseline_flatten.ys
 │   ├── synth_macropreserve.ys
 │   └── test_circuit.v
+├── test2
+│   ├── chained_carry_64b.sv
+│   ├── gatelevel_chained_carry.gv
+│   ├── gatelevel_macropreserve.gv
+│   ├── mixed_circuit.sv
+│   ├── synth_chained_carry.ys
+│   ├── synth_macropreserve.ys
+│   └── verify_simulation.py
 ├── tests
 │   ├── half_adder_aig_test.rs
 │   ├── macro_memory_layout_test.rs
-│   └── netlist_macro_parse_test.rs
+│   ├── netlist_macro_parse_test.rs
+│   ├── test2_chained_carry_test.rs
+│   └── test2_heterogeneous_integration_test.rs
 ├── usage.md
 └── verif
     ├── csrc
@@ -201,10 +219,6 @@
     │   ├── test_designs
     │   │   ├── carry_chain_64b.sv
     │   │   ├── dsp_fir_mac.sv
-    │   │   ├── half_adder.sv
-    │   │   ├── half_adder_gatelevel.gv
-    │   │   ├── half_adder_memory_mapped.v
-    │   │   ├── half_adder_tb.sv
     │   │   ├── mixed_top.sv
     │   │   ├── mixed_top_gatelevel.gv
     │   │   └── srl_delay_pipe.sv
@@ -234,4 +248,4 @@
         ├── tb_srlc32e_unisim.v
         └── tb_stimulus.v
 
-47 directories, 188 files
+50 directories, 199 files
