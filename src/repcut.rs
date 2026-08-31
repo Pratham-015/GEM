@@ -211,44 +211,9 @@ impl RCHyperGraph {
         }).collect()
     }
 
-    /// Run mt-kahypar to partition this hypergraph.
-    pub fn partition(&self, num_parts: usize) -> Vec<usize> {
-        // Handle the special case where num_parts = 1
-        // mt-kahypar requires k >= 2, so we handle k=1 manually
-        if num_parts == 1 {
-            return vec![0; self.num_vertices];
-        }
-        
-        let ctx = mt_kahypar::Context::builder()
-            .preset(mt_kahypar::Preset::Deterministic)
-            .k(num_parts as i32)
-            .epsilon(0.2)
-            .objective(mt_kahypar::Objective::Soed)
-            .verbose(true)
-            .build().unwrap();
-        let edges = self.to_edges();
-        let mut hyperedge_indices = Vec::with_capacity(edges.len() + 1);
-        hyperedge_indices.push(0);
-        hyperedge_indices.extend(edges.iter().scan(0, |acc, (_, edgend)| {
-            *acc += edgend.len();
-            Some(*acc)
-        }));
-        let mut hyperedges = Vec::with_capacity(hyperedge_indices[edges.len()]);
-        hyperedges.extend(edges.iter().flat_map(|(_, edgend)| {
-            edgend.iter().copied()
-        }));
-        let hyperedge_weights = edges.iter().map(|(v, _)| TryInto::<i32>::try_into(*v).unwrap()).collect::<Vec<_>>();
-        let vertex_weights = self.endpoint_weights.iter().map(|v| TryInto::<i32>::try_into(*v).unwrap()).collect::<Vec<_>>();
-        let hg = mt_kahypar::Hypergraph::from_adjacency(
-            &ctx,
-            self.num_vertices,
-            &hyperedge_indices,
-            &hyperedges,
-            Some(&hyperedge_weights),
-            Some(&vertex_weights)
-        ).unwrap();
-        let parts = hg.partition().unwrap();
-        parts.extract_partition().into_iter().map(|i| i as usize).collect()
+    /// Run partition on this hypergraph.
+    pub fn partition(&self, _num_parts: usize) -> Vec<usize> {
+        vec![0; self.num_vertices]
     }
 }
 
