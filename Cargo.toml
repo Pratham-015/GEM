@@ -11,7 +11,7 @@ clilog = { version = "0.2.5", path = "eda-infra-rs/clilog" }
 compact_str = "0.7.1"
 indexmap = { version = "2.4.0", features = ["rayon"] }
 itertools = "0.13.0"
-mt-kahypar = "0.2.0"
+# mt-kahypar = "0.2.0"
 netlistdb = { version = "0.4.6", path = "eda-infra-rs/netlistdb" }
 rand = "0.8.5"
 rand_chacha = "0.3.1"
