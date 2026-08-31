@@ -1,0 +1,30 @@
+# ============================================================================
+# test2/synth_macropreserve.ys
+# Macro-preserving Yosys synthesis script for test2 heterogeneous design
+# ============================================================================
+
+# Read blackbox headers for macros
+read_verilog -lib aigpdk/aigpdk_macros_bb.v
+
+# Read design
+read_verilog -sv test2/mixed_circuit.sv
+
+# Elaborate
+hierarchy -check -top mixed_circuit
+
+# Synthesize surrounding logic without touching blackboxes
+synth -flatten
+delete t:$print
+
+# Technology mapping to AIG PDK
+dfflibmap -liberty aigpdk/aigpdk_nomem.lib
+opt_clean -purge
+abc -liberty aigpdk/aigpdk_nomem.lib
+opt_clean -purge
+techmap
+abc -liberty aigpdk/aigpdk_nomem.lib
+opt_clean -purge
+
+# Write gate-level netlist
+write_verilog -noexpr -nodec test2/gatelevel_macropreserve.gv
+stat

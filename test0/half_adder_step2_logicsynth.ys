@@ -1,7 +1,7 @@
 # Step 2: Logic synthesis and AIG mapping for half_adder
 #
 # Read intermediate netlist from Step 1 and macro blackbox definitions
-read_verilog -sv verif/rtl/test_designs/half_adder_memory_mapped.v
+read_verilog -sv test0/half_adder_memory_mapped.v
 read_verilog -lib aigpdk/aigpdk_macros_bb.v
 hierarchy -check -top half_adder
 
@@ -19,7 +19,7 @@ abc -liberty aigpdk/aigpdk_nomem.lib
 opt_clean -purge
 
 # Write out structural gate-level netlist in AIG format
-write_verilog -noexpr -nodec verif/rtl/test_designs/half_adder_gatelevel.gv
+write_verilog -noexpr -nodec test0/half_adder_gatelevel.gv
 write_verilog -noexpr -nodec verif/rtl/gatelevel.gv
 stat
 

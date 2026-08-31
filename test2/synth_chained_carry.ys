@@ -1,0 +1,14 @@
+read_verilog -lib aigpdk/aigpdk_macros_bb.v
+read_verilog -sv test2/chained_carry_64b.sv
+hierarchy -check -top chained_carry_64b
+synth -flatten
+delete t:$print
+dfflibmap -liberty aigpdk/aigpdk_nomem.lib
+opt_clean -purge
+abc -liberty aigpdk/aigpdk_nomem.lib
+opt_clean -purge
+techmap
+abc -liberty aigpdk/aigpdk_nomem.lib
+opt_clean -purge
+write_verilog -noexpr -nodec test2/gatelevel_chained_carry.gv
+stat

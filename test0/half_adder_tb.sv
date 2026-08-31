@@ -2,7 +2,7 @@
 `timescale 1ns / 1ps
 
 `include "aigpdk/aigpdk.v"
-`include "verif/rtl/test_designs/half_adder_gatelevel.gv"
+`include "test0/half_adder_gatelevel.gv"
 
 module half_adder_tb;
     reg  A;

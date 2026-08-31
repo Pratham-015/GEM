@@ -7,7 +7,7 @@ use std::path::PathBuf;
 #[test]
 fn test_half_adder_netlist_and_aig_construction() {
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let netlist_path = manifest_dir.join("verif/rtl/test_designs/half_adder_gatelevel.gv");
+    let netlist_path = manifest_dir.join("test0/half_adder_gatelevel.gv");
 
     // 1. Parse into NetlistDB
     let db = NetlistDB::from_sverilog_file(
