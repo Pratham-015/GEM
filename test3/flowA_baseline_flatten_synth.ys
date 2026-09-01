@@ -1,8 +1,8 @@
 # 1. Read whitebox models
-read_verilog test3/macros_behavioral.v
+read_verilog -sv test3/macros_behavioral.sv
 
 # 2. Read the test circuit
-read_verilog test3/signal_processor.v
+read_verilog -sv test3/signal_processor.sv
 
 # 3. Check hierarchy and set top module
 hierarchy -check -top signal_processor
@@ -30,8 +30,8 @@ abc -liberty aigpdk/aigpdk_nomem.lib
 opt_clean -purge
 
 # Write out structural gate-level netlist in AIG format
-# 12,13. Writes AIG to .gv file
-write_verilog -noexpr -nodec test3/gatelevel_baseline.gv
+# 12. Writes AIG to .gv file
+write_verilog -noexpr -nodec test3/flowA_baseline_flatten_gatelevel.gv
 
-# 14. Printing statistics
+# 13. Printing statistics
 # stat

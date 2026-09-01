@@ -2,8 +2,8 @@ import re
 import sys
 import os
 
-BASELINE_GV = "test3/gatelevel_baseline.gv"
-PRESERVE_GV = "test3/gatelevel_macropreserve.gv"
+BASELINE_GV = "test3/flowA_baseline_flatten_gatelevel.gv"
+PRESERVE_GV = "test3/flowB_macropreserve_gatelevel.gv"
 MACROS = ["CARRY4", "DSP48E2", "SRLC32E"]
 
 def count_cells(filepath):

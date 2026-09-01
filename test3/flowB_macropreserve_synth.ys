@@ -2,7 +2,7 @@
 read_verilog -lib aigpdk/aigpdk_macros_bb.v
 
 # 2. Read the test circuit
-read_verilog test3/signal_processor.v
+read_verilog -sv test3/signal_processor.sv
 
 # 3. Check hierarchy and set top module
 hierarchy -check -top signal_processor
@@ -30,8 +30,8 @@ abc -liberty aigpdk/aigpdk_nomem.lib
 opt_clean -purge
 
 # Write out structural gate-level netlist in AIG format
-# 12,13. Writes AIG to .gv file
-write_verilog -noexpr -nodec test3/gatelevel_macropreserve.gv
+# 12. Writes AIG to .gv file
+write_verilog -noexpr -nodec test3/flowB_macropreserve_gatelevel.gv
 
-# 14. Printing statistics
+# 13. Printing statistics
 # stat
