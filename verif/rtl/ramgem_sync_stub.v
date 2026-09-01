@@ -1,10 +1,9 @@
 // ramgem_sync_stub.v
-// Behavioral Icarus-Verilog-simulatable model of the $__RAMGEM_SYNC_ memory
-// primitive declared in synth/memlib_yosys.txt, used only to verify
-// correctness of Yosys's memory_libmap output (verif/rtl/memory_mapped_sync.v)
-// with a conventional simulator. Not part of the GEM toolchain itself.
+// Behavioral stub for the $__RAMGEM_SYNC_ blackbox memory
+// primitive declared in aigpdk/memlib_yosys.txt, used only to verify
+// that the post-memory-mapping netlist can be simulated with iverilog.
 //
-// Port contract (from synth/memlib_yosys.txt):
+// Port contract (from aigpdk/memlib_yosys.txt):
 //   abits 13, width 32, byte 1 (byte-level write granularity)
 //   port sw "W" { clock posedge; }   -- synchronous write
 //   port sr "R" { clock posedge; }   -- synchronous (registered) read

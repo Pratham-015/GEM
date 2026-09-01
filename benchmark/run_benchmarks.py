@@ -3,7 +3,7 @@
 benchmark/run_benchmarks.py
 Automated Benchmarking & NCU Profiling Suite for Deliverable D.
 - Sweeps batch sizes N in [1K, 10K, 100K, 1M]
-- Sweeps clock cycles C in [1, 8, 64, 256, 1024]
+- Sweeps clock cycles C in [1, 8, 64, 256]
 - Generates CSV summaries and markdown performance reports
 """
 
