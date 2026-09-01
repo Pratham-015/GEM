@@ -1,23 +1,22 @@
 #!/usr/bin/env python3
 """
-test2/full_integration_test.py
-End-to-End Integration Test for Deliverables A + B + C
+verif/full_integration_test.py
+End-to-End System Integration Test for Deliverables B + C + Full Regression.
 
 Pipeline verified:
-  [A] Yosys blackbox synthesis preserving CARRY4, DSP48E2, SRLC32E
   [B] Host parser → AIG DAG → 64-bit aligned macro memory layout
-  [C] Cycle-accurate CUDA macro models vs Python golden models
-
-This script exercises the FULL vertical stack on a single heterogeneous
-design (test2/mixed_circuit.sv) that contains all three macro types plus
-boolean glue logic and sequential DFFs.
+  [C] Cycle-accurate CUDA macro models vs Python golden models vs Silicon UNISIM
+  [D] Full workspace Rust unit and regression test suite
 """
 
-import os, sys, subprocess, re
+import os
+import sys
+import subprocess
+import random
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 GEM_ROOT = os.path.abspath(os.path.join(HERE, ".."))
-sys.path.insert(0, os.path.join(GEM_ROOT, "verif", "golden"))
+sys.path.insert(0, os.path.join(HERE, "golden"))
 
 from carry4 import CARRY4, eval_carry_chain_fused
 from dsp48e2 import DSP48E2
@@ -28,8 +27,10 @@ from bitops import mask, to_signed
 def banner(msg):
     print(f"  {msg}")
 
+
 def section(msg):
     print(f"\n  {msg}")
+
 
 def check(label, ok):
     tag = "[PASS]" if ok else "[FAIL]"
@@ -37,46 +38,10 @@ def check(label, ok):
     if not ok:
         raise AssertionError(f"FAILED: {label}")
 
-# PHASE 1: Deliverable A — Yosys Macro Preservation
-def phase_a():
-    banner("PHASE 1: Deliverable A — Yosys Macro Preservation")
 
-    netlist = os.path.join(HERE, "gatelevel_macropreserve.gv")
-    if not os.path.exists(netlist):
-        print("  Netlist not found, synthesizing...")
-        ys = os.path.join(HERE, "synth_macropreserve.ys")
-        subprocess.run(
-            ["/home/pratham_sharma/.local/bin/yosys", ys],
-            cwd=GEM_ROOT, capture_output=True, check=True
-        )
-
-    with open(netlist) as f:
-        content = f.read()
-
-    # Count cell instances
-    cells = {}
-    for m in re.finditer(r'^\s+(\w+)\s+\w+\s*\(', content, re.MULTILINE):
-        ctype = m.group(1)
-        if ctype in ("module", "wire", "input", "output", "assign", "endmodule"):
-            continue
-        cells[ctype] = cells.get(ctype, 0) + 1
-
-    print(f"  Gate-level netlist: {netlist}")
-    print(f"  Cell summary:")
-    for ct, n in sorted(cells.items()):
-        print(f"    {ct:20s} {n:4d}")
-
-    check("CARRY4 preserved in netlist", cells.get("CARRY4", 0) == 1)
-    check("DSP48E2 preserved in netlist", cells.get("DSP48E2", 0) == 1)
-    check("SRLC32E preserved in netlist", cells.get("SRLC32E", 0) == 1)
-    check("DFF cells present", cells.get("DFF", 0) == 4)
-    aig_count = sum(v for k, v in cells.items() if k.startswith("AND2_"))
-    check(f"AIG glue logic mapped ({aig_count} AND2_* cells)", aig_count >= 10)
-
-
-# PHASE 2: Deliverable B — Host Parser + DAG + Memory Layout
-def phase_b():
-    banner("PHASE 2: Deliverable B — Host Parser, DAG & Memory Layout")
+# PHASE 1: Deliverable B — Host Parser + DAG + Memory Layout
+def phase_host_dag():
+    banner("PHASE 1: Deliverable B — Host Parser, DAG & Memory Layout")
 
     result = subprocess.run(
         ["cargo", "test", "--test", "test2_heterogeneous_integration_test",
@@ -94,11 +59,11 @@ def phase_b():
           "Deliverable A & B Pipeline Integration: 100% SUCCESS" in result.stdout)
 
 
-# PHASE 3: Deliverable C — Cycle-Accurate Macro Models vs Golden
-def phase_c():
-    banner("PHASE 3: Deliverable C — Cycle-Accurate Macro Models")
+# PHASE 2: Deliverable C — Cycle-Accurate Macro Models vs Golden
+def phase_macro_models():
+    banner("PHASE 2: Deliverable C — Cycle-Accurate Macro Models")
 
-    section("C.1: CARRY4 Golden Model Verification")
+    section("2.1: CARRY4 Golden Model Verification")
     c4 = CARRY4()
     # Edge cases + random
     vectors_c4 = [
@@ -107,7 +72,6 @@ def phase_c():
         (0xA, 0x5, 0, 1),   # alternating + CYINIT
         (0x3, 0xC, 1, 0),   # partial
     ]
-    import random
     random.seed(42)
     for _ in range(200):
         vectors_c4.append((random.randint(0, 15), random.randint(0, 15),
@@ -121,7 +85,7 @@ def phase_c():
 
     check(f"CARRY4 slice: {len(vectors_c4)} vectors (ripple vs fused)", True)
 
-    section("C.2: DSP48E2 Golden Model Verification (Multi-Cycle)")
+    section("2.2: DSP48E2 Golden Model Verification (Multi-Cycle)")
     dsp = DSP48E2()
     cycles_dsp = [
         # (A, D, B, C, state, use_pre)
@@ -140,7 +104,7 @@ def phase_c():
             f"DSP48E2 cycle {i}: got P={dsp.read_P()}, expected {expected_p[i]}"
     check(f"DSP48E2: {len(cycles_dsp)} sequential cycles, all P values correct", True)
 
-    section("C.3: SRLC32E Golden Model Verification (Multi-Cycle)")
+    section("2.3: SRLC32E Golden Model Verification (Multi-Cycle)")
     srl = SRLC32E()
     # Shift in 8 bits: 1,0,1,1,0,0,1,0  → SRL = 0b10110010 = 0xB2
     shift_bits = [1, 0, 1, 1, 0, 0, 1, 0]
@@ -156,9 +120,10 @@ def phase_c():
         assert q == expected_q, f"SRLC32E Q[{addr}] mismatch: got {q}, expected {expected_q}"
     check("SRLC32E: 8-cycle shift + address read verification", True)
 
-    section("C.4: GPU Differential Harness (vs Icarus Verilog & Xilinx UNISIM)")
+    section("2.4: GPU Differential Harness (vs Icarus Verilog & Xilinx UNISIM)")
+    diff_script = os.path.join(HERE, "host", "diff_harness.py")
     result = subprocess.run(
-        ["python3", "verif/host/diff_harness.py"],
+        ["python3", diff_script],
         cwd=GEM_ROOT, capture_output=True, text=True, timeout=120
     )
     for line in result.stdout.splitlines():
@@ -170,9 +135,9 @@ def phase_c():
           "gem_macros.cuh (GPU) PASS" in result.stdout)
 
 
-# PHASE 4: Full Cargo Test Suite
+# PHASE 3: Full Cargo Test Suite
 def phase_cargo():
-    banner("PHASE 4: Full Workspace Regression (cargo test)")
+    banner("PHASE 3: Full Workspace Regression (cargo test)")
 
     result = subprocess.run(
         ["cargo", "test"],
@@ -190,27 +155,26 @@ def phase_cargo():
 # MAIN
 def main():
     print()
-    banner("GEM — DELIVERABLE A + B + C FULL INTEGRATION TEST")
+    banner("GEM — FULL SYSTEM & GPU INTEGRATION TEST (verif/)")
     print()
 
-    phase_a()
+    phase_host_dag()
     print()
-    phase_b()
-    print()
-    phase_c()
+    phase_macro_models()
     print()
     phase_cargo()
 
     print()
     banner("FINAL VERDICT")
     print()
-    print("  ✅ Deliverable A: Yosys blackbox synthesis — all 3 macros preserved")
     print("  ✅ Deliverable B: Host parser + AIG DAG + 64-bit GPU memory layout")
     print("  ✅ Deliverable C: Cycle-accurate CUDA models — bit-exact vs silicon")
-    print("  ✅ All cargo tests passing")
+    print("  ✅ All workspace cargo tests passing")
     print()
-    print("  [PASS] DELIVERABLES A + B + C FULLY INTEGRATED AND VERIFIED")
+    print("  [PASS] FULL SYSTEM INTEGRATION AND REGRESSION VERIFIED")
     print()
+
 
 if __name__ == "__main__":
     main()
+

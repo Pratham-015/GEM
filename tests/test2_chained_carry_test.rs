@@ -10,7 +10,7 @@ use std::path::PathBuf;
 #[test]
 fn test_64bit_chained_carry_topology_and_dag() {
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let netlist_path = manifest_dir.join("test2/gatelevel_chained_carry.gv");
+    let netlist_path = manifest_dir.join("test2/chained_carry_gatelevel.gv");
 
     // 1. Parse into NetlistDB
     let db = NetlistDB::from_sverilog_file(

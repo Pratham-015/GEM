@@ -1,4 +1,13 @@
 .
+├── .cache
+│   └── clangd
+│       └── index
+│           ├── .gitignore
+│           ├── kernel_v1.cu.3B2F453485E90D25.idx
+│           ├── kernel_v1_impl.cuh.FD378BAE0851ADCD.idx
+│           ├── memfill.cpp.D493B2B2F2D1B8DA.idx
+│           ├── memfill.cu.E0591AA16AAB5C76.idx
+│           └── types.hpp.1D5C8987728F1E70.idx
 ├── .cargo
 │   └── config.toml
 ├── .gitattributes
@@ -8,6 +17,8 @@
 │   └── settings.json
 ├── Cargo.lock
 ├── Cargo.toml
+├── EClub-High-Prep-2026.pdf
+├── High-Prep-Report.tex
 ├── LICENSE
 ├── LICENSES.txt
 ├── README.md
@@ -18,6 +29,12 @@
 │   ├── aigpdk_nomem.lib
 │   ├── memlib_yosys.txt
 │   └── memlib_yosys_behavior_oneport.v
+├── benchmark
+│   ├── bench_engine
+│   ├── bench_engine.cu
+│   ├── performance_report.md
+│   ├── run_benchmarks.py
+│   └── speedup_summary.csv
 ├── build.rs
 ├── compile_commands.json
 ├── csrc
@@ -169,24 +186,34 @@
 │   ├── half_adder_memory_mapped.v
 │   ├── half_adder_step1_memsynth.ys
 │   ├── half_adder_step2_logicsynth.ys
-│   └── half_adder_tb.sv
+│   ├── half_adder_tb.sv
+│   └── tb_sim.out
 ├── test1
-│   ├── aktestA.py
-│   ├── carry4_behavioral.v
+│   ├── carry4_behavioral.sv
 │   ├── compare_flows.py
-│   ├── gatelevel_baseline.gv
-│   ├── gatelevel_macropreserve.gv
-│   ├── synth_baseline_flatten.ys
-│   ├── synth_macropreserve.ys
-│   └── test_circuit.v
+│   ├── flowA_gatelevel_baseline.gv
+│   ├── flowA_synth_baseline_flatten.ys
+│   ├── flowB_gatelevel_macropreserve.gv
+│   ├── flowB_synth_macropreserve.ys
+│   └── test_circuit.sv
 ├── test2
 │   ├── chained_carry_64b.sv
-│   ├── gatelevel_chained_carry.gv
-│   ├── gatelevel_macropreserve.gv
-│   ├── mixed_circuit.sv
-│   ├── synth_chained_carry.ys
-│   ├── synth_macropreserve.ys
-│   └── verify_simulation.py
+│   ├── chained_carry_check.py
+│   ├── chained_carry_gatelevel.gv
+│   ├── chained_carry_synth.ys
+│   ├── golden_reference.py
+│   ├── macropreserve_check.py
+│   ├── macropreserve_gatelevel.gv
+│   ├── macropreserve_synth.ys
+│   └── mixed_circuit.sv
+├── test3
+│   ├── baseline_flatten_gatelevel.gv
+│   ├── baseline_flatten_synth.ys
+│   ├── compare_flows.py
+│   ├── macropreserve_gatelevel.gv
+│   ├── macropreserve_synth.ys
+│   ├── macros_behavioral.v
+│   └── signal_processor.v
 ├── tests
 │   ├── half_adder_aig_test.rs
 │   ├── macro_memory_layout_test.rs
@@ -195,11 +222,13 @@
 │   └── test2_heterogeneous_integration_test.rs
 ├── usage.md
 └── verif
+    ├── aktestA.py
     ├── csrc
     │   ├── bench_cpu.cpp
     │   ├── bench_gen.h
     │   ├── bench_gpu.cu
     │   └── test_gem_macros.cu
+    ├── full_integration_test.py
     ├── golden
     │   ├── __pycache__
     │   │   ├── bitops.cpython-312.pyc
@@ -248,4 +277,4 @@
         ├── tb_srlc32e_unisim.v
         └── tb_stimulus.v
 
-50 directories, 199 files
+55 directories, 223 files

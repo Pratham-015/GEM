@@ -1,7 +1,10 @@
-# 1. Read the test circuit
+# 1. Read blackbox definitions FIRST
+read_verilog -lib aigpdk/aigpdk_macros_bb.v
+
+# 2. Read the test circuit
 read_verilog test2/chained_carry_64b.sv
 
-# 2. Check hierarchy and set top module
+# 3. Check hierarchy and set top module
 hierarchy -check -top chained_carry_64b
 
 # Logic synthesis & flattening
@@ -28,7 +31,7 @@ opt_clean -purge
 
 # Write out structural gate-level netlist in AIG format
 # 11,12. Writes AIG to .gv file
-write_verilog -noexpr -nodec test2/gatelevel_chained_carry.gv
+write_verilog -noexpr -nodec test2/chained_carry_gatelevel.gv
 
 # 13. Printing statistics
 # stat

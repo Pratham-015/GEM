@@ -6,11 +6,11 @@ use std::path::PathBuf;
 #[test]
 fn test_parse_macro_gatelevel_netlist() {
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let netlist_path = manifest_dir.join("verif/rtl/test_designs/mixed_top_gatelevel.gv");
+    let netlist_path = manifest_dir.join("test3/macropreserve_gatelevel.gv");
 
     let db = NetlistDB::from_sverilog_file(
         &netlist_path,
-        Some("mixed_top"),
+        None,
         &AIGPDKLeafPins(),
     ).expect("Failed to parse structural netlist with macros");
 

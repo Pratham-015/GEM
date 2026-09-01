@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-test2/verify_simulation.py
-End-to-end integration and simulation verification for Deliverables A & B.
-Runs cycle-accurate checks on the heterogeneous mixed_circuit.
+test2/golden_reference.py
+Cycle-accurate software golden reference model for mixed_circuit.sv.
+Computes expected mathematical outputs cycle-by-cycle for reference verification.
 """
 
 import sys
@@ -71,8 +71,8 @@ def simulate_step(clk, rst, op_a, op_b, cin, dsp_a, dsp_b, dsp_c, dsp_d, dsp_sta
     }
 
 def main():
-    print("  GEM DELIVERABLE A & B INTEGRATION VERIFICATION (test2/)")
-    print("  Heterogeneous Design: Logic + CARRY4 + DSP48E2 + SRLC32E + DFFs")
+    print("  GOLDEN REFERENCE SIMULATION (test2/mixed_circuit.sv)")
+    print("  Computing cycle-accurate expected values across CARRY4, DSP48E2, SRLC32E, and DFFs")
 
     dsp_p_reg = 0
     srl_state_reg = 0
@@ -102,7 +102,7 @@ def main():
         srl_state_reg = res["srl_state_next"]
         reg_sum = res["registered_sum"]
 
-    print("  VERDICT: [PASS] All heterogeneous modules correctly integrated!")
+    print("  VERDICT: [PASS] Golden reference values successfully computed!")
 
 if __name__ == "__main__":
     main()
