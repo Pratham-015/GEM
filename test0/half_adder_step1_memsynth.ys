@@ -1,19 +1,27 @@
 # Step 1: Memory synthesis for half_adder
-#
-# Read RTL design
+
+# 1. Read RTL design
 read_verilog -sv test0/half_adder.sv
 
-# Check hierarchy and set top module
+# 2. Check hierarchy and set top module
 hierarchy -check -top half_adder
 
 # Simplify design before mapping
+# 3. Convert processes to netlists
 proc;;
+
+# 4,5,6. Executing Opt passes
 opt_expr; opt_dff; opt_clean
+# 7. Executing Memory pass
 memory -nomap
 
 # Map memories to GEM RAM format (no memories in half_adder, but runs cleanly)
+# 8. Memory Libmap pass
 memory_libmap -lib aigpdk/memlib_yosys.txt -logic-cost-rom 100 -logic-cost-ram 100
 
 # Write intermediate netlist
+# 9. Executing Verilog Pass
 write_verilog test0/half_adder_memory_mapped.v
 
+# 10. Printing statistics
+# stat

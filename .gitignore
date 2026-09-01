@@ -7,3 +7,6 @@
 # non-redistributable Xilinx vendor sources staged here at runtime by
 # verif/host/diff_harness.py. Never commit this directory.
 /build/
+EClub-High-Prep-2026.pdf
+High-Prep-report-unfinished-LaTeX.pdf
+High-Prep-Report.tex

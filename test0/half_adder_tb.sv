@@ -26,9 +26,7 @@ module half_adder_tb;
 
     initial begin
         match = 1'b1;
-        $display("==================================================");
         $display("   Half Adder: RTL vs AIG Gatelevel Verification   ");
-        $display("==================================================");
 
         for (i = 0; i < 4; i = i + 1) begin
             {A, B} = i[1:0];
@@ -43,14 +41,10 @@ module half_adder_tb;
         end
 
         if (match) begin
-            $display("==================================================");
             $display("   VERIFICATION PASSED: 100%% Bit-Exact Match!    ");
-            $display("==================================================");
             $finish(0);
         end else begin
-            $display("==================================================");
             $display("   VERIFICATION FAILED!                          ");
-            $display("==================================================");
             $finish(1);
         end
     end
