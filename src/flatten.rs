@@ -342,6 +342,9 @@ impl FlatteningPart {
     /// if is not already placed, we will place it as well as place
     /// the clock enable bit, duplication bit, and bitflags for clock and data.
     fn get_or_place_output_with_activation(&mut self, pin_iv: usize, clken_iv: usize) -> u16 {
+        if pin_iv <= 1 {
+            return 0;
+        }
         let (activ_idx, _, pos) = self.comb_outputs_activations
             .get(&(pin_iv >> 1)).unwrap()
             .get_full(&(clken_iv << 1 | (pin_iv & 1))).unwrap();

@@ -446,7 +446,7 @@ fn main() {
 
     let mut input_layout = Vec::new();
     for (i, driv) in aig.drivers.iter().enumerate() {
-        if let DriverType::InputPort(_) | DriverType::InputClockFlag(_, _) = driv {
+        if let DriverType::InputPort(_) | DriverType::InputClockFlag(_, _) | DriverType::Macro(_, _) = driv {
             input_layout.push(i);
         }
     }
