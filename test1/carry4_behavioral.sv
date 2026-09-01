@@ -1,9 +1,7 @@
-// ============================================================
 // carry4_behavioral.v  –  Transparent behavioral model of CARRY4
 // Used ONLY by the baseline (flatten) flow so that Yosys/ABC
 // can see through the CARRY4 and shred it into AIG gates.
 // This file is NOT read in the macro-preserving flow.
-// ============================================================
 `timescale 1ns / 1ps
 
 module CARRY4 (

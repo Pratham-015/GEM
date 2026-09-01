@@ -1,11 +1,15 @@
+# FLOW B (GEM Deliverable A): Macro-preserving synthesis.
+# CARRY4 is blackboxed with (* blackbox, keep *).
+# synth/techmap/abc never see its internals; it survives intact.
+
 # 1. Read blackbox definitions FIRST
 read_verilog -lib aigpdk/aigpdk_macros_bb.v
 
 # 2. Read the test circuit
-read_verilog test3/signal_processor.v
+read_verilog -sv test1/test_circuit.sv
 
 # 3. Check hierarchy and set top module
-hierarchy -check -top signal_processor
+hierarchy -check -top test_circuit
 
 # Logic synthesis & flattening
 # 4. Executing Synth pass (Multiple passes)
@@ -30,8 +34,8 @@ abc -liberty aigpdk/aigpdk_nomem.lib
 opt_clean -purge
 
 # Write out structural gate-level netlist in AIG format
-# 12,13. Writes AIG to .gv file
-write_verilog -noexpr -nodec test3/gatelevel_macropreserve.gv
+# 12. Writes AIG to .gv file
+write_verilog -noexpr -nodec test1/flowB_gatelevel_macropreserve.gv
 
-# 14. Printing statistics
-# stat
+# 13. Printing statistics
+stat

@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 """
 test2/full_integration_test.py
-=============================================================================
 End-to-End Integration Test for Deliverables A + B + C
-=============================================================================
 
 Pipeline verified:
   [A] Yosys blackbox synthesis preserving CARRY4, DSP48E2, SRLC32E
@@ -26,15 +24,12 @@ from dsp48e2 import DSP48E2
 from srlc32e import SRLC32E
 from bitops import mask, to_signed
 
-WIDTH = 70
 
 def banner(msg):
-    print("=" * WIDTH)
     print(f"  {msg}")
-    print("=" * WIDTH)
 
 def section(msg):
-    print(f"\n--- {msg} ---")
+    print(f"\n  {msg}")
 
 def check(label, ok):
     tag = "[PASS]" if ok else "[FAIL]"
@@ -42,9 +37,7 @@ def check(label, ok):
     if not ok:
         raise AssertionError(f"FAILED: {label}")
 
-# =========================================================================
 # PHASE 1: Deliverable A — Yosys Macro Preservation
-# =========================================================================
 def phase_a():
     banner("PHASE 1: Deliverable A — Yosys Macro Preservation")
 
@@ -81,9 +74,7 @@ def phase_a():
     check(f"AIG glue logic mapped ({aig_count} AND2_* cells)", aig_count >= 10)
 
 
-# =========================================================================
 # PHASE 2: Deliverable B — Host Parser + DAG + Memory Layout
-# =========================================================================
 def phase_b():
     banner("PHASE 2: Deliverable B — Host Parser, DAG & Memory Layout")
 
@@ -103,9 +94,7 @@ def phase_b():
           "Deliverable A & B Pipeline Integration: 100% SUCCESS" in result.stdout)
 
 
-# =========================================================================
 # PHASE 3: Deliverable C — Cycle-Accurate Macro Models vs Golden
-# =========================================================================
 def phase_c():
     banner("PHASE 3: Deliverable C — Cycle-Accurate Macro Models")
 
@@ -181,9 +170,7 @@ def phase_c():
           "gem_macros.cuh (GPU) PASS" in result.stdout)
 
 
-# =========================================================================
 # PHASE 4: Full Cargo Test Suite
-# =========================================================================
 def phase_cargo():
     banner("PHASE 4: Full Workspace Regression (cargo test)")
 
@@ -200,9 +187,7 @@ def phase_cargo():
     check("cargo test suite passed (exit 0)", result.returncode == 0)
 
 
-# =========================================================================
 # MAIN
-# =========================================================================
 def main():
     print()
     banner("GEM — DELIVERABLE A + B + C FULL INTEGRATION TEST")

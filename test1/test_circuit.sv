@@ -1,7 +1,5 @@
-// ============================================================
 // test_circuit.v  –  GEM Deliverable A verification circuit
 // Has: AND gate, OR gate, XOR gate, and one CARRY4 macro.
-// ============================================================
 `timescale 1ns / 1ps
 
 module test_circuit (
@@ -20,7 +18,6 @@ module test_circuit (
     output wire [3:0] carry_o
 );
 
-    // ---- Standard boolean gates ----
     wire and_result;
     wire or_result;
 
@@ -30,7 +27,6 @@ module test_circuit (
     assign out_or     = or_result;
     assign out_xor    = and_result ^ or_result;  // XOR
 
-    // ---- Word-level hardware macro: CARRY4 ----
     CARRY4 u_carry4 (
         .CO    (carry_co),
         .O     (carry_o),

@@ -19,16 +19,17 @@ import sys
 from pathlib import Path
 
 TARGET_TYPES = ("CARRY4", "DSP48E2", "SRLC32E")
-SEPARATOR = "=" * 78
 
 
 def find_design_file() -> Path:
     """Return the most complete design file that includes all required macros."""
     base = Path(__file__).resolve().parent
     candidates = [
-        base.parent / "verif" / "rtl" / "test_designs" / "mixed_top_gatelevel.gv",
-        base / "gatelevel_macropreserve.gv",
-        base / "gatelevel_baseline.gv",
+        base / "rtl" / "test_designs" / "mixed_top_gatelevel.gv",
+        base / "rtl" / "gatelevel.gv",
+        base.parent / "test3" / "gatelevel_macropreserve.gv",
+        base.parent / "test2" / "gatelevel_macropreserve.gv",
+        base.parent / "test1" / "flowB_gatelevel_macropreserve.gv",
     ]
 
     for path in candidates:
@@ -77,10 +78,8 @@ def validate_target(filepath: Path, target: str) -> tuple[bool, int]:
 
 
 def main() -> int:
-    print(SEPARATOR)
     print("  GEM MACRO VALIDATION SUITE")
     print("  Target primitives: CARRY4, DSP48E2, SRLC32E")
-    print(SEPARATOR)
 
     try:
         design = find_design_file()
@@ -100,9 +99,7 @@ def main() -> int:
         print(f"  [{status}] {target:<10} -> found {count} instance(s)")
         all_ok = all_ok and ok
 
-    print(SEPARATOR)
     print("  VALIDATION SUMMARY")
-    print(SEPARATOR)
 
     if all_ok:
         print("\n  [PASS] All required primitive types were detected in the design.")
@@ -111,9 +108,6 @@ def main() -> int:
         for target, ok, count in results:
             print(f"    - {target}: {count} instance(s), {('PASS' if ok else 'FAIL')}")
         print("\n  Interpretation:")
-        print("    * CARRY4 is preserved as a macro for efficient carry-chain evaluation.")
-        print("    * DSP48E2 is preserved as the word-level DSP primitive.")
-        print("    * SRLC32E is preserved as the shift-register LUT primitive.")
         print("\n  Result: SUCCESS")
         return 0
 

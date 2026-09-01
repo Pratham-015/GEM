@@ -1,4 +1,3 @@
-// ============================================================================
 // test2/mixed_circuit.sv
 // Complete heterogeneous benchmark integrating Deliverable A & B:
 // - Boolean logic (AND, OR, XOR, INV)
@@ -6,7 +5,6 @@
 // - CARRY4 fast-carry macro
 // - DSP48E2 multiply-accumulate macro
 // - SRLC32E dynamic shift register LUT macro
-// ============================================================================
 `timescale 1ns / 1ps
 
 module mixed_circuit (

@@ -1,14 +1,34 @@
-read_verilog -lib aigpdk/aigpdk_macros_bb.v
-read_verilog -sv test2/chained_carry_64b.sv
+# 1. Read the test circuit
+read_verilog test2/chained_carry_64b.sv
+
+# 2. Check hierarchy and set top module
 hierarchy -check -top chained_carry_64b
+
+# Logic synthesis & flattening
+# 3. Executing Synth pass (Multiple passes)
 synth -flatten
+# Deletes Print/Display statements in netlist
 delete t:$print
+
+# Standard cell and gate-level mapping targeting GEM's AIG PDK
+# 4. Executing DFF Libmap Pass
 dfflibmap -liberty aigpdk/aigpdk_nomem.lib
+
+# 5. Executing Opt Clean pass
 opt_clean -purge
+
+# 6,7. Executing ABC
 abc -liberty aigpdk/aigpdk_nomem.lib
 opt_clean -purge
+
+# 8,9,10. Executing Techmap
 techmap
 abc -liberty aigpdk/aigpdk_nomem.lib
 opt_clean -purge
+
+# Write out structural gate-level netlist in AIG format
+# 11,12. Writes AIG to .gv file
 write_verilog -noexpr -nodec test2/gatelevel_chained_carry.gv
-stat
+
+# 13. Printing statistics
+# stat

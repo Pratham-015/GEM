@@ -1,8 +1,6 @@
-// ============================================================================
 // test2/chained_carry_64b.sv
 // 64-bit Adder composed of 16 chained CARRY4 primitives (CO[3] -> CI ripple).
 // Demonstrates macro-to-macro dependency resolution without intermediate gates.
-// ============================================================================
 `timescale 1ns / 1ps
 
 module chained_carry_64b (

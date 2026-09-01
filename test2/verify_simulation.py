@@ -71,10 +71,8 @@ def simulate_step(clk, rst, op_a, op_b, cin, dsp_a, dsp_b, dsp_c, dsp_d, dsp_sta
     }
 
 def main():
-    print("=" * 70)
     print("  GEM DELIVERABLE A & B INTEGRATION VERIFICATION (test2/)")
     print("  Heterogeneous Design: Logic + CARRY4 + DSP48E2 + SRLC32E + DFFs")
-    print("=" * 70)
 
     dsp_p_reg = 0
     srl_state_reg = 0
@@ -104,9 +102,7 @@ def main():
         srl_state_reg = res["srl_state_next"]
         reg_sum = res["registered_sum"]
 
-    print("=" * 70)
     print("  VERDICT: [PASS] All heterogeneous modules correctly integrated!")
-    print("=" * 70)
 
 if __name__ == "__main__":
     main()

@@ -1,30 +1,41 @@
-# ============================================================================
-# test2/synth_macropreserve.ys
-# Macro-preserving Yosys synthesis script for test2 heterogeneous design
-# ============================================================================
+# FLOW B (GEM Deliverable A): Macro-preserving synthesis for test2.
 
-# Read blackbox headers for macros
+# 1. Read blackbox definitions FIRST
 read_verilog -lib aigpdk/aigpdk_macros_bb.v
 
-# Read design
-read_verilog -sv test2/mixed_circuit.sv
+# 2. Read the test circuit
+read_verilog test2/mixed_circuit.sv
 
-# Elaborate
+# 3. Check hierarchy and set top module
 hierarchy -check -top mixed_circuit
 
-# Synthesize surrounding logic without touching blackboxes
+# Logic synthesis & flattening
+# 4. Executing Synth pass (Multiple passes)
 synth -flatten
+# Deletes Print/Display statements in netlist
 delete t:$print
 
-# Technology mapping to AIG PDK
+# Standard cell and gate-level mapping targeting GEM's AIG PDK
+# 5. Executing DFF Libmap Pass
 dfflibmap -liberty aigpdk/aigpdk_nomem.lib
+
+# 6. Executing Opt Clean pass
 opt_clean -purge
+
+# 7,8. Executing ABC
 abc -liberty aigpdk/aigpdk_nomem.lib
 opt_clean -purge
+
+# 9,10,11. Executing Techmap
 techmap
 abc -liberty aigpdk/aigpdk_nomem.lib
 opt_clean -purge
 
-# Write gate-level netlist
+# Write out structural gate-level netlist in AIG format
+# 12,13. Writes AIG to .gv file
 write_verilog -noexpr -nodec test2/gatelevel_macropreserve.gv
-stat
+# This is done for the original GEM architecture to use
+write_verilog -noexpr -nodec verif/rtl/test_designs/mixed_top_gatelevel.gv
+
+# 14. Printing statistics
+# stat
