@@ -90,12 +90,36 @@ performance comparison suppressed because at least one representation failed RTL
 
 ## Nsight Compute
 
-BLOCKED: `ERR_NVGPUCTRPERM` prevents metric discovery and collection.
+| Workload | Occupancy | Theoretical | Divergent targets | Uniform targets | Predicated threads | DRAM peak | DRAM MB/s | Load/store sectors/request |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| exact-chain | 16.67% | 33.33% | 3.76% | 96.24% | 70.09% | 0.00% | 6.81 | 6.63 / 2.89 |
+| mixed_heterogeneous | 16.67% | 33.33% | 1.21% | 98.79% | 75.15% | 0.00% | 2.10 | 7.35 / 3.73 |
+| large_scale | 16.67% | 33.33% | 1.08% | 98.92% | 75.57% | 0.00% | 3.28 | 7.52 / 3.70 |
 
-IMPACT: production-kernel occupancy, warp divergence, bandwidth, and coalescing remain unmeasured.
+All rows profile `simulate_v1_noninteractive_simple_scan`, the production simulator kernel. Raw CSV and parsed JSON are stored beside this report.
 
-REQUIRED ACTION: enable NVIDIA performance counters and run `python3 benchmark/profile_boomerang_ncu.py`.
+Profiled commit(s): `4260717aef83cad17ad57d1fad33966ee40bc0d4`.
 
+Observed DRAM utilization rounds to 0.00–0.00% of peak while measured bandwidth is 2.10–6.81 MB/s, so these runs are not DRAM-bandwidth-bound. Achieved occupancy is 16.67–16.67% versus 33.33–33.33% theoretical. The launches use 124 registers/thread and 16,640 shared bytes/block; registers limit residency to 2 blocks/SM.
+
+Branch-target divergence is 3.76% on the exact chain and falls to 1.21%/1.08% on mixed/large workloads. Predicated lane utilization remains 70–76%, so low branch divergence does not mean all lanes do useful work.
+
+Sector/request values are measured transaction density, but mixed access widths prevent converting them into a defensible coalescing-efficiency percentage without instruction-level access classification.
+
+## Cooperative block-count sweep
+
+| Blocks | Median cycles/s |
+|---:|---:|
+| 1 | 3,552 |
+| 2 | 3,557 |
+| 4 | 3,556 |
+| 8 | 3,553 |
+| 16 | 3,556 |
+| 20 | 3,553 |
+| 32 | 2,581 |
+| 40 | 2,582 |
+
+Throughput is flat from 1–20 blocks and drops at 32–40 blocks. Increasing cooperative grid size therefore does not expose additional useful parallel work for this single-partition mixed graph; scheduling/coordination, rather than DRAM bandwidth, is the observed scaling limit. This sweep varies grid size; it is not a substitute for the measured Nsight occupancy counters above.
 
 ## Other pools
 
@@ -106,4 +130,4 @@ External results are not available. `benchmark/other_pools.csv` is the import te
 - Cross-category throughput is not a macro speedup ratio because the workloads contain different graphs.
 - The upstream comparison is intentionally restricted to the identical Boolean netlist that both official upstream and modified GEM can execute.
 - Macro-preserved versus shredded measurements require different legal netlist representations and must be reported separately from implementation-only speedup.
-- Memory bandwidth, coalescing, occupancy, and divergence are not claimed unless the Nsight section contains measured counters.
+- Nsight counter values apply to the three named production workloads and this RTX 4050; they are not universal GPU claims.

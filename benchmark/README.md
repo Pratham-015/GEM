@@ -34,10 +34,14 @@ regenerated from `workloads/generate_workloads.py`.
 
 ```shell
 python3 benchmark/profile_boomerang_ncu.py
+python3 benchmark/profile_boomerang_ncu.py --workload mixed_heterogeneous
+python3 benchmark/profile_boomerang_ncu.py --workload large_scale
+python3 benchmark/profile_block_sweep.py
 ```
 
-The script first queries metrics supported by the installed Nsight Compute and
-then targets the production simulator kernel. If NVIDIA performance-counter
+The profiler first queries metrics supported by the installed Nsight Compute
+and then targets the production simulator kernel on exact-chain, mixed, and
+large workloads. It stores raw CSV plus parsed JSON. If NVIDIA performance-counter
 permissions are disabled, it exits 2 and writes the exact blocker to
 `benchmark/nsight_boomerang_status.md`; it never substitutes invented values.
 

@@ -92,15 +92,51 @@ def main():
                   f"| Shredded, official upstream | {fmt(a['median_cps'])} | {fmt(a['mean_cps'])} | {fmt(a['stdev_cps'])} |",
                   f"| Macro-preserved, modified | {fmt(b['median_cps'])} | {fmt(b['mean_cps'])} | {fmt(b['stdev_cps'])} |", "",
                   f"Representation-plus-implementation ratio: **{rep['speedup']:.3f}x**. This is not an implementation-only speedup."]
-    status = (ROOT / "benchmark/nsight_boomerang_status.md")
-    nsight = status.read_text().replace("# Nsight Boomerang Profile\n\n", "") if status.exists() else "NOT MEASURED"
-    lines += ["", "## Nsight Compute", "", nsight, "",
+    profiles = []
+    for stem in ("boomerang", "mixed_heterogeneous", "large_scale"):
+        path = ROOT / f"benchmark/nsight_{stem}.json"
+        if path.exists():
+            profiles.append(json.loads(path.read_text()))
+    lines += ["", "## Nsight Compute", ""]
+    if profiles:
+        lines += ["| Workload | Occupancy | Theoretical | Divergent targets | Uniform targets | Predicated threads | DRAM peak | DRAM MB/s | Load/store sectors/request |",
+                  "|---|---:|---:|---:|---:|---:|---:|---:|---:|"]
+        for profile in profiles:
+            s = profile["summary"]
+            lines.append(f"| {profile['workload']} | {s['achieved_occupancy_percent']:.2f}% | {s['theoretical_occupancy_percent']:.2f}% | {s['derived_divergent_branch_targets_percent']:.2f}% | {s['uniform_branch_targets_percent']:.2f}% | {s['predicated_thread_utilization_percent']:.2f}% | {s['dram_peak_utilization_percent']:.2f}% | {s['dram_bytes_per_second']/1e6:.2f} | {s['global_load_sectors_per_request']:.2f} / {s['global_store_sectors_per_request']:.2f} |")
+        bandwidths = [p["summary"]["dram_bytes_per_second"] / 1e6 for p in profiles]
+        dram_util = [p["summary"]["dram_peak_utilization_percent"] for p in profiles]
+        occupancies = [p["summary"]["achieved_occupancy_percent"] for p in profiles]
+        theoretical = [p["summary"]["theoretical_occupancy_percent"] for p in profiles]
+        registers = sorted({p["summary"]["registers_per_thread"] for p in profiles})
+        shared_bytes = sorted({p["summary"]["shared_memory_per_block_bytes"] for p in profiles})
+        register_limits = sorted({p["summary"]["resident_block_limit_registers"] for p in profiles})
+        profile_commits = sorted({p.get("environment", {}).get("commit", "UNRECORDED")
+                                  for p in profiles})
+        lines += ["", "All rows profile `simulate_v1_noninteractive_simple_scan`, the production simulator kernel. Raw CSV and parsed JSON are stored beside this report.", "",
+                  f"Profiled commit(s): `{', '.join(profile_commits)}`.", "",
+                  f"Observed DRAM utilization rounds to {min(dram_util):.2f}–{max(dram_util):.2f}% of peak while measured bandwidth is {min(bandwidths):.2f}–{max(bandwidths):.2f} MB/s, so these runs are not DRAM-bandwidth-bound. Achieved occupancy is {min(occupancies):.2f}–{max(occupancies):.2f}% versus {min(theoretical):.2f}–{max(theoretical):.2f}% theoretical. The launches use {registers[0]:.0f} registers/thread and {shared_bytes[0]:,.0f} shared bytes/block; registers limit residency to {register_limits[0]:.0f} blocks/SM.", "",
+                  "Branch-target divergence is 3.76% on the exact chain and falls to 1.21%/1.08% on mixed/large workloads. Predicated lane utilization remains 70–76%, so low branch divergence does not mean all lanes do useful work.", "",
+                  "Sector/request values are measured transaction density, but mixed access widths prevent converting them into a defensible coalescing-efficiency percentage without instruction-level access classification."]
+    else:
+        lines.append("NOT MEASURED")
+    sweep_path = RESULTS / "block_sweep.json"
+    lines += ["", "## Cooperative block-count sweep", ""]
+    if sweep_path.exists():
+        sweep = json.loads(sweep_path.read_text())
+        lines += ["| Blocks | Median cycles/s |", "|---:|---:|"]
+        for row in sweep["results"]:
+            lines.append(f"| {row['blocks']} | {fmt(row['median_cps'])} |")
+        lines += ["", "Throughput is flat from 1–20 blocks and drops at 32–40 blocks. Increasing cooperative grid size therefore does not expose additional useful parallel work for this single-partition mixed graph; scheduling/coordination, rather than DRAM bandwidth, is the observed scaling limit. This sweep varies grid size; it is not a substitute for the measured Nsight occupancy counters above."]
+    else:
+        lines.append("NOT MEASURED")
+    lines += ["",
               "## Other pools", "", "External results are not available. `benchmark/other_pools.csv` is the import template; missing values remain `PENDING_EXTERNAL_DATA`.", "",
               "## Interpretation limits", "",
               "- Cross-category throughput is not a macro speedup ratio because the workloads contain different graphs.",
               "- The upstream comparison is intentionally restricted to the identical Boolean netlist that both official upstream and modified GEM can execute.",
               "- Macro-preserved versus shredded measurements require different legal netlist representations and must be reported separately from implementation-only speedup.",
-              "- Memory bandwidth, coalescing, occupancy, and divergence are not claimed unless the Nsight section contains measured counters.", ""]
+              "- Nsight counter values apply to the three named production workloads and this RTX 4050; they are not universal GPU claims.", ""]
     (RESULTS / "performance_report.md").write_text("\n".join(lines), encoding="utf-8")
     print("report:", RESULTS / "performance_report.md")
 
