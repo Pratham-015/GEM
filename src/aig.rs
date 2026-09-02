@@ -578,9 +578,9 @@ impl AIG {
             let pin_name = netlistdb.pinnames[pinid].1.as_str();
             let is_output = matches!(
                 (celltype, pin_name),
-                ("CARRY4", "O" | "CO") |
-                ("DSP48E2" | "GEM_DSP48E2", "P") |
-                ("SRLC32E", "Q" | "Q31")
+                ("CARRY4", "O" | "CO")
+                    | ("DSP48E2" | "GEM_DSP48E2", "P")
+                    | ("SRLC32E", "Q" | "Q31")
             );
             if is_output {
                 let port = macro_port(celltype, pin_name)
@@ -681,8 +681,7 @@ impl AIG {
         for cellid in 1..netlistdb.num_cells {
             if !matches!(
                 netlistdb.celltypes[cellid].as_str(),
-                "DFF" | "DFFSR" | "$__RAMGEM_SYNC_" |
-                "DSP48E2" | "GEM_DSP48E2" | "SRLC32E"
+                "DFF" | "DFFSR" | "$__RAMGEM_SYNC_" | "DSP48E2" | "GEM_DSP48E2" | "SRLC32E"
             ) {
                 continue;
             }
@@ -807,9 +806,9 @@ impl AIG {
                     let pin_iv = aig.pin2aigpin_iv[pinid];
                     let is_output = matches!(
                         (celltype, pin_name),
-                        ("CARRY4", "O" | "CO") |
-                        ("DSP48E2" | "GEM_DSP48E2", "P") |
-                        ("SRLC32E", "Q" | "Q31")
+                        ("CARRY4", "O" | "CO")
+                            | ("DSP48E2" | "GEM_DSP48E2", "P")
+                            | ("SRLC32E", "Q" | "Q31")
                     );
                     if is_output {
                         continue;
@@ -861,10 +860,16 @@ impl AIG {
                 }
 
                 if celltype == "DSP48E2" {
-                    assert!(opmode.iter().all(|&v| v != usize::MAX),
-                        "DSP48E2 cell {} has incomplete OPMODE", cellid);
-                    assert!(inmode[2] != usize::MAX,
-                        "DSP48E2 cell {} has incomplete INMODE", cellid);
+                    assert!(
+                        opmode.iter().all(|&v| v != usize::MAX),
+                        "DSP48E2 cell {} has incomplete OPMODE",
+                        cellid
+                    );
+                    assert!(
+                        inmode[2] != usize::MAX,
+                        "DSP48E2 cell {} has incomplete INMODE",
+                        cellid
+                    );
                     let mut eq_opmode = |value: usize| {
                         let mut eq = 1usize;
                         for (bit, &signal) in opmode.iter().enumerate() {
@@ -1037,7 +1042,10 @@ impl AIG {
                     continue;
                 }
                 let ci_input = b_inst.inputs.iter().find(|i| i.port == MacroPort::CarryCI);
-                let cyinit_input = b_inst.inputs.iter().find(|i| i.port == MacroPort::CarryCYINIT);
+                let cyinit_input = b_inst
+                    .inputs
+                    .iter()
+                    .find(|i| i.port == MacroPort::CarryCYINIT);
                 if let Some(cyinit) = cyinit_input {
                     if cyinit.signal_iv != 0 {
                         continue;
@@ -1052,8 +1060,16 @@ impl AIG {
                         if a_id != b_id && self.macros.contains_key(&a_id) {
                             let a_inst = &self.macros[&a_id];
                             if a_inst.kind == MacroKind::CarryChain {
-                                let a_width = a_inst.inputs.iter().filter(|i| i.port == MacroPort::CarryS).count() as u8;
-                                let b_width = b_inst.inputs.iter().filter(|i| i.port == MacroPort::CarryS).count() as u8;
+                                let a_width = a_inst
+                                    .inputs
+                                    .iter()
+                                    .filter(|i| i.port == MacroPort::CarryS)
+                                    .count() as u8;
+                                let b_width = b_inst
+                                    .inputs
+                                    .iter()
+                                    .filter(|i| i.port == MacroPort::CarryS)
+                                    .count() as u8;
                                 if a_bit == a_width - 1 && (a_width + b_width) <= 60 {
                                     fused_pair = Some((a_id, b_id, a_width));
                                     break;
@@ -1086,7 +1102,9 @@ impl AIG {
                     self.drivers[output.aig_pin] = DriverType::Macro(a_id, output.port, new_bit);
                 }
                 a_inst.sort_ports();
-                a_inst.validate().unwrap_or_else(|e| panic!("invalid fused carry chain: {}", e));
+                a_inst
+                    .validate()
+                    .unwrap_or_else(|e| panic!("invalid fused carry chain: {}", e));
             } else {
                 break;
             }

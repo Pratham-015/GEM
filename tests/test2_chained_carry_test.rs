@@ -65,17 +65,45 @@ fn test_64bit_chained_carry_topology_and_dag() {
     let mut total_co_bits = 0;
 
     for m in aig.macros.values() {
-        total_s_bits += m.inputs.iter().filter(|p| p.port == MacroPort::CarryS).count();
-        total_di_bits += m.inputs.iter().filter(|p| p.port == MacroPort::CarryDI).count();
-        total_o_bits += m.outputs.iter().filter(|p| p.port == MacroPort::CarryO).count();
-        total_co_bits += m.outputs.iter().filter(|p| p.port == MacroPort::CarryCO).count();
+        total_s_bits += m
+            .inputs
+            .iter()
+            .filter(|p| p.port == MacroPort::CarryS)
+            .count();
+        total_di_bits += m
+            .inputs
+            .iter()
+            .filter(|p| p.port == MacroPort::CarryDI)
+            .count();
+        total_o_bits += m
+            .outputs
+            .iter()
+            .filter(|p| p.port == MacroPort::CarryO)
+            .count();
+        total_co_bits += m
+            .outputs
+            .iter()
+            .filter(|p| p.port == MacroPort::CarryCO)
+            .count();
         assert!(m.validate().is_ok());
     }
 
-    assert_eq!(total_s_bits, 64, "Total S input bits across fused segments must be 64");
-    assert_eq!(total_di_bits, 64, "Total DI input bits across fused segments must be 64");
-    assert_eq!(total_o_bits, 64, "Total O output bits across fused segments must be 64");
-    assert_eq!(total_co_bits, 64, "Total CO output bits across fused segments must be 64");
+    assert_eq!(
+        total_s_bits, 64,
+        "Total S input bits across fused segments must be 64"
+    );
+    assert_eq!(
+        total_di_bits, 64,
+        "Total DI input bits across fused segments must be 64"
+    );
+    assert_eq!(
+        total_o_bits, 64,
+        "Total O output bits across fused segments must be 64"
+    );
+    assert_eq!(
+        total_co_bits, 64,
+        "Total CO output bits across fused segments must be 64"
+    );
 
     // The fused segments only require inter-segment dependencies at segment boundaries (bit 59 -> CI).
     let ripple_edges: Vec<_> = aig

@@ -10,7 +10,7 @@ use gem::pe::Partition;
 use gem::staging::build_staged_aigs;
 use netlistdb::NetlistDB;
 use std::path::PathBuf;
-use ulib::{AsUPtrMut, Device, UVec};
+use ulib::{AsUPtr, AsUPtrMut, Device, UVec};
 
 #[derive(clap::Parser, Debug)]
 struct SimulatorArgs {
@@ -131,10 +131,25 @@ fn main() {
         device,
     );
     let mut sram_storage = UVec::new_zeroed(script.sram_storage_size as usize, device);
+    script
+        .validate_macro_abi()
+        .unwrap_or_else(|e| panic!("invalid macro CUDA ABI: {e}"));
     script.macro_state_data.as_mut_uptr(device);
     script.macro_io_data.as_mut_uptr(device);
     script.macro_program_offsets.as_mut_uptr(device);
     script.macro_program_data.as_mut_uptr(device);
+    assert_eq!(
+        script.macro_state_data.as_uptr(device) as usize % std::mem::align_of::<u64>(),
+        0,
+        "macro state device buffer is not 64-bit aligned"
+    );
+    assert_ne!(script.macro_state_data.as_uptr(device) as usize, 0);
+    assert_eq!(
+        script.macro_io_data.as_uptr(device) as usize % std::mem::align_of::<u64>(),
+        0,
+        "macro I/O device buffer is not 64-bit aligned"
+    );
+    assert_ne!(script.macro_io_data.as_uptr(device) as usize, 0);
     device.synchronize();
     let timer_sim = clilog::stimer!("simulation (warm up)");
     ucci::simulate_v1_noninteractive_simple_scan(
@@ -147,7 +162,9 @@ fn main() {
         args.num_dummy_cycles,
         script.reg_io_state_size as usize,
         &mut input_states_uvec,
-        script.macro_storage.instances.len(),
+        script.macro_storage.num_carrychain,
+        script.macro_storage.num_dsp,
+        script.macro_storage.num_srl,
         &script.macro_program_offsets,
         &script.macro_program_data,
         &mut script.macro_state_data,
@@ -183,7 +200,9 @@ fn main() {
         args.num_dummy_cycles,
         script.reg_io_state_size as usize,
         &mut input_states_uvec,
-        script.macro_storage.instances.len(),
+        script.macro_storage.num_carrychain,
+        script.macro_storage.num_dsp,
+        script.macro_storage.num_srl,
         &script.macro_program_offsets,
         &script.macro_program_data,
         &mut script.macro_state_data,

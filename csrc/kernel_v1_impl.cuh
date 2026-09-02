@@ -336,8 +336,10 @@ __device__ __forceinline__ void macro_write_bit(
 // Phase 1: gather every macro's Boolean inputs into the 64-bit SoA buffer.
 // A grid barrier after this function prevents any macro output write from
 // racing another macro's input gather in the same relaxation pass.
-__device__ void gather_macro_program(
+__device__ void gather_macro_range(
+  usize first_macro,
   usize num_macros,
+  u32 expected_kind,
   const u32 *__restrict__ offsets,
   const u32 *__restrict__ program,
   const u32 *__restrict__ state,
@@ -345,9 +347,16 @@ __device__ void gather_macro_program(
 {
   usize tid = (usize)blockIdx.x * blockDim.x + threadIdx.x;
   usize stride_threads = (usize)gridDim.x * blockDim.x;
-  for(usize mi = tid; mi < num_macros; mi += stride_threads) {
+  for(usize local_i = tid; local_i < num_macros; local_i += stride_threads) {
+    usize mi = first_macro + local_i;
     const u32 *d = program + offsets[mi];
     u32 kind = d[0], io_off = d[2], io_stride = d[3], n_in = d[5];
+    // MacroStorageLayout groups descriptors by kind.  Dispatching one range
+    // at a time keeps all active lanes on the same evaluator path instead of
+    // mixing 1-bit carry/SRL work and 48-bit DSP work inside one warp.
+    assert(kind == expected_kind);
+    unsigned cohort_mask = __activemask();
+    assert(__all_sync(cohort_mask, kind == expected_kind));
     gem_u64 f0 = 0, f1 = 0, f2 = 0, f3 = 0, f4 = 0;
     for(u32 k = 0; k < n_in; k += 2) {
       u32 bit = macro_read_source(state, d[6 + k]);
@@ -382,8 +391,10 @@ __device__ void gather_macro_program(
 }
 
 // Phase 2: one CUDA thread performs one native word-level macro operation.
-__device__ void evaluate_macro_program(
+__device__ void evaluate_macro_range(
+  usize first_macro,
   usize num_macros,
+  u32 expected_kind,
   const u32 *__restrict__ offsets,
   const u32 *__restrict__ program,
   const u32 *__restrict__ edge_state,
@@ -394,9 +405,13 @@ __device__ void evaluate_macro_program(
 {
   usize tid = (usize)blockIdx.x * blockDim.x + threadIdx.x;
   usize stride_threads = (usize)gridDim.x * blockDim.x;
-  for(usize mi = tid; mi < num_macros; mi += stride_threads) {
+  for(usize local_i = tid; local_i < num_macros; local_i += stride_threads) {
+    usize mi = first_macro + local_i;
     const u32 *d = program + offsets[mi];
     u32 kind = d[0], state_off = d[1], io_off = d[2], io_stride = d[3];
+    assert(kind == expected_kind);
+    unsigned cohort_mask = __activemask();
+    assert(__all_sync(cohort_mask, kind == expected_kind));
     bool clock_active = macro_read_source(edge_state, d[4]);
     u32 n_in = d[5];
     const u32 *out_desc = d + 6 + n_in;
@@ -453,7 +468,9 @@ __global__ void simulate_v1_noninteractive_simple_scan(
   usize num_cycles,
   usize state_size,
   u32 *__restrict__ states_noninteractive,
-  usize num_macros,
+  usize num_carrychain_macros,
+  usize num_dsp_macros,
+  usize num_srl_macros,
   const u32 *__restrict__ macro_program_offsets,
   const u32 *__restrict__ macro_program_data,
   u64 *__restrict__ macro_state_data,
@@ -487,12 +504,32 @@ __global__ void simulate_v1_noninteractive_simple_scan(
           );
         cooperative_groups::this_grid().sync();
       }
-      gather_macro_program(num_macros, macro_program_offsets,
-        macro_program_data, states_noninteractive + (cycle_i + 1) * state_size,
-        macro_io_data);
+      usize carry_first = 0;
+      usize dsp_first = carry_first + num_carrychain_macros;
+      usize srl_first = dsp_first + num_dsp_macros;
+      gather_macro_range(carry_first, num_carrychain_macros,
+        GEM_MACRO_CARRYCHAIN, macro_program_offsets, macro_program_data,
+        states_noninteractive + (cycle_i + 1) * state_size, macro_io_data);
+      gather_macro_range(dsp_first, num_dsp_macros,
+        GEM_MACRO_DSP48E2, macro_program_offsets, macro_program_data,
+        states_noninteractive + (cycle_i + 1) * state_size, macro_io_data);
+      gather_macro_range(srl_first, num_srl_macros,
+        GEM_MACRO_SRLC32E, macro_program_offsets, macro_program_data,
+        states_noninteractive + (cycle_i + 1) * state_size, macro_io_data);
       cooperative_groups::this_grid().sync();
-      evaluate_macro_program(num_macros, macro_program_offsets,
-        macro_program_data, states_noninteractive + cycle_i * state_size,
+      evaluate_macro_range(carry_first, num_carrychain_macros,
+        GEM_MACRO_CARRYCHAIN, macro_program_offsets, macro_program_data,
+        states_noninteractive + cycle_i * state_size,
+        states_noninteractive + (cycle_i + 1) * state_size,
+        macro_state_data, macro_io_data, commit_macro_state);
+      evaluate_macro_range(dsp_first, num_dsp_macros,
+        GEM_MACRO_DSP48E2, macro_program_offsets, macro_program_data,
+        states_noninteractive + cycle_i * state_size,
+        states_noninteractive + (cycle_i + 1) * state_size,
+        macro_state_data, macro_io_data, commit_macro_state);
+      evaluate_macro_range(srl_first, num_srl_macros,
+        GEM_MACRO_SRLC32E, macro_program_offsets, macro_program_data,
+        states_noninteractive + cycle_i * state_size,
         states_noninteractive + (cycle_i + 1) * state_size,
         macro_state_data, macro_io_data, commit_macro_state);
       cooperative_groups::this_grid().sync();

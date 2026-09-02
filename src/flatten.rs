@@ -150,8 +150,10 @@ fn build_macro_program(
         let clock_source = m.clock.map_or(0x8000_0001, |clock| {
             let pin = clock.signal_iv >> 1;
             *input_map.get(&pin).unwrap_or_else(|| {
-                panic!("macro {:?} cell {} clock flag {} has no Boolean input slot",
-                    m.kind, m.cell_id, pin)
+                panic!(
+                    "macro {:?} cell {} clock flag {} has no Boolean input slot",
+                    m.kind, m.cell_id, pin
+                )
             }) | (((clock.signal_iv & 1) as u32) << 30)
         });
         data.push(clock_source);
@@ -1148,6 +1150,79 @@ fn build_flattened_script_v1(
 }
 
 impl FlattenedScriptV1 {
+    /// Validate the host/device macro ABI before a CUDA launch.
+    ///
+    /// This deliberately validates the serialized program rather than only
+    /// `MacroStorageLayout`: the kernel consumes these words and offsets, so a
+    /// correct high-level layout cannot compensate for a malformed descriptor.
+    pub fn validate_macro_abi(&self) -> Result<(), String> {
+        let storage = &self.macro_storage;
+        let num_macros = storage.instances.len();
+        if storage.num_carrychain + storage.num_dsp + storage.num_srl != num_macros {
+            return Err("macro kind counts do not sum to the descriptor count".into());
+        }
+        if self.macro_program_offsets.len() != num_macros + 1 {
+            return Err("macro CSR offset count must equal num_macros + 1".into());
+        }
+        if self.macro_state_data.len() != storage.total_state_words.max(1)
+            || self.macro_io_data.len() != storage.total_io_words.max(1)
+        {
+            return Err("allocated macro buffer length disagrees with storage layout".into());
+        }
+        if self.macro_state_data.iter().any(|&word| word != 0) {
+            return Err("persistent DSP/SRLC32E state is not zero-initialized".into());
+        }
+        if self.macro_program_offsets[0] != 0
+            || self.macro_program_offsets[num_macros] as usize
+                != self.macro_program_data.len()
+        {
+            return Err("macro CSR endpoints do not cover the descriptor buffer".into());
+        }
+
+        for (i, instance) in storage.instances.iter().enumerate() {
+            let start = self.macro_program_offsets[i] as usize;
+            let end = self.macro_program_offsets[i + 1] as usize;
+            if start > end || end > self.macro_program_data.len() || end - start < 7 {
+                return Err(format!("macro descriptor {i} has invalid CSR bounds"));
+            }
+            let descriptor = &self.macro_program_data[start..end];
+            if descriptor[0] != instance.kind as u32 {
+                return Err(format!("macro descriptor {i} is not grouped by declared kind"));
+            }
+            if descriptor[1] as usize != instance.state_offset.unwrap_or(0)
+                || descriptor[2] as usize != instance.io_offset
+                || descriptor[3] as usize != storage.io_stride(instance.kind)
+            {
+                return Err(format!("macro descriptor {i} layout fields disagree with allocator"));
+            }
+            if let Some(state_offset) = instance.state_offset {
+                if state_offset >= storage.total_state_words {
+                    return Err(format!("macro descriptor {i} state offset is out of bounds"));
+                }
+            }
+            let last_input_field = match instance.kind {
+                crate::macro_layout::MacroKind::CarryChain => 2,
+                crate::macro_layout::MacroKind::DSP48E2 => 4,
+                crate::macro_layout::MacroKind::SRLC32E => 0,
+            };
+            let last_io_word = instance.io_offset
+                + last_input_field * storage.io_stride(instance.kind);
+            if last_io_word >= storage.total_io_words {
+                return Err(format!("macro descriptor {i} I/O offset is out of bounds"));
+            }
+
+            let input_words = descriptor[5] as usize;
+            if input_words % 2 != 0 || 6 + input_words >= descriptor.len() {
+                return Err(format!("macro descriptor {i} has a malformed input table"));
+            }
+            let output_words = descriptor[6 + input_words] as usize;
+            if output_words % 2 != 0 || 7 + input_words + output_words != descriptor.len() {
+                return Err(format!("macro descriptor {i} has a malformed output table"));
+            }
+        }
+        Ok(())
+    }
+
     /// build a flattened script.
     ///
     /// `init_parts` give the partitions to flatten.

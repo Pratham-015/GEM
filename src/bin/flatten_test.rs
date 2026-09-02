@@ -675,8 +675,6 @@ fn main() {
     let mut vcd_time = 0;
     let mut last_vcd_time_active = true;
     let mut aigpin_values_debug = vec![u8::MAX; aig.num_aigpins + 1];
-    let mut delayed_bit_changes = HashSet::new();
-
     aigpin_values_debug[0] = 0;
     let launch_debug_shell_after = args.launch_debug_shell_after.unwrap_or(u64::MAX);
 
@@ -845,10 +843,6 @@ fn main() {
                 // input change events to make sure the internal pins
                 // are correct
                 last_vcd_time_active = args.include_wires;
-
-                for pos in std::mem::take(&mut delayed_bit_changes) {
-                    state[(pos >> 5) as usize] ^= 1u32 << (pos & 31);
-                }
             }
             FastFlowToken::Value(FFValueChange { id, bits }) => {
                 for (pos, b) in bits.iter().enumerate() {
@@ -863,12 +857,11 @@ fn main() {
                             }
                         };
                         let old_value = state[(pos >> 5) as usize] >> (pos & 31) & 1;
-                        if old_value
-                            == match b {
-                                b'1' => 1,
-                                _ => 0,
-                            }
-                        {
+                        let new_value = match b {
+                            b'1' => 1,
+                            _ => 0,
+                        };
+                        if old_value == new_value {
                             continue;
                         }
                         last_vcd_time_active = true;
@@ -882,7 +875,9 @@ fn main() {
                                 state[p as usize >> 5] |= 1 << (p & 31);
                             }
                         }
-                        delayed_bit_changes.insert(pos);
+                        let mask = 1u32 << (pos & 31);
+                        let word = &mut state[(pos >> 5) as usize];
+                        *word = (*word & !mask) | (new_value << (pos & 31));
                     }
                 }
             }

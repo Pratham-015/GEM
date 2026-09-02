@@ -30,7 +30,7 @@ abc -liberty aigpdk/aigpdk_nomem.lib
 opt_clean -purge
 
 # Write out structural gate-level netlist in AIG format
-# 11,12. Writes AIG to .gv file
+# 11. Writes AIG to .gv file
 write_verilog -noexpr -nodec test2/chained_carry_gatelevel.gv
 
 # 13. Printing statistics

@@ -30,7 +30,7 @@ module DSP48E2_PS_MAP #(
         ADREG != 0 || MREG != 0 || PREG != 1 ||
         ACASCREG != 0 || BCASCREG != 0 || ALUMODEREG != 0 ||
         INMODEREG != 0 || OPMODEREG != 0 || CARRYINREG != 0 ||
-        CARRYINSELREG != 0 || AMULTSEL != "A" || BMULTSEL != "B" ||
+        CARRYINSELREG != 0 || AMULTSEL != "AD" || BMULTSEL != "B" ||
         PREADDINSEL != "A" || USE_MULT != "MULTIPLY" || USE_SIMD != "ONE48";
 
     // Exact encodings established against DSP48E2 UNISIM:
@@ -46,8 +46,11 @@ module DSP48E2_PS_MAP #(
     wire is_inmode_ad = (INMODE == 5'b00100);
     wire valid_inmode = is_inmode_a || is_inmode_ad;
 
-    // Reject unsupported dynamic or static OPMODE / ALUMODE / INMODE configurations
-    wire _TECHMAP_FAIL_ = invalid_param || !valid_op_alu || !valid_inmode;
+    // Yosys requires _TECHMAP_FAIL_ to be constant after parameter
+    // specialization.  OPMODE/ALUMODE/INMODE are legal runtime controls in
+    // the PS interface, so they are normalized below rather than folded into
+    // this structural configuration predicate.
+    wire _TECHMAP_FAIL_ = invalid_param;
 
     wire [1:0] state = is_mult ? 2'd1 :
                        is_mac  ? 2'd2 : 2'd0;

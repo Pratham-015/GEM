@@ -185,5 +185,5 @@ fn test_heterogeneous_pipeline_integration() {
         "I/O words must be warp-padded"
     );
 
-    println!("Deliverable A & B Pipeline Integration: 100% SUCCESS");
+    println!("Host macro graph and storage-layout checks passed; production CUDA execution is verified separately by verif/integrated_macro_test.py");
 }

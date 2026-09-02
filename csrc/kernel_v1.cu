@@ -24,19 +24,22 @@ void simulate_v1_noninteractive_simple_scan_cuda(
   usize num_cycles,
   usize state_size,
   u32 *states_noninteractive,
-  usize num_macros,
+  usize num_carrychain_macros,
+  usize num_dsp_macros,
+  usize num_srl_macros,
   const u32 *macro_program_offsets,
   const u32 *macro_program_data,
   u64 *macro_state_data,
   u64 *macro_io_data
   )
 {
-  void *arg_ptrs[14] = {
+  void *arg_ptrs[16] = {
     (void *)&num_blocks, (void *)&num_major_stages, (void *)&num_macro_passes,
     (void *)&blocks_start, (void *)&blocks_data,
     (void *)&sram_data, (void *)&num_cycles, (void *)&state_size,
     (void *)&states_noninteractive,
-    (void *)&num_macros, (void *)&macro_program_offsets,
+    (void *)&num_carrychain_macros, (void *)&num_dsp_macros,
+    (void *)&num_srl_macros, (void *)&macro_program_offsets,
     (void *)&macro_program_data,
     (void *)&macro_state_data, (void *)&macro_io_data
   };

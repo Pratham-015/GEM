@@ -14,7 +14,7 @@ use std::io::{BufReader, BufWriter, Seek, SeekFrom};
 use std::path::PathBuf;
 use std::rc::Rc;
 use sverilogparse::SVerilogRange;
-use ulib::{AsUPtrMut, Device, UVec};
+use ulib::{AsUPtr, AsUPtrMut, Device, UVec};
 use vcd_ng::{
     FFValueChange, FastFlow, FastFlowToken, Parser, Scope, ScopeItem, SimulationCommand, Var,
     Writer,
@@ -557,7 +557,11 @@ fn simulate_macro_program(
                     n_bits = (field + 1) as u32;
                 }
             }
-            let mask = if n_bits >= 64 { !0u64 } else { (1u64 << n_bits) - 1 };
+            let mask = if n_bits >= 64 {
+                !0u64
+            } else {
+                (1u64 << n_bits) - 1
+            };
             let aa = (s | di) & mask;
             let bb = (!s & di) & mask;
             let total = aa.wrapping_add(bb).wrapping_add(cin & 1);
@@ -814,8 +818,6 @@ fn main() {
     // behavior from our actual {propagate, then update} implementation.
     let mut vcd_time = 0;
     let mut last_vcd_time_active = true;
-    let mut delayed_bit_changes = HashSet::new();
-
     let mut input_states = Vec::new();
     let mut offsets_timestamps = Vec::new();
 
@@ -849,10 +851,6 @@ fn main() {
                 }
                 vcd_time = t;
                 last_vcd_time_active = false;
-
-                for pos in std::mem::take(&mut delayed_bit_changes) {
-                    state[(pos >> 5) as usize] ^= 1u32 << (pos & 31);
-                }
             }
             FastFlowToken::Value(FFValueChange { id, bits }) => {
                 // A `b...` value may carry fewer characters than the
@@ -879,7 +877,8 @@ fn main() {
                                 }
                             };
                             let old_value = state[(pos >> 5) as usize] >> (pos & 31) & 1;
-                            if old_value != match $b { b'1' => 1, _ => 0 } {
+                            let new_value = match $b { b'1' => 1, _ => 0 };
+                            if old_value != new_value {
                                 last_vcd_time_active = true;
                                 if let Some((pe, ne)) = aig.clock_pin2aigpins.get(&pin).copied() {
                                     if pe != usize::MAX && old_value == 0 {
@@ -891,7 +890,9 @@ fn main() {
                                         state[p as usize >> 5] |= 1 << (p & 31);
                                     }
                                 }
-                                delayed_bit_changes.insert(pos);
+                                let mask = 1u32 << (pos & 31);
+                                let word = &mut state[(pos >> 5) as usize];
+                                *word = (*word & !mask) | (new_value << (pos & 31));
                             }
                         }
                     }
@@ -905,10 +906,24 @@ fn main() {
             }
         }
     }
+    // A VCD is not required to contain a timestamp after its final value
+    // changes.  Flush that active timestamp explicitly so the last vector is
+    // not silently dropped at EOF.
+    if last_vcd_time_active
+        && args
+            .max_cycles
+            .map_or(true, |max_cycles| offsets_timestamps.len() < max_cycles)
+    {
+        input_states.extend(state.iter().copied());
+        offsets_timestamps.push((input_states.len(), vcd_time));
+    }
     input_states.extend(state.iter().copied());
     clilog::info!("total number of cycles: {}", offsets_timestamps.len());
     let mut input_states_uvec: UVec<_> = input_states.clone().into();
     let device = Device::CUDA(0);
+    script
+        .validate_macro_abi()
+        .unwrap_or_else(|e| panic!("invalid macro CUDA ABI: {e}"));
     input_states_uvec.as_mut_uptr(device);
     let mut sram_storage = UVec::new_zeroed(script.sram_storage_size as usize, device);
     // Move macro buffers to GPU.
@@ -916,6 +931,18 @@ fn main() {
     script.macro_io_data.as_mut_uptr(device);
     script.macro_program_offsets.as_mut_uptr(device);
     script.macro_program_data.as_mut_uptr(device);
+    assert_eq!(
+        script.macro_state_data.as_uptr(device) as usize % std::mem::align_of::<u64>(),
+        0,
+        "macro state device buffer is not 64-bit aligned"
+    );
+    assert_ne!(script.macro_state_data.as_uptr(device) as usize, 0);
+    assert_eq!(
+        script.macro_io_data.as_uptr(device) as usize % std::mem::align_of::<u64>(),
+        0,
+        "macro I/O device buffer is not 64-bit aligned"
+    );
+    assert_ne!(script.macro_io_data.as_uptr(device) as usize, 0);
     device.synchronize();
     let timer_sim = clilog::stimer!("simulation");
     ucci::simulate_v1_noninteractive_simple_scan(
@@ -928,7 +955,9 @@ fn main() {
         offsets_timestamps.len(),
         script.reg_io_state_size as usize,
         &mut input_states_uvec,
-        script.macro_storage.instances.len(),
+        script.macro_storage.num_carrychain,
+        script.macro_storage.num_dsp,
+        script.macro_storage.num_srl,
         &script.macro_program_offsets,
         &script.macro_program_data,
         &mut script.macro_state_data,
