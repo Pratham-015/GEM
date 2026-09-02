@@ -6,19 +6,33 @@ verif/full_integration_test.py.  It never substitutes a micro-kernel.  A
 counter-permission failure is recorded explicitly and returns exit status 2.
 """
 import argparse
+import json
 import pathlib
 import shutil
 import subprocess
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-METRICS = [
+CANDIDATE_METRICS = [
     "sm__warps_active.avg.pct_of_peak_sustained_active",
     "smsp__sass_average_branch_targets_threads_uniform.pct",
     "gpu__dram_throughput.avg.pct_of_peak_sustained_elapsed",
     "l1tex__average_t_sectors_per_request_pipe_lsu_mem_global_op_ld.ratio",
     "l1tex__average_t_sectors_per_request_pipe_lsu_mem_global_op_st.ratio",
 ]
+
+
+def supported_metrics():
+    query = run(["ncu", "--query-metrics", "--devices", "0"],
+                text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    if query.returncode != 0:
+        return [], query.stdout
+    available = set()
+    for line in query.stdout.splitlines():
+        token = line.strip().split()[0] if line.strip() else ""
+        if "__" in token:
+            available.add(token.rstrip(","))
+    return [metric for metric in CANDIDATE_METRICS if metric in available], query.stdout
 
 
 def run(cmd, **kwargs):
@@ -56,10 +70,22 @@ def main():
         return 2
     if not args.skip_prepare:
         prepare()
+    metrics, query_output = supported_metrics()
+    if not metrics:
+        if "ERR_NVGPUCTRPERM" in query_output:
+            status.write_text(
+                "# Nsight Boomerang Profile\n\nBLOCKED: `ERR_NVGPUCTRPERM` prevents metric discovery and collection.\n\n"
+                "IMPACT: production-kernel occupancy, warp divergence, bandwidth, and coalescing remain unmeasured.\n\n"
+                "REQUIRED ACTION: enable NVIDIA performance counters and run `python3 benchmark/profile_boomerang_ncu.py`.\n")
+            print("BLOCKED: ERR_NVGPUCTRPERM during metric discovery")
+            return 2
+        status.write_text("# Nsight Boomerang Profile\n\nFAILED: none of the requested metrics are supported.\n")
+        print("FAILED: no supported requested metrics")
+        return 1
     command = [
         "ncu", "--target-processes", "all", "--kernel-name-base", "demangled",
         "--kernel-name", "regex:simulate_v1_noninteractive_simple_scan.*",
-        "--metrics", ",".join(METRICS), "--csv", "--page", "raw",
+        "--metrics", ",".join(metrics), "--csv", "--page", "raw",
         "target/release/cuda_test", "/tmp/gem_exact_chain.gv",
         "/tmp/gem_exact_chain.gemparts", "/tmp/gem_exact_chain_golden.vcd",
         "/tmp/gem_exact_chain_ncu.vcd", "1", "--top-module", "exact_macro_chain",
@@ -87,13 +113,16 @@ def main():
     if result.returncode != 0:
         status.write_text(f"# Nsight Boomerang Profile\n\nFAILED (exit {result.returncode}).\n\n```\n{output[-4000:]}\n```\n")
         return result.returncode
-    missing = [metric for metric in METRICS if metric not in output]
+    missing = [metric for metric in metrics if metric not in output]
     if missing:
         status.write_text("# Nsight Boomerang Profile\n\nFAILED: missing counters: " + ", ".join(missing) + "\n")
         return 1
+    metadata = {"metrics": metrics, "raw_csv": str(output_path.relative_to(ROOT)),
+                "command": command}
+    (ROOT / "benchmark/nsight_boomerang.json").write_text(json.dumps(metadata, indent=2) + "\n")
     status.write_text(
         "# Nsight Boomerang Profile\n\nVERIFIED on the production exact-chain kernel.\n\n"
-        f"Raw counters: [{args.output}]({output_path.name})\n",
+        f"Metrics: `{', '.join(metrics)}`\n\nRaw counters: [{args.output}]({output_path.name})\n",
         encoding="utf-8",
     )
     print("PASS: production Boomerang Nsight counters captured in", args.output)

@@ -10,6 +10,7 @@ use gem::pe::Partition;
 use gem::staging::build_staged_aigs;
 use netlistdb::NetlistDB;
 use std::path::PathBuf;
+use std::time::Instant;
 use ulib::{AsUPtr, AsUPtrMut, Device, UVec};
 
 #[derive(clap::Parser, Debug)]
@@ -35,10 +36,48 @@ struct SimulatorArgs {
     num_blocks: usize,
     /// the number of dummy cycles to execute.
     num_dummy_cycles: usize,
+    /// Number of untimed production-kernel launches before measurement.
+    #[clap(long, default_value_t = 1)]
+    warmup_runs: usize,
+    /// Number of independently reset, timed production-kernel launches.
+    #[clap(long, default_value_t = 1)]
+    repetitions: usize,
+    /// Deterministic seed used to populate primary-input and clock-flag bits.
+    #[clap(long, default_value_t = 1)]
+    seed: u64,
 }
 
 mod ucci {
     include!(concat!(env!("OUT_DIR"), "/uccbind/kernel_v1.rs"));
+}
+
+fn benchmark_input_states(script: &FlattenedScriptV1, num_cycles: usize, seed: u64) -> Vec<u32> {
+    let state_words = script.reg_io_state_size as usize;
+    let mut states = vec![0u32; state_words * (num_cycles + 1)];
+    if seed == 0 {
+        return states;
+    }
+    let mut input_positions = script.input_map.values().copied().collect::<Vec<_>>();
+    input_positions.sort_unstable();
+    input_positions.dedup();
+    let mut rng = seed;
+    for cycle in 0..=num_cycles {
+        for &position in &input_positions {
+            // xorshift64*: deterministic, inexpensive, and independent of the
+            // host rand crate/version. Only true primary inputs and synthesized
+            // clock-edge flags are initialized; macro outputs remain zero until
+            // the production kernel publishes them.
+            rng ^= rng >> 12;
+            rng ^= rng << 25;
+            rng ^= rng >> 27;
+            let bit = (rng.wrapping_mul(0x2545_f491_4f6c_dd1d) >> 63) as u32;
+            if bit != 0 {
+                let position = position as usize;
+                states[cycle * state_words + (position >> 5)] |= 1u32 << (position & 31);
+            }
+        }
+    }
+    states
 }
 
 fn main() {
@@ -126,10 +165,13 @@ fn main() {
     // do simulation
     clilog::info!("total number of cycles: {}", args.num_dummy_cycles);
     let device = Device::CUDA(0);
-    let mut input_states_uvec = UVec::new_zeroed(
-        script.reg_io_state_size as usize * (args.num_dummy_cycles + 1),
-        device,
-    );
+    assert!(args.repetitions > 0, "--repetitions must be positive");
+    let input_states = benchmark_input_states(&script, args.num_dummy_cycles, args.seed);
+    let mut input_hasher = DefaultHasher::new();
+    input_states.hash(&mut input_hasher);
+    println!("Benchmark input hash: {}", input_hasher.finish());
+    let mut input_states_uvec: UVec<_> = input_states.clone().into();
+    input_states_uvec.as_mut_uptr(device);
     let mut sram_storage = UVec::new_zeroed(script.sram_storage_size as usize, device);
     script
         .validate_macro_abi()
@@ -151,64 +193,71 @@ fn main() {
     );
     assert_ne!(script.macro_io_data.as_uptr(device) as usize, 0);
     device.synchronize();
-    let timer_sim = clilog::stimer!("simulation (warm up)");
-    ucci::simulate_v1_noninteractive_simple_scan(
-        args.num_blocks,
-        script.num_major_stages,
-        script.num_macro_levels,
-        &script.blocks_start,
-        &script.blocks_data,
-        &mut sram_storage,
-        args.num_dummy_cycles,
-        script.reg_io_state_size as usize,
-        &mut input_states_uvec,
-        script.macro_storage.num_carrychain,
-        script.macro_storage.num_dsp,
-        script.macro_storage.num_srl,
-        &script.macro_program_offsets,
-        &script.macro_program_data,
-        &mut script.macro_state_data,
-        &mut script.macro_io_data,
-        device,
-    );
-    device.synchronize();
-    clilog::finish!(timer_sim);
+    for warmup in 0..args.warmup_runs {
+        ucci::simulate_v1_noninteractive_simple_scan(
+            args.num_blocks,
+            script.num_major_stages,
+            script.num_macro_levels,
+            &script.blocks_start,
+            &script.blocks_data,
+            &mut sram_storage,
+            args.num_dummy_cycles,
+            script.reg_io_state_size as usize,
+            &mut input_states_uvec,
+            script.macro_storage.num_carrychain,
+            script.macro_storage.num_dsp,
+            script.macro_storage.num_srl,
+            &script.macro_program_offsets,
+            &script.macro_program_data,
+            &mut script.macro_state_data,
+            &mut script.macro_io_data,
+            device,
+        );
+        device.synchronize();
+        println!(
+            "GEM_BENCH_WARMUP run={} cycles={}",
+            warmup, args.num_dummy_cycles
+        );
+    }
 
-    // Warm-up executes real sequential macros and therefore mutates DSP PREG,
-    // SRLC32E state, SRAM, and output history.  Benchmark the same zero-state
-    // workload as the warm-up instead of silently timing a different initial
-    // condition.
-    input_states_uvec = UVec::new_zeroed(
-        script.reg_io_state_size as usize * (args.num_dummy_cycles + 1),
-        device,
-    );
-    sram_storage = UVec::new_zeroed(script.sram_storage_size as usize, device);
-    script.macro_state_data =
-        UVec::new_zeroed(script.macro_storage.total_state_words.max(1), device);
-    script.macro_io_data =
-        UVec::new_zeroed(script.macro_storage.total_io_words.max(1), device);
-    device.synchronize();
+    for repetition in 0..args.repetitions {
+        // Reset outside the measured interval. This makes every sample start
+        // from identical primary inputs, SRAM, DSP PREG, and SRL state.
+        input_states_uvec = input_states.clone().into();
+        input_states_uvec.as_mut_uptr(device);
+        sram_storage = UVec::new_zeroed(script.sram_storage_size as usize, device);
+        script.macro_state_data =
+            UVec::new_zeroed(script.macro_storage.total_state_words.max(1), device);
+        script.macro_io_data = UVec::new_zeroed(script.macro_storage.total_io_words.max(1), device);
+        device.synchronize();
 
-    let timer_sim = clilog::stimer!("simulation");
-    ucci::simulate_v1_noninteractive_simple_scan(
-        args.num_blocks,
-        script.num_major_stages,
-        script.num_macro_levels,
-        &script.blocks_start,
-        &script.blocks_data,
-        &mut sram_storage,
-        args.num_dummy_cycles,
-        script.reg_io_state_size as usize,
-        &mut input_states_uvec,
-        script.macro_storage.num_carrychain,
-        script.macro_storage.num_dsp,
-        script.macro_storage.num_srl,
-        &script.macro_program_offsets,
-        &script.macro_program_data,
-        &mut script.macro_state_data,
-        &mut script.macro_io_data,
-        device,
-    );
-    device.synchronize();
-    clilog::finish!(timer_sim);
+        let start = Instant::now();
+        ucci::simulate_v1_noninteractive_simple_scan(
+            args.num_blocks,
+            script.num_major_stages,
+            script.num_macro_levels,
+            &script.blocks_start,
+            &script.blocks_data,
+            &mut sram_storage,
+            args.num_dummy_cycles,
+            script.reg_io_state_size as usize,
+            &mut input_states_uvec,
+            script.macro_storage.num_carrychain,
+            script.macro_storage.num_dsp,
+            script.macro_storage.num_srl,
+            &script.macro_program_offsets,
+            &script.macro_program_data,
+            &mut script.macro_state_data,
+            &mut script.macro_io_data,
+            device,
+        );
+        device.synchronize();
+        let elapsed = start.elapsed();
+        let elapsed_ms = elapsed.as_secs_f64() * 1000.0;
+        let cycles_per_second = args.num_dummy_cycles as f64 / elapsed.as_secs_f64();
+        println!(
+            "GEM_BENCH_SAMPLE repetition={} cycles={} elapsed_ms={:.6} cycles_per_second={:.3}",
+            repetition, args.num_dummy_cycles, elapsed_ms, cycles_per_second
+        );
+    }
 }

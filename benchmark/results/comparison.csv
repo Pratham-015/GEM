@@ -1,0 +1,2 @@
+benchmark,cycles,baseline_commit,modified_commit,baseline_median_cps,modified_median_cps,speedup,percentage_change
+boolean_heavy,2000,9e913f9b5efc8b12027bfb374be8b1a0028df00a,04796087195e3f0db28468301d77ecf02ad91392,59385.199872024896,59422.111,1.0006215543275874,0.06215543275873703
