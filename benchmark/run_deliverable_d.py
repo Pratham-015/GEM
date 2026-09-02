@@ -391,7 +391,8 @@ def main():
     env["cuda_compile_command"] = cuda_compile_command()
     results = []
     for item in prepared:
-        measurement = measure_current(item, args.repetitions, args.blocks, item["seed"])
+        workload_blocks = item.get("requested", {}).get("benchmark_blocks", args.blocks)
+        measurement = measure_current(item, args.repetitions, workload_blocks, item["seed"])
         results.append({**item, "measurement": measurement})
     payload = {"schema_version": 1, "metric_definition": "simulated cycles / synchronized production-kernel elapsed seconds",
                "timing_scope": "one cooperative production simulation launch; excludes parsing, allocation, H2D/D2H, synthesis, partitioning, and output",

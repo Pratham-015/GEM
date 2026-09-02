@@ -149,11 +149,16 @@ def prepare_generated(name):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--skip-prepare", action="store_true")
-    ap.add_argument("--workload", choices=["exact-chain", "mixed_heterogeneous", "large_scale"],
+    ap.add_argument("--workload", choices=["exact-chain", "mixed_heterogeneous", "large_scale",
+                                            "occupancy_stress"],
                     default="exact-chain")
+    ap.add_argument("--blocks", type=int,
+                    help="cooperative CUDA grid size (generated workloads only)")
+    ap.add_argument("--parts", help="override generated-workload .gemparts file")
+    ap.add_argument("--profile-name", help="output stem for a controlled profile variant")
     ap.add_argument("--output")
     args = ap.parse_args()
-    stem = "boomerang" if args.workload == "exact-chain" else args.workload
+    stem = args.profile_name or ("boomerang" if args.workload == "exact-chain" else args.workload)
     status = ROOT / f"benchmark/nsight_{stem}_status.md"
     output_path = pathlib.Path(args.output or f"benchmark/nsight_{stem}.csv")
     if not output_path.is_absolute():
@@ -163,6 +168,8 @@ def main():
         print("BLOCKED: ncu is not installed")
         return 2
     if args.workload == "exact-chain":
+        if args.blocks is not None or args.parts is not None:
+            raise SystemExit("--blocks/--parts are only supported for generated workloads")
         if not args.skip_prepare:
             prepare()
         else:
@@ -182,11 +189,15 @@ def main():
             item = next(item for item in manifest if item["name"] == args.workload)
             gv = ROOT / f"benchmark/generated/artifacts/{args.workload}.gv"
             parts = ROOT / f"benchmark/generated/artifacts/{args.workload}.gemparts"
+            if args.parts:
+                parts = pathlib.Path(args.parts).resolve()
             require_files([ROOT / "target/release/cuda_dummy_test", gv, parts],
                           "Run without --skip-prepare first.")
         else:
             item, gv, parts = prepare_generated(args.workload)
-        application = ["target/release/cuda_dummy_test", gv, parts, "4", str(item["cycles"]),
+        blocks = args.blocks if args.blocks is not None else (
+            16 if args.workload == "occupancy_stress" else 4)
+        application = ["target/release/cuda_dummy_test", gv, parts, str(blocks), str(item["cycles"]),
                        "--top-module", item["top"], "--warmup-runs", "0",
                        "--repetitions", "1", "--seed", str(item["seed"])]
     metrics, query_output = supported_metrics()

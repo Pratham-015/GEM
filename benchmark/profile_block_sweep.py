@@ -16,20 +16,29 @@ SAMPLE = re.compile(r"GEM_BENCH_SAMPLE .* cycles_per_second=([0-9.]+)")
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--blocks", default="1,2,4,8,16,20,32,40")
-    parser.add_argument("--cycles", type=int, default=300)
+    parser.add_argument("--workload", default="mixed_heterogeneous")
+    parser.add_argument("--blocks")
+    parser.add_argument("--cycles", type=int, default=1000)
     parser.add_argument("--repetitions", type=int, default=3)
+    parser.add_argument("--warmup-runs", type=int, default=12)
     args = parser.parse_args()
-    netlist = ROOT / "benchmark/generated/artifacts/mixed_heterogeneous.gv"
-    parts = ROOT / "benchmark/generated/artifacts/mixed_heterogeneous.gemparts"
+    manifest = json.loads((ROOT / "benchmark/generated/workloads/manifest.json").read_text())
+    item = next((item for item in manifest if item["name"] == args.workload), None)
+    if item is None:
+        raise SystemExit(f"unknown workload: {args.workload}")
+    netlist = ROOT / f"benchmark/generated/artifacts/{args.workload}.gv"
+    parts = ROOT / f"benchmark/generated/artifacts/{args.workload}.gemparts"
     if not netlist.exists() or not parts.exists():
         raise SystemExit("run the Deliverable D benchmark or mixed Nsight preparation first")
     results = []
-    for blocks in (int(value) for value in args.blocks.split(",")):
+    block_list = args.blocks or ("1,4,8,9,12,16,20,28,40"
+                                 if args.workload == "occupancy_stress"
+                                 else "1,2,4,8,16,20,32,40")
+    for blocks in (int(value) for value in block_list.split(",")):
         command = [ROOT / "target/release/cuda_dummy_test", netlist, parts, blocks,
-                   args.cycles, "--top-module", "mixed_heterogeneous",
-                   "--warmup-runs", "3", "--repetitions", args.repetitions,
-                   "--seed", "20260902"]
+                   args.cycles, "--top-module", item["top"],
+                   "--warmup-runs", args.warmup_runs, "--repetitions", args.repetitions,
+                   "--seed", str(item["seed"])]
         completed = subprocess.run([str(value) for value in command], cwd=ROOT,
                                    text=True, stdout=subprocess.PIPE,
                                    stderr=subprocess.STDOUT, check=True)
@@ -41,8 +50,9 @@ def main():
                         "mean_cps": statistics.mean(samples),
                         "command": [str(value) for value in command],
                         "raw_stdout": completed.stdout})
-    payload = {"workload": "mixed_heterogeneous", "cycles": args.cycles,
-               "repetitions": args.repetitions, "results": results,
+    payload = {"workload": args.workload, "cycles": args.cycles,
+               "repetitions": args.repetitions, "warmup_runs": args.warmup_runs,
+               "results": results,
                "environment": {
                    "timestamp_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
                    "commit": subprocess.check_output(
@@ -53,7 +63,8 @@ def main():
                        ["nvidia-smi", "--query-gpu=name,driver_version,compute_cap",
                         "--format=csv,noheader"], text=True).strip(),
                }}
-    output = ROOT / "benchmark/results/block_sweep.json"
+    suffix = "" if args.workload == "mixed_heterogeneous" else f"_{args.workload}"
+    output = ROOT / f"benchmark/results/block_sweep{suffix}.json"
     output.write_text(json.dumps(payload, indent=2) + "\n")
     print(output)
 

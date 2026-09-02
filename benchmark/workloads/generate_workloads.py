@@ -4,6 +4,7 @@
 import argparse
 import json
 from pathlib import Path
+import random
 
 
 DSP_PARAMS = """#(.AREG(0),.BREG(0),.CREG(0),.DREG(0),.ADREG(0),.MREG(0),.PREG(1),.ACASCREG(0),.BCASCREG(0),.ALUMODEREG(0),.INMODEREG(0),.OPMODEREG(0),.CARRYINREG(0),.CARRYINSELREG(0),.AMULTSEL(\"AD\"))"""
@@ -59,6 +60,36 @@ def macro_rtl(name, dsp, carry, srl, boolean_gates=0, deep=False):
     return "\n".join(lines) + "\n"
 
 
+def occupancy_rtl(name, outputs=8192, seed=20260902):
+    """Wide independent cones that expose real inter-block parallelism."""
+    rng = random.Random(seed)
+    lines = [
+        f"module {name}(input wire clk,input wire [63:0] data,output wire [{outputs-1}:0] result);",
+        "wire [47:0] dp; wire [3:0] carry_o,carry_co; wire sq,sq31;",
+        "`ifdef GOLDEN",
+        "dsp48e2_ref dsp(.P(dp),.clk(clk),.A(data[26:0]),.D(data[53:27]),.B(data[17:0]),.C(data[47:0]),.state(2'd1),.use_pre(1'b1));",
+        "CARRY4_ref carry(.O(carry_o),.CO(carry_co),.DI(data[7:4]),.S(data[3:0]),.CI(data[8]),.CYINIT(data[9]));",
+        "srlc32e_ref srl(.Q(sq),.Q31(sq31),.clk(clk),.CE(data[10]),.D(carry_co[3]),.A(data[15:11]));",
+        "`else",
+        "DSP48E2 " + DSP_PARAMS + " dsp(.P(dp),.CLK(clk),.A({{3{data[26]}},data[26:0]}),.D(data[53:27]),.B(data[17:0]),.C(data[47:0]),.OPMODE(9'h005),.ALUMODE(4'b0),.INMODE(5'b00100));",
+        "CARRY4 carry(.O(carry_o),.CO(carry_co),.DI(data[7:4]),.S(data[3:0]),.CI(data[8]),.CYINIT(data[9]));",
+        "SRLC32E srl(.Q(sq),.Q31(sq31),.CLK(clk),.CE(data[10]),.D(carry_co[3]),.A(data[15:11]));",
+        "`endif",
+    ]
+    for i in range(outputs):
+        literals = []
+        for _ in range(6):
+            bit = rng.randrange(64)
+            literals.append(("~" if rng.randrange(2) else "") + f"data[{bit}]")
+        macro_term = f"dp[{i % 48}]^carry_o[{i % 4}]^sq"
+        lines.append(
+            f"assign result[{i}]=({literals[0]}&{literals[1]})^"
+            f"({literals[2]}&{literals[3]})^({literals[4]}&{literals[5]})^{macro_term};"
+        )
+    lines.append("endmodule")
+    return "\n".join(lines) + "\n"
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--output-dir", default="benchmark/generated/workloads")
@@ -74,6 +105,7 @@ def main():
         ("mixed_heterogeneous", 1000, macro_rtl("mixed_heterogeneous", 16, 32, 32, 1024), {"dsp": 16,"carry4":32,"srlc32e":32,"aig_target":1024,"scale_group":"heterogeneous","scale":"medium"}),
         ("deep_dependency", 200, macro_rtl("deep_dependency", 0, 64, 0, 128, True), {"carry4":64,"aig_target":128,"deep":True}),
         ("large_scale", 200, macro_rtl("large_scale", 32, 128, 128, 8192), {"dsp":32,"carry4":128,"srlc32e":128,"aig_target":8192,"scale_group":"heterogeneous","scale":"large"}),
+        ("occupancy_stress", 1000, occupancy_rtl("occupancy_stress"), {"dsp":1,"carry4":1,"srlc32e":1,"wide_outputs":8192,"purpose":"multi-partition occupancy","benchmark_blocks":16}),
     ]
     manifest = []
     for name, cycles, rtl, requested in specs:

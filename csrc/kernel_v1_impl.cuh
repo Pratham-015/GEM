@@ -336,10 +336,10 @@ __device__ __forceinline__ void macro_write_bit(
 // Phase 1: gather every macro's Boolean inputs into the 64-bit SoA buffer.
 // A grid barrier after this function prevents any macro output write from
 // racing another macro's input gather in the same topological level.
+template <u32 expected_kind>
 __device__ void gather_macro_range(
   usize first_macro,
   usize num_macros,
-  u32 expected_kind,
   const u32 *__restrict__ offsets,
   const u32 *__restrict__ program,
   const u32 *__restrict__ state,
@@ -397,10 +397,10 @@ __device__ void gather_macro_range(
 }
 
 // Phase 2: one CUDA thread performs one native word-level macro operation.
+template <u32 expected_kind>
 __device__ void evaluate_macro_range(
   usize first_macro,
   usize num_macros,
-  u32 expected_kind,
   const u32 *__restrict__ offsets,
   const u32 *__restrict__ program,
   const u32 *__restrict__ edge_state,
@@ -566,8 +566,8 @@ __global__ void simulate_v1_noninteractive_simple_scan(
     // publish the old DSP PREG values before any AIG consumer runs.  The
     // descriptor level UINT_MAX uniquely selects purely registered DSPs;
     // no input gather is needed when state is not committed.
-    evaluate_macro_range(dsp_first, num_dsp_macros,
-      GEM_MACRO_DSP48E2, macro_program_offsets, macro_program_data,
+    evaluate_macro_range<GEM_MACRO_DSP48E2>(dsp_first, num_dsp_macros,
+      macro_program_offsets, macro_program_data,
       states_noninteractive + cycle_i * state_size,
       states_noninteractive + (cycle_i + 1) * state_size,
       macro_state_data, macro_io_data, shared_macro_fields, 0xffffffffu, false);
@@ -593,33 +593,33 @@ __global__ void simulate_v1_noninteractive_simple_scan(
         // next-state inputs; there is no macro dispatch after it.
         if(macro_level == num_macro_levels) break;
 
-        gather_macro_range(carry_first, num_carrychain_macros,
-          GEM_MACRO_CARRYCHAIN, macro_program_offsets, macro_program_data,
+        gather_macro_range<GEM_MACRO_CARRYCHAIN>(carry_first, num_carrychain_macros,
+          macro_program_offsets, macro_program_data,
           states_noninteractive + (cycle_i + 1) * state_size, macro_io_data,
           (u32)macro_level, false);
-        gather_macro_range(dsp_first, num_dsp_macros,
-          GEM_MACRO_DSP48E2, macro_program_offsets, macro_program_data,
+        gather_macro_range<GEM_MACRO_DSP48E2>(dsp_first, num_dsp_macros,
+          macro_program_offsets, macro_program_data,
           states_noninteractive + (cycle_i + 1) * state_size, macro_io_data,
           (u32)macro_level, false);
-        gather_macro_range(srl_first, num_srl_macros,
-          GEM_MACRO_SRLC32E, macro_program_offsets, macro_program_data,
+        gather_macro_range<GEM_MACRO_SRLC32E>(srl_first, num_srl_macros,
+          macro_program_offsets, macro_program_data,
           states_noninteractive + (cycle_i + 1) * state_size, macro_io_data,
           (u32)macro_level, false);
         cooperative_groups::this_grid().sync();
-        evaluate_macro_range(carry_first, num_carrychain_macros,
-          GEM_MACRO_CARRYCHAIN, macro_program_offsets, macro_program_data,
+        evaluate_macro_range<GEM_MACRO_CARRYCHAIN>(carry_first, num_carrychain_macros,
+          macro_program_offsets, macro_program_data,
           states_noninteractive + cycle_i * state_size,
           states_noninteractive + (cycle_i + 1) * state_size,
           macro_state_data, macro_io_data, shared_macro_fields,
           (u32)macro_level, false);
-        evaluate_macro_range(dsp_first, num_dsp_macros,
-          GEM_MACRO_DSP48E2, macro_program_offsets, macro_program_data,
+        evaluate_macro_range<GEM_MACRO_DSP48E2>(dsp_first, num_dsp_macros,
+          macro_program_offsets, macro_program_data,
           states_noninteractive + cycle_i * state_size,
           states_noninteractive + (cycle_i + 1) * state_size,
           macro_state_data, macro_io_data, shared_macro_fields,
           (u32)macro_level, false);
-        evaluate_macro_range(srl_first, num_srl_macros,
-          GEM_MACRO_SRLC32E, macro_program_offsets, macro_program_data,
+        evaluate_macro_range<GEM_MACRO_SRLC32E>(srl_first, num_srl_macros,
+          macro_program_offsets, macro_program_data,
           states_noninteractive + cycle_i * state_size,
           states_noninteractive + (cycle_i + 1) * state_size,
           macro_state_data, macro_io_data, shared_macro_fields,
@@ -630,22 +630,22 @@ __global__ void simulate_v1_noninteractive_simple_scan(
       if(edge_phase == 0u) {
         // Gather DSP and SRL inputs before either kind updates state.  This is
         // the single global rising edge shared by both primitive families.
-        gather_macro_range(dsp_first, num_dsp_macros,
-          GEM_MACRO_DSP48E2, macro_program_offsets, macro_program_data,
+        gather_macro_range<GEM_MACRO_DSP48E2>(dsp_first, num_dsp_macros,
+          macro_program_offsets, macro_program_data,
           states_noninteractive + (cycle_i + 1) * state_size, macro_io_data,
           0u, true);
-        gather_macro_range(srl_first, num_srl_macros,
-          GEM_MACRO_SRLC32E, macro_program_offsets, macro_program_data,
+        gather_macro_range<GEM_MACRO_SRLC32E>(srl_first, num_srl_macros,
+          macro_program_offsets, macro_program_data,
           states_noninteractive + (cycle_i + 1) * state_size, macro_io_data,
           0u, true);
         cooperative_groups::this_grid().sync();
-        evaluate_macro_range(dsp_first, num_dsp_macros,
-          GEM_MACRO_DSP48E2, macro_program_offsets, macro_program_data,
+        evaluate_macro_range<GEM_MACRO_DSP48E2>(dsp_first, num_dsp_macros,
+          macro_program_offsets, macro_program_data,
           states_noninteractive + cycle_i * state_size,
           states_noninteractive + (cycle_i + 1) * state_size,
           macro_state_data, macro_io_data, shared_macro_fields, 0u, true);
-        evaluate_macro_range(srl_first, num_srl_macros,
-          GEM_MACRO_SRLC32E, macro_program_offsets, macro_program_data,
+        evaluate_macro_range<GEM_MACRO_SRLC32E>(srl_first, num_srl_macros,
+          macro_program_offsets, macro_program_data,
           states_noninteractive + cycle_i * state_size,
           states_noninteractive + (cycle_i + 1) * state_size,
           macro_state_data, macro_io_data, shared_macro_fields, 0u, true);

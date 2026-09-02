@@ -211,8 +211,38 @@ impl RCHyperGraph {
     }
 
     /// Run partition on this hypergraph.
-    pub fn partition(&self, _num_parts: usize) -> Vec<usize> {
-        vec![0; self.num_vertices]
+    pub fn partition(&self, num_parts: usize) -> Vec<usize> {
+        assert!(num_parts > 0, "partition count must be non-zero");
+        if self.num_vertices == 0 {
+            return Vec::new();
+        }
+
+        // mt-kahypar is optional in this build.  The old fallback returned
+        // partition zero for every endpoint, silently defeating requested
+        // parallelism and leaving all but one CUDA block idle.  Use a
+        // deterministic longest-processing-time assignment instead: heavier
+        // endpoint cones are placed first on the currently lightest part.
+        // Partition::build_one subsequently validates every part against the
+        // Boomerang PE resource limits, so this affects load balance only, not
+        // simulator semantics.
+        let actual_parts = num_parts.min(self.num_vertices);
+        let mut order = (0..self.num_vertices).collect::<Vec<_>>();
+        order.sort_by_key(|&vertex| {
+            (std::cmp::Reverse(self.endpoint_weights[vertex]), vertex)
+        });
+        let mut loads = vec![0u64; actual_parts];
+        let mut assignments = vec![0usize; self.num_vertices];
+        for vertex in order {
+            let part = loads
+                .iter()
+                .enumerate()
+                .min_by_key(|&(part, load)| (*load, part))
+                .unwrap()
+                .0;
+            assignments[vertex] = part;
+            loads[part] = loads[part].saturating_add(self.endpoint_weights[vertex].max(1));
+        }
+        assignments
     }
 }
 
@@ -230,5 +260,29 @@ impl fmt::Display for RCHyperGraph {
             writeln!(f, "{}", w)?;
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn fallback_partitioner_uses_and_balances_requested_parts() {
+        let graph = RCHyperGraph {
+            num_vertices: 8,
+            clusters: IndexMap::new(),
+            endpoint_weights: vec![9, 8, 7, 6, 5, 4, 3, 2],
+        };
+        let assignments = graph.partition(4);
+        assert_eq!(assignments.len(), 8);
+        assert_eq!(assignments.iter().copied().max(), Some(3));
+        let mut loads = vec![0u64; 4];
+        for (vertex, &part) in assignments.iter().enumerate() {
+            loads[part] += graph.endpoint_weights[vertex];
+        }
+        assert!(loads.iter().all(|&load| load > 0));
+        assert!(loads.iter().max().unwrap() - loads.iter().min().unwrap() <= 3);
+        assert_eq!(assignments, graph.partition(4));
     }
 }

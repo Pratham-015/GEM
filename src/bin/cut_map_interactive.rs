@@ -59,6 +59,10 @@ struct SimulatorArgs {
     /// By default is 0, meaning no degradation is allowed.
     #[clap(long, default_value_t=0)]
     max_stage_degrad: usize,
+    /// Initial number of endpoint groups assigned to each partition. Zero
+    /// starts with one coarse partition and refines only when PE mapping fails.
+    #[clap(long, default_value_t=0)]
+    target_endpoints_per_part: usize,
 }
 
 fn main() {
@@ -88,7 +92,11 @@ fn main() {
         let mut parts_indices_good = Vec::new();
         // always made sure that staged output pins are at fronts.
         let mut unrealized_endpoints = (0..staged.num_endpoint_groups()).collect::<Vec<_>>();
-        let mut division = 600;
+        let mut division = if args.target_endpoints_per_part == 0 {
+            staged.num_endpoint_groups().saturating_mul(2).max(2)
+        } else {
+            args.target_endpoints_per_part.saturating_mul(2)
+        };
 
         while !unrealized_endpoints.is_empty() {
             division = (division / 2).max(1);

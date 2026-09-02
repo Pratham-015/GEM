@@ -37,11 +37,13 @@ def main():
         lines += ["NOT RUN — these measurements are development-only and must not be published as final results.", ""]
     lines += [
              "## Production throughput", "",
-             "| Workload | Cycles | AIG gates | DSP | CARRY4 | SRLC32E | Median cycles/s | Mean | Min | Max | Stddev |",
-             "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|"]
+             "| Workload | Blocks | Cycles | AIG gates | DSP | CARRY4 | SRLC32E | Median cycles/s | Mean | Min | Max | Stddev |",
+             "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|"]
     for row in data["results"]:
         n, s = row["netlist_stats"], row["measurement"]["summary"]
-        lines.append(f"| {row['name']} | {row['cycles']} | {n['aig_cells']} | {n['dsp']} | {n['carry4']} | {n['srlc32e']} | {fmt(s['median_cps'])} | {fmt(s['mean_cps'])} | {fmt(s['min_cps'])} | {fmt(s['max_cps'])} | {fmt(s['stdev_cps'])} |")
+        command = [str(value) for value in row["measurement"]["command"]]
+        blocks = command[3]
+        lines.append(f"| {row['name']} | {blocks} | {row['cycles']} | {n['aig_cells']} | {n['dsp']} | {n['carry4']} | {n['srlc32e']} | {fmt(s['median_cps'])} | {fmt(s['mean_cps'])} | {fmt(s['min_cps'])} | {fmt(s['max_cps'])} | {fmt(s['stdev_cps'])} |")
     lines += ["", "These are production GEM measurements, not isolated macro microkernels.", "",
               "## Preprocessing cost", "",
               "| Workload | Synthesis (s) | Partition (s) |", "|---|---:|---:|"]
@@ -58,6 +60,18 @@ def main():
             macros = n["dsp"] + n["carry4"] + n["srlc32e"]
             lines.append(f"| {row['requested']['scale']} | {n['cells']} | {n['aig_cells']} | {macros} | {fmt(s['median_cps'])} | {1e6/s['median_cps']:.2f} |")
         lines += ["", "Cycles/second falls as heterogeneous graph work per simulated cycle grows; these points test scaling, not a same-workload implementation speedup."]
+    else:
+        lines.append("NOT MEASURED")
+    occupancy_sweep_path = RESULTS / "block_sweep_occupancy_stress.json"
+    lines += ["", "## Multi-partition occupancy scaling", ""]
+    if occupancy_sweep_path.exists():
+        sweep = json.loads(occupancy_sweep_path.read_text())
+        lines += ["| Blocks | Median cycles/s |", "|---:|---:|"]
+        for row in sweep["results"]:
+            lines.append(f"| {row['blocks']} | {fmt(row['median_cps'])} |")
+        one = next(row["median_cps"] for row in sweep["results"] if row["blocks"] == 1)
+        best = max(sweep["results"], key=lambda row: row["median_cps"])
+        lines += ["", f"The 9-partition heterogeneous stress graph scales from {fmt(one)} cycles/s at one block to {fmt(best['median_cps'])} cycles/s at {best['blocks']} blocks (**{best['median_cps']/one:.2f}x**). This measures useful multi-partition execution; larger grids with idle blocks are not counted as an occupancy improvement."]
     else:
         lines.append("NOT MEASURED")
     lines += ["",
@@ -93,7 +107,7 @@ def main():
                   f"| Macro-preserved, modified | {fmt(b['median_cps'])} | {fmt(b['mean_cps'])} | {fmt(b['stdev_cps'])} |", "",
                   f"Representation-plus-implementation ratio: **{rep['speedup']:.3f}x**. This is not an implementation-only speedup."]
     profiles = []
-    for stem in ("boomerang", "mixed_heterogeneous", "large_scale"):
+    for stem in ("boomerang", "mixed_heterogeneous", "large_scale", "occupancy_stress"):
         path = ROOT / f"benchmark/nsight_{stem}.json"
         if path.exists():
             profiles.append(json.loads(path.read_text()))
@@ -116,7 +130,7 @@ def main():
         lines += ["", "All rows profile `simulate_v1_noninteractive_simple_scan`, the production simulator kernel. Raw CSV and parsed JSON are stored beside this report.", "",
                   f"Profiled commit(s): `{', '.join(profile_commits)}`.", "",
                   f"Observed DRAM utilization rounds to {min(dram_util):.2f}–{max(dram_util):.2f}% of peak while measured bandwidth is {min(bandwidths):.2f}–{max(bandwidths):.2f} MB/s, so these runs are not DRAM-bandwidth-bound. Achieved occupancy is {min(occupancies):.2f}–{max(occupancies):.2f}% versus {min(theoretical):.2f}–{max(theoretical):.2f}% theoretical. The launches use {registers[0]:.0f} registers/thread and {shared_bytes[0]:,.0f} shared bytes/block; registers limit residency to {register_limits[0]:.0f} blocks/SM.", "",
-                  "Branch-target divergence is 3.76% on the exact chain and falls to 1.21%/1.08% on mixed/large workloads. Predicated lane utilization remains 70–76%, so low branch divergence does not mean all lanes do useful work.", "",
+                  f"Branch-target divergence spans {min(p['summary']['derived_divergent_branch_targets_percent'] for p in profiles):.2f}–{max(p['summary']['derived_divergent_branch_targets_percent'] for p in profiles):.2f}%. Predicated lane utilization spans {min(p['summary']['predicated_thread_utilization_percent'] for p in profiles):.2f}–{max(p['summary']['predicated_thread_utilization_percent'] for p in profiles):.2f}%, so low branch divergence does not mean all lanes do useful work.", "",
                   "Sector/request values are measured transaction density, but mixed access widths prevent converting them into a defensible coalescing-efficiency percentage without instruction-level access classification."]
     else:
         lines.append("NOT MEASURED")

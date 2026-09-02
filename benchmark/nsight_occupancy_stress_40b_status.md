@@ -1,19 +1,19 @@
-# Nsight mixed_heterogeneous Profile
+# Nsight occupancy_stress Profile
 
 VERIFIED on the production simulator kernel.
 
-- Achieved occupancy: `16.67%`
+- Achieved occupancy: `33.32%`
 - Theoretical occupancy: `33.33%`
-- Launch: `4` blocks x `256` threads, `0.10` waves/SM
+- Launch: `40` blocks x `256` threads, `1.00` waves/SM
 - Resources: `124` registers/thread, `16640` shared bytes/block
-- Uniform branch targets: `98.79%`
-- Derived divergent branch targets: `1.21%`
-- Predicated-on threads per instruction: `75.16%`
-- DRAM peak utilization: `0.00%`
-- DRAM bandwidth: `1.95 MB/s`
-- Global load/store sectors per request: `7.36` / `3.73`
-- Profiled kernel duration: `457.816 ms`
+- Uniform branch targets: `98.75%`
+- Derived divergent branch targets: `1.25%`
+- Predicated-on threads per instruction: `80.30%`
+- DRAM peak utilization: `0.05%`
+- DRAM bandwidth: `89.48 MB/s`
+- Global load/store sectors per request: `7.87` / `4.20`
+- Profiled kernel duration: `28.398 ms`
 
 Metrics: `sm__warps_active.avg.pct_of_peak_sustained_active, sm__sass_average_branch_targets_threads_uniform.pct, sm__average_thread_inst_executed_pred_on_per_inst_executed_realtime.pct, sm__sass_branch_targets_threads_divergent.sum, sm__sass_branch_targets_threads_uniform.sum, dram__throughput.avg.pct_of_peak_sustained_elapsed, dram__bytes.sum, dram__bytes.sum.per_second, l1tex__average_t_sectors_per_request_pipe_lsu_mem_global_op_ld.ratio, l1tex__average_t_sectors_per_request_pipe_lsu_mem_global_op_st.ratio, gpu__time_duration.sum`
 
-Raw counters: [benchmark/nsight_mixed_heterogeneous.csv](nsight_mixed_heterogeneous.csv)
+Raw counters: [benchmark/nsight_occupancy_stress_40b.csv](nsight_occupancy_stress_40b.csv)
