@@ -14,5 +14,5 @@ High-Prep-Report.tex
 folder_structure.txt
 /benchmark/generated/
 /benchmark/results/runs/
+/benchmark/results/development/
 /verif/sim_out/
-/report/

@@ -32,7 +32,11 @@ def macro_rtl(name, dsp, carry, srl, boolean_gates=0, deep=False):
         terms.append(f"{{63'b0,bx[{boolean_gates}]}}")
     if dsp:
         lines += [f"wire [47:0] dp[0:{dsp-1}];", "genvar di; generate for(di=0;di<%d;di=di+1) begin:dg" % dsp,
-                  "DSP48E2 " + DSP_PARAMS + " u(.P(dp[di]),.CLK(clk),.A({{3{data[26]}},data[26:0]}),.D(data[26:0]^di),.B(data[17:0]^di),.C(data[47:0]),.OPMODE(9'h005),.ALUMODE(4'b0),.INMODE(5'b00100));",
+                  "`ifdef GOLDEN",
+                  "dsp48e2_ref u(.P(dp[di]),.clk(clk),.A(data[26:0]),.D(data[26:0]^{22'd0,di[4:0]}),.B(data[17:0]^{13'd0,di[4:0]}),.C(data[47:0]),.state(2'd1),.use_pre(1'b1));",
+                  "`else",
+                  "DSP48E2 " + DSP_PARAMS + " u(.P(dp[di]),.CLK(clk),.A({{3{data[26]}},data[26:0]}),.D(data[26:0]^{22'd0,di[4:0]}),.B(data[17:0]^{13'd0,di[4:0]}),.C(data[47:0]),.OPMODE(9'h005),.ALUMODE(4'b0),.INMODE(5'b00100));",
+                  "`endif",
                   "end endgenerate"]
         for i in range(dsp):
             terms.append(f"{{16'b0,dp[{i}]}}")
@@ -41,7 +45,11 @@ def macro_rtl(name, dsp, carry, srl, boolean_gates=0, deep=False):
         ci_expr = "(ci==0 ? data[0] : co[ci*4-1])"
         if deep:
             ci_expr = "(ci==0 ? data[0] : (co[ci*4-1]^data[(ci+11)%64]))"
-        lines += [f"CARRY4 u(.O(oo[ci*4 +: 4]),.CO(co[ci*4 +: 4]),.DI(data[(ci*3)%61 +: 4]),.S(data[(ci*7)%61 +: 4]),.CI({ci_expr}),.CYINIT(1'b0));",
+        lines += ["`ifdef GOLDEN",
+                  f"CARRY4_ref u(.O(oo[ci*4 +: 4]),.CO(co[ci*4 +: 4]),.DI(data[(ci*3)%61 +: 4]),.S(data[(ci*7)%61 +: 4]),.CI({ci_expr}),.CYINIT(1'b0));",
+                  "`else",
+                  f"CARRY4 u(.O(oo[ci*4 +: 4]),.CO(co[ci*4 +: 4]),.DI(data[(ci*3)%61 +: 4]),.S(data[(ci*7)%61 +: 4]),.CI({ci_expr}),.CYINIT(1'b0));",
+                  "`endif",
                   "end endgenerate"]
         for offset in range(0, carry * 4, 64):
             width = min(64, carry * 4 - offset)
@@ -49,7 +57,11 @@ def macro_rtl(name, dsp, carry, srl, boolean_gates=0, deep=False):
             terms.append(f"{{{{{64-width}{{1'b0}}}},co[{offset} +: {width}]}}")
     if srl:
         lines += [f"wire [{srl-1}:0] sq,sq31;", "genvar si; generate for(si=0;si<%d;si=si+1) begin:sg" % srl,
+                  "`ifdef GOLDEN",
+                  "srlc32e_ref u(.Q(sq[si]),.Q31(sq31[si]),.clk(clk),.CE(data[(si+1)%64]),.D(data[(si*5+3)%64]),.A(data[(si*7)%59 +: 5]));",
+                  "`else",
                   "SRLC32E u(.Q(sq[si]),.Q31(sq31[si]),.CLK(clk),.CE(data[(si+1)%64]),.D(data[(si*5+3)%64]),.A(data[(si*7)%59 +: 5]));",
+                  "`endif",
                   "end endgenerate"]
         for offset in range(0, srl, 64):
             width = min(64, srl - offset)
@@ -90,6 +102,27 @@ def occupancy_rtl(name, outputs=8192, seed=20260902):
     return "\n".join(lines) + "\n"
 
 
+def carry_representation_rtl():
+    """Combinational CARRY4 experiment with an unscored clock anchor.
+
+    Official upstream GEM discovers VCD cycles through sequential cells.  The
+    heartbeat output keeps one ordinary DFF alive so upstream consumes every
+    stimulus edge; correctness and performance conclusions use only `result`,
+    whose path remains entirely combinational.
+    """
+    rtl = macro_rtl("carry_representation", 0, 15, 0, 256)
+    rtl = rtl.replace(
+        "output wire [63:0] result);",
+        "output wire [63:0] result, output reg heartbeat);",
+        1,
+    )
+    return rtl.replace(
+        "endmodule\n",
+        "initial heartbeat=1'b0; always @(posedge clk) heartbeat<=data[63];\nendmodule\n",
+        1,
+    )
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--output-dir", default="benchmark/generated/workloads")
@@ -97,21 +130,33 @@ def main():
     out = Path(args.output_dir)
     out.mkdir(parents=True, exist_ok=True)
     specs = [
-        ("boolean_heavy", 2000, boolean_rtl("boolean_heavy", 4096), {"aig_target": 4096}),
-        ("dsp_heavy", 2000, macro_rtl("dsp_heavy", 32, 0, 0), {"dsp": 32}),
-        ("carry_heavy", 1000, macro_rtl("carry_heavy", 0, 128, 0), {"carry4": 128}),
-        ("srl_heavy", 2000, macro_rtl("srl_heavy", 0, 0, 128), {"srlc32e": 128}),
-        ("scaling_small", 1000, macro_rtl("scaling_small", 4, 8, 8, 256), {"dsp":4,"carry4":8,"srlc32e":8,"aig_target":256,"scale_group":"heterogeneous","scale":"small"}),
-        ("mixed_heterogeneous", 1000, macro_rtl("mixed_heterogeneous", 16, 32, 32, 1024), {"dsp": 16,"carry4":32,"srlc32e":32,"aig_target":1024,"scale_group":"heterogeneous","scale":"medium"}),
-        ("deep_dependency", 200, macro_rtl("deep_dependency", 0, 64, 0, 128, True), {"carry4":64,"aig_target":128,"deep":True}),
-        ("large_scale", 200, macro_rtl("large_scale", 32, 128, 128, 8192), {"dsp":32,"carry4":128,"srlc32e":128,"aig_target":8192,"scale_group":"heterogeneous","scale":"large"}),
-        ("occupancy_stress", 1000, occupancy_rtl("occupancy_stress"), {"dsp":1,"carry4":1,"srlc32e":1,"wide_outputs":8192,"purpose":"multi-partition occupancy","benchmark_blocks":16}),
+        ("boolean_heavy", 2000, 64, boolean_rtl("boolean_heavy", 4096), {"aig_target": 4096}),
+        ("dsp_heavy", 2000, 64, macro_rtl("dsp_heavy", 32, 0, 0), {"dsp": 32}),
+        ("carry_heavy", 1000, 64, macro_rtl("carry_heavy", 0, 128, 0), {"carry4": 128}),
+        ("srl_heavy", 2000, 64, macro_rtl("srl_heavy", 0, 0, 128), {"srlc32e": 128}),
+        ("scaling_small", 1000, 64, macro_rtl("scaling_small", 4, 8, 8, 256), {"dsp":4,"carry4":8,"srlc32e":8,"aig_target":256,"scale_group":"heterogeneous","scale":"small"}),
+        ("mixed_heterogeneous", 1000, 64, macro_rtl("mixed_heterogeneous", 16, 32, 32, 1024), {"dsp": 16,"carry4":32,"srlc32e":32,"aig_target":1024,"scale_group":"heterogeneous","scale":"medium"}),
+        ("deep_dependency", 200, 64, macro_rtl("deep_dependency", 0, 64, 0, 128, True), {"carry4":64,"aig_target":128,"deep":True}),
+        ("large_scale", 200, 64, macro_rtl("large_scale", 32, 128, 128, 8192), {"dsp":32,"carry4":128,"srlc32e":128,"aig_target":8192,"scale_group":"heterogeneous","scale":"large"}),
+        ("occupancy_stress", 1000, 8192, occupancy_rtl("occupancy_stress"), {"dsp":1,"carry4":1,"srlc32e":1,"wide_outputs":8192,"purpose":"multi-partition occupancy","benchmark_blocks":16}),
     ]
     manifest = []
-    for name, cycles, rtl, requested in specs:
+    for name, cycles, result_width, rtl, requested in specs:
         path = out / f"{name}.sv"
         path.write_text(rtl, encoding="utf-8")
-        manifest.append({"name": name, "top": name, "cycles": cycles, "seed": 20260902, "source": str(path), "requested": requested})
+        manifest.append({"name": name, "top": name, "cycles": cycles,
+                         "correctness_cycles": 48, "result_width": result_width,
+                         "seed": 20260902, "source": str(path), "requested": requested})
+
+    # A single fused-width combinational carry chain is used for the fair
+    # representation experiment.  Official upstream executes its shredded
+    # AIG form while modified GEM executes the preserved CARRY4 form.  Keeping
+    # sequential DSP/SRL state out of this comparison avoids conflating macro
+    # preservation with the historical upstream VCD clocking convention.
+    comparison = out / "carry_representation.sv"
+    comparison.write_text(
+        carry_representation_rtl(), encoding="utf-8"
+    )
     (out / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     print(f"generated {len(manifest)} deterministic workloads in {out}")
 

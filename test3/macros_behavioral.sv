@@ -31,9 +31,27 @@ module DSP48E2(
     input  [1:0]  STATE
 );
     reg [47:0] preg;
+    reg [26:0] ad;
+    reg [44:0] product;
+
     assign P = preg;
+    always @(*) begin
+        // Assignment to the fixed-width vectors performs the PS-mandated
+        // 27-bit pre-adder and 45-bit product truncation.  Keep the declared
+        // nets unsigned so Yosys' structural writer does not emit a `signed`
+        // qualifier that the historical upstream GEM parser cannot consume;
+        // the casts still make the actual multiply two's-complement signed.
+        ad = USE_PRE ? (A + D) : A;
+        product = $signed(ad) * $signed(B);
+    end
+
+    initial preg = 48'd0;
     always @(posedge CLK) begin
-        preg <= C + (A * B);
+        case (STATE)
+            2'd0:    preg <= C;
+            2'd1:    preg <= {{3{product[44]}}, product};
+            default: preg <= preg + {{3{product[44]}}, product};
+        endcase
     end
 endmodule
 
@@ -62,6 +80,7 @@ module SRLC32E(
     input  [4:0] A
 );
     reg [31:0] shift_reg;
+    initial shift_reg = 32'd0;
     assign Q31 = shift_reg[31];
     assign Q = shift_reg[A];
     always @(posedge CLK) begin

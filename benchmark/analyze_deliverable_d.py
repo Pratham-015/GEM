@@ -2,6 +2,7 @@
 """Generate a conservative human-readable report from raw D results."""
 
 import json
+import hashlib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -12,14 +13,34 @@ def fmt(value):
     return f"{value:,.0f}"
 
 
+def sha256_file(path):
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def profile_is_current(profile):
+    """Reject profile JSON whose recorded production sources changed later."""
+    recorded = profile.get("sha256", {})
+    required = {
+        "kernel_source": ROOT / "csrc/kernel_v1_impl.cuh",
+        "macro_source": ROOT / "csrc/gem_macros.cuh",
+    }
+    return all(recorded.get(name) == sha256_file(path)
+               for name, path in required.items())
+
+
 def main():
     data = json.loads((RESULTS / "latest.json").read_text())
     env = data["environment"]
+    repetitions = data["results"][0]["measurement"]["summary"]["samples"]
     lines = ["# Deliverable D: Reproducible Production Performance Report", "",
              "## Methodology", "",
              f"Primary metric: `{data['metric_definition']}`.", "",
              f"Timing scope: {data['timing_scope']}.", "",
-             "Every production row uses 12 untimed warm-up launches followed by seven measured launches in one initialized process; mutable SRAM, DSP, SRL, and input state is reset outside each timed interval.", "",
+             f"Every production row uses 12 untimed warm-up launches followed by {repetitions} measured launches in one initialized process; mutable SRAM, DSP, SRL, and input state is reset outside each timed interval.", "",
              "Timing uses a host monotonic clock around the production launch and a mandatory post-launch device synchronization. It therefore includes kernel-launch latency but excludes setup and transfers. CUDA-event timing is not implemented.", "",
              "## Environment", "",
              f"- Commit: `{env['commit']}`", f"- Dirty during run: `{env['dirty']}`",
@@ -35,6 +56,16 @@ def main():
                   gate["scope"] + ".", ""]
     else:
         lines += ["NOT RUN — these measurements are development-only and must not be published as final results.", ""]
+    lines += ["## Per-workload differential gates", "",
+              "Every timed workload is separately checked against the independent Python event model in `benchmark/generated_workload_reference.py`. The model uses the literal golden primitive models, not CUDA implementation code.", "",
+              "| Workload | Status | Random cycles | Result bits | Checked event values | Mismatches |",
+              "|---|---|---:|---:|---:|---:|"]
+    for row in data["results"]:
+        gate = row.get("workload_correctness")
+        if gate:
+            lines.append(f"| {row['name']} | {gate['status']} | {gate['cycles']} | {gate['result_width']} | {gate['checked_values']} | {gate['mismatches']} |")
+        else:
+            lines.append(f"| {row['name']} | NOT RUN | — | — | — | — |")
     lines += [
              "## Production throughput", "",
              "| Workload | Blocks | Cycles | AIG gates | DSP | CARRY4 | SRLC32E | Median cycles/s | Mean | Min | Max | Stddev |",
@@ -101,16 +132,32 @@ def main():
     else:
         a = rep["shredded_upstream"]["summary"]
         b = rep["preserved_modified"]["summary"]
-        lines += ["Both representations passed output differential checking against the same RTL stimulus.", "",
+        c = rep["correctness"]
+        random_a = c["randomized_shredded_iverilog_diff"].strip().splitlines()[-2]
+        random_b = c["randomized_preserved_cuda_diff"].strip().splitlines()[-2]
+        zero_a = c["upstream_diff"].strip().splitlines()[-2]
+        zero_b = c["modified_diff"].strip().splitlines()[-2]
+        lines += ["This experiment uses one combinational 15-CARRY4 chain. Both netlists are regenerated from the same RTL; the upstream form contains no macros and the modified form preserves all 15 CARRY4 instances.", "",
+                  "Random changing-vector semantics are checked as RTL versus Icarus-simulated shredded gates and RTL versus production-CUDA preserved macros. The old upstream VCD adapter is not used for changing vectors because it does not preserve vector-event timing reliably. The timed comparison uses constant-zero input in both binaries, and that exact input is separately checked in both simulators.", "",
+                  f"- Random RTL vs shredded Icarus: `{random_a}`",
+                  f"- Random RTL vs preserved CUDA: `{random_b}`",
+                  f"- Timed zero input vs upstream: `{zero_a}`",
+                  f"- Timed zero input vs modified: `{zero_b}`", "",
                   "| Representation | Median cycles/s | Mean | Stddev |", "|---|---:|---:|---:|",
                   f"| Shredded, official upstream | {fmt(a['median_cps'])} | {fmt(a['mean_cps'])} | {fmt(a['stdev_cps'])} |",
                   f"| Macro-preserved, modified | {fmt(b['median_cps'])} | {fmt(b['mean_cps'])} | {fmt(b['stdev_cps'])} |", "",
-                  f"Representation-plus-implementation ratio: **{rep['speedup']:.3f}x**. This is not an implementation-only speedup."]
+                  f"Representation-plus-implementation ratio: **{rep['speedup']:.3f}x** ({(rep['speedup']-1)*100:+.1f}%). This is not an implementation-only speedup.", "",
+                  "The result is a measured regression, not a claimed gain: macro dispatch and cooperative barriers cost more than the removed AIG work for this graph."]
     profiles = []
+    stale_profiles = []
     for stem in ("boomerang", "mixed_heterogeneous", "large_scale", "occupancy_stress"):
         path = ROOT / f"benchmark/nsight_{stem}.json"
         if path.exists():
-            profiles.append(json.loads(path.read_text()))
+            profile = json.loads(path.read_text())
+            if profile_is_current(profile):
+                profiles.append(profile)
+            else:
+                stale_profiles.append(path.name)
     lines += ["", "## Nsight Compute", ""]
     if profiles:
         lines += ["| Workload | Occupancy | Theoretical | Divergent targets | Uniform targets | Predicated threads | DRAM peak | DRAM MB/s | Load/store sectors/request |",
@@ -132,8 +179,10 @@ def main():
                   f"Observed DRAM utilization rounds to {min(dram_util):.2f}–{max(dram_util):.2f}% of peak while measured bandwidth is {min(bandwidths):.2f}–{max(bandwidths):.2f} MB/s, so these runs are not DRAM-bandwidth-bound. Achieved occupancy is {min(occupancies):.2f}–{max(occupancies):.2f}% versus {min(theoretical):.2f}–{max(theoretical):.2f}% theoretical. The launches use {registers[0]:.0f} registers/thread and {shared_bytes[0]:,.0f} shared bytes/block; registers limit residency to {register_limits[0]:.0f} blocks/SM.", "",
                   f"Branch-target divergence spans {min(p['summary']['derived_divergent_branch_targets_percent'] for p in profiles):.2f}–{max(p['summary']['derived_divergent_branch_targets_percent'] for p in profiles):.2f}%. Predicated lane utilization spans {min(p['summary']['predicated_thread_utilization_percent'] for p in profiles):.2f}–{max(p['summary']['predicated_thread_utilization_percent'] for p in profiles):.2f}%, so low branch divergence does not mean all lanes do useful work.", "",
                   "Sector/request values are measured transaction density, but mixed access widths prevent converting them into a defensible coalescing-efficiency percentage without instruction-level access classification."]
+        if stale_profiles:
+            lines += ["", "Excluded stale profiles whose recorded kernel/macro source hashes do not match the current files: " + ", ".join(stale_profiles) + "."]
     else:
-        lines.append("NOT MEASURED")
+        lines.append("NOT MEASURED with current production source hashes.")
     sweep_path = RESULTS / "block_sweep.json"
     lines += ["", "## Cooperative block-count sweep", ""]
     if sweep_path.exists():

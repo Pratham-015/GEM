@@ -5,15 +5,23 @@
 Run from the repository root:
 
 ```shell
-python3 benchmark/run_benchmarks.py --repetitions 7
+python3 benchmark/run_benchmarks.py --repetitions 7 --require-clean
 ```
 
 This command runs the correctness gate, regenerates deterministic RTL,
 synthesizes with Yosys, partitions with the production Boomerang path, builds
 and measures the production CUDA simulator, and compares an identical
-macro-free netlist against official upstream commit
-`9e913f9b5efc8b12027bfb374be8b1a0028df00a`. The runner creates an isolated
+macro-free netlist against official upstream commit. The runner creates an isolated
 detached worktree under `/tmp`; it never treats the current binary as upstream.
+`--require-clean` prevents final evidence from being published against source
+that cannot be reconstructed from the recorded commit.
+
+Before timing, every generated workload is run through the production CUDA
+simulator for 48 randomized cycles and compared event-by-event with
+`generated_workload_reference.py`. That model independently reconstructs the
+generated ordinary RTL and imports only the literal Python macro models under
+`verif/golden`; it never calls the C++/CUDA evaluator. Source, netlist,
+partition, binary, reference, and VCD SHA-256 hashes are recorded in JSON.
 
 The primary metric is simulated cycles divided by elapsed seconds around one
 production simulator launch and its mandatory device synchronization. Parsing,
@@ -29,6 +37,24 @@ times. Timestamped raw runs are kept locally in `results/runs/`.
 Generated inputs and netlists live in the ignored `benchmark/generated/`
 directory. They are deterministic from seed `20260902` and can always be
 regenerated from `workloads/generate_workloads.py`.
+
+`--skip-correctness` is only a development shortcut. Such runs are written to
+`benchmark/results/development/` and cannot overwrite publishable `latest.*`
+evidence.
+
+## Macro-representation comparison
+
+The runner also regenerates a 15-CARRY4 combinational design twice from the
+same RTL: a fully shredded AIG netlist for official upstream and a preserved
+CARRY4 netlist for modified GEM. Random vectors prove the shredded netlist in
+Icarus and the preserved netlist in production CUDA. Timed runs use the exact
+constant-zero input supported by both benchmark binaries and separately prove
+that input in both simulators. The resulting ratio is explicitly labelled as
+representation-plus-implementation, not an implementation-only speedup.
+
+Historical upstream GEM's changing-vector VCD adapter is not used as random
+correctness evidence because it does not retain vector event timing reliably.
+This limitation is recorded rather than hidden or corrected after measurement.
 
 ## Nsight Compute
 
@@ -56,8 +82,3 @@ permissions are disabled, it exits 2 and writes the exact blocker to
 - `run_deliverable_d.py`: official measurement implementation.
 - `analyze_deliverable_d.py`: report generator from raw JSON.
 - `profile_boomerang_ncu.py`: production-kernel profiling automation.
-
-## External competition results
-
-Populate `benchmark/other_pools.csv` only from measured, attributable results.
-Unknown submissions remain `PENDING_EXTERNAL_DATA`.

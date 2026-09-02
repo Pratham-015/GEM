@@ -8,12 +8,14 @@ counter-permission failure is recorded explicitly and returns exit status 2.
 import argparse
 import csv
 import datetime
+import hashlib
 import io
 import json
 import pathlib
 import shutil
 import subprocess
 import sys
+import time
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 CANDIDATE_METRICS = [
@@ -56,16 +58,31 @@ def require_files(paths, hint):
 
 
 def supported_metrics():
-    query = run(["ncu", "--query-metrics-mode", "all", "--devices", "0"],
-                text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    if query.returncode != 0:
-        return [], query.stdout
-    available = set()
-    for line in query.stdout.splitlines():
-        token = line.strip().split()[0] if line.strip() else ""
-        if "__" in token:
-            available.add(token.rstrip(","))
-    return [metric for metric in CANDIDATE_METRICS if metric in available], query.stdout
+    outputs = []
+    for attempt in range(3):
+        query = run(["ncu", "--query-metrics-mode", "all", "--devices", "0"],
+                    text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        outputs.append(query.stdout)
+        if query.returncode == 0:
+            available = set()
+            for line in query.stdout.splitlines():
+                token = line.strip().split()[0] if line.strip() else ""
+                if "__" in token:
+                    available.add(token.rstrip(","))
+            metrics = [metric for metric in CANDIDATE_METRICS if metric in available]
+            if metrics:
+                return metrics, "\n".join(outputs)
+        if attempt != 2:
+            time.sleep(1)
+    return [], "\n".join(outputs)
+
+
+def sha256_file(path):
+    digest = hashlib.sha256()
+    with pathlib.Path(path).open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def parse_raw_csv(output):
@@ -297,6 +314,12 @@ def main():
         "gpu": subprocess.check_output(
             ["nvidia-smi", "--query-gpu=name,driver_version,compute_cap",
              "--format=csv,noheader"], text=True).strip(),
+    }
+    metadata["sha256"] = {
+        "raw_csv": sha256_file(output_path),
+        "kernel_source": sha256_file(ROOT / "csrc/kernel_v1_impl.cuh"),
+        "macro_source": sha256_file(ROOT / "csrc/gem_macros.cuh"),
+        "executable": sha256_file(ROOT / application[0]),
     }
     metadata_path = ROOT / f"benchmark/nsight_{stem}.json"
     metadata_path.write_text(json.dumps(metadata, indent=2) + "\n")

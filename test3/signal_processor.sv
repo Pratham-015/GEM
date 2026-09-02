@@ -4,7 +4,7 @@ module signal_processor(
     input [7:0] in_b,
     input [17:0] coeff,
     input [4:0] tap_sel,
-    output reg [47:0] out_p,
+    output [47:0] out_p,
     output out_parity
 );
     wire [7:0] s_sum;
@@ -30,7 +30,10 @@ module signal_processor(
         .B(coeff),
         .C(48'd0),
         .D(27'd0),
-        .STATE(2'b00)
+        // PS state 1 is the registered multiplier result.  State 0 is the
+        // C-bypass mode and, with C tied low here, would intentionally
+        // produce zero rather than exercise the multiplier.
+        .STATE(2'b01)
     );
     
     wire parity = ^s_sum;
@@ -45,8 +48,9 @@ module signal_processor(
         .A(tap_sel)
     );
     
-    always @(posedge clk) begin
-        out_p <= mac_out;
-    end
+    // The DSP already contains the sole PS-mandated PREG.  Expose it directly
+    // so this benchmark compares macro preservation rather than adding a
+    // second, unrelated register stage after the primitive.
+    assign out_p = mac_out;
     assign out_parity = delayed_parity;
 endmodule
