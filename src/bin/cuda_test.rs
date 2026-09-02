@@ -1,21 +1,24 @@
 // SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
-use std::path::PathBuf;
-use gem::aigpdk::{AIGPDKLeafPins, AIGPDK_SRAM_SIZE};
-use gem::aig::{DriverType, AIG};
-use gem::staging::build_staged_aigs;
-use gem::pe::Partition;
-use gem::flatten::FlattenedScriptV1;
-use netlistdb::{Direction, GeneralPinName, NetlistDB};
-use sverilogparse::SVerilogRange;
 use compact_str::CompactString;
-use ulib::{AsUPtrMut, Device, UVec};
-use std::fs::File;
-use std::io::{BufReader, BufWriter, Seek, SeekFrom};
-use std::hash::Hash;
-use std::rc::Rc;
+use gem::aig::{DriverType, AIG};
+use gem::aigpdk::{AIGPDKLeafPins, AIGPDK_SRAM_SIZE};
+use gem::flatten::FlattenedScriptV1;
+use gem::pe::Partition;
+use gem::staging::build_staged_aigs;
+use netlistdb::{Direction, GeneralPinName, NetlistDB};
 use std::collections::{HashMap, HashSet};
-use vcd_ng::{Parser, ScopeItem, Var, Scope, FastFlow, FastFlowToken, FFValueChange, Writer, SimulationCommand};
+use std::fs::File;
+use std::hash::Hash;
+use std::io::{BufReader, BufWriter, Seek, SeekFrom};
+use std::path::PathBuf;
+use std::rc::Rc;
+use sverilogparse::SVerilogRange;
+use ulib::{AsUPtrMut, Device, UVec};
+use vcd_ng::{
+    FFValueChange, FastFlow, FastFlowToken, Parser, Scope, ScopeItem, SimulationCommand, Var,
+    Writer,
+};
 
 #[derive(clap::Parser, Debug)]
 struct SimulatorArgs {
@@ -30,7 +33,7 @@ struct SimulatorArgs {
     #[clap(long)]
     top_module: Option<String>,
     /// Level split thresholds.
-    #[clap(long, value_delimiter=',')]
+    #[clap(long, value_delimiter = ',')]
     level_split: Vec<usize>,
     /// Input path for the serialized partitions.
     gemparts: PathBuf,
@@ -65,7 +68,7 @@ struct SimulatorArgs {
 #[derive(PartialEq, Eq, Clone, Debug)]
 struct VCDHier {
     cur: CompactString,
-    prev: Option<Rc<VCDHier>>
+    prev: Option<Rc<VCDHier>>,
 }
 
 /// Reverse iterator of a [`VCDHier`], yielding cell names
@@ -79,7 +82,7 @@ impl<'i> Iterator for VCDHierRevIter<'i> {
     fn next(&mut self) -> Option<&'i CompactString> {
         let name = self.0?;
         if name.cur.is_empty() {
-            return None
+            return None;
         }
         let ret = &name.cur;
         self.0 = name.prev.as_ref().map(|a| a.as_ref());
@@ -114,7 +117,10 @@ impl VCDHier {
 
     #[inline]
     fn empty() -> Self {
-        VCDHier { cur: "".into(), prev: None }
+        VCDHier {
+            cur: "".into(),
+            prev: None,
+        }
     }
 
     #[inline]
@@ -133,32 +139,34 @@ impl VCDHier {
 /// all paths matched).
 /// If fails, return None.
 fn match_scope_path<'i>(mut scope: &'i str, cur: &str) -> Option<&'i str> {
-    if scope.len() == 0 { return Some("") }
+    if scope.len() == 0 {
+        return Some("");
+    }
     if scope.starts_with('/') {
         scope = &scope[1..];
     }
-    if scope.len() == 0 { Some("") }
-    else if scope.starts_with(cur) {
-        if scope.len() == cur.len() { Some("") }
-        else if scope.as_bytes()[cur.len()] == b'/' {
+    if scope.len() == 0 {
+        Some("")
+    } else if scope.starts_with(cur) {
+        if scope.len() == cur.len() {
+            Some("")
+        } else if scope.as_bytes()[cur.len()] == b'/' {
             Some(&scope[cur.len() + 1..])
+        } else {
+            None
         }
-        else { None }
+    } else {
+        None
     }
-    else { None }
 }
 
-fn find_top_scope<'i>(
-    items: &'i [ScopeItem], top_scope: &'_ str
-) -> Option<&'i Scope> {
+fn find_top_scope<'i>(items: &'i [ScopeItem], top_scope: &'_ str) -> Option<&'i Scope> {
     for item in items {
         if let ScopeItem::Scope(scope) = item {
-            if let Some(s1) = match_scope_path(
-                top_scope, scope.identifier.as_str()
-            ) {
+            if let Some(s1) = match_scope_path(top_scope, scope.identifier.as_str()) {
                 return match s1 {
                     "" => Some(scope),
-                    _ => find_top_scope(&scope.children[..], s1)
+                    _ => find_top_scope(&scope.children[..], s1),
                 };
             }
         }
@@ -169,7 +177,8 @@ fn find_top_scope<'i>(
 /// CPU prototype partition executor for script version 1.
 fn simulate_block_v1(
     script: &[u32],
-    input_state: &[u32], output_state: &mut [u32],
+    input_state: &[u32],
+    output_state: &mut [u32],
     sram_data: &mut [u32],
     debug_verbose: bool,
 ) {
@@ -191,7 +200,7 @@ fn simulate_block_v1(
         }
         if num_stages == 0 {
             script_pi += 256;
-            break
+            break;
         }
         // assert_eq!(part.stages.len(), num_stages as usize);
         // assert_eq!(part.stages.iter().map(|s| s.write_outs.len()).sum::<usize>(), (num_ios - num_srams - num_output_duplicates) as usize);
@@ -204,10 +213,12 @@ fn simulate_block_v1(
                 let mut cur_state = state[i];
                 let idx = script[script_pi + (i * 2)];
                 let mut mask = script[script_pi + (i * 2 + 1)];
-                if mask == 0 { continue }
+                if mask == 0 {
+                    continue;
+                }
                 let value = match (idx >> 31) != 0 {
                     false => input_state[idx as usize],
-                    true => output_state[(idx ^ (1 << 31)) as usize]
+                    true => output_state[(idx ^ (1 << 31)) as usize],
                 };
                 while mask != 0 {
                     cur_state <<= 1;
@@ -242,8 +253,12 @@ fn simulate_block_v1(
                         let t_shuffle = script[script_pi + i * 4 + k_inner];
                         let t_shuffle_1_idx = (t_shuffle & ((1 << 16) - 1)) as u16;
                         let t_shuffle_2_idx = (t_shuffle >> 16) as u16;
-                        hier_inputs[i] |= (state[(t_shuffle_1_idx >> 5) as usize] >> (t_shuffle_1_idx & 31) & 1) << (k * 2);
-                        hier_inputs[i] |= (state[(t_shuffle_2_idx >> 5) as usize] >> (t_shuffle_2_idx & 31) & 1) << (k * 2 + 1);
+                        hier_inputs[i] |=
+                            (state[(t_shuffle_1_idx >> 5) as usize] >> (t_shuffle_1_idx & 31) & 1)
+                                << (k * 2);
+                        hier_inputs[i] |=
+                            (state[(t_shuffle_2_idx >> 5) as usize] >> (t_shuffle_2_idx & 31) & 1)
+                                << (k * 2 + 1);
                     }
                 }
                 script_pi += 256 * 4;
@@ -332,8 +347,12 @@ fn simulate_block_v1(
                     let t_shuffle = script[script_pi + (i * 4 + k_inner) as usize];
                     let t_shuffle_1_idx = (t_shuffle & ((1 << 16) - 1)) as u32;
                     let t_shuffle_2_idx = (t_shuffle >> 16) as u32;
-                    sram_duplicate_perm[i as usize] |= (writeouts[(t_shuffle_1_idx >> 5) as usize] >> (t_shuffle_1_idx & 31) & 1) << (k * 2);
-                    sram_duplicate_perm[i as usize] |= (writeouts[(t_shuffle_2_idx >> 5) as usize] >> (t_shuffle_2_idx & 31) & 1) << (k * 2 + 1);
+                    sram_duplicate_perm[i as usize] |=
+                        (writeouts[(t_shuffle_1_idx >> 5) as usize] >> (t_shuffle_1_idx & 31) & 1)
+                            << (k * 2);
+                    sram_duplicate_perm[i as usize] |=
+                        (writeouts[(t_shuffle_2_idx >> 5) as usize] >> (t_shuffle_2_idx & 31) & 1)
+                            << (k * 2 + 1);
                 }
             }
             script_pi += 256 * 4;
@@ -358,7 +377,8 @@ fn simulate_block_v1(
             let r = ram[port_r_addr_iv as usize];
             let w0 = ram[port_w_addr_iv as usize];
             writeouts[(num_ios - num_srams + sram_i_u32) as usize] = r;
-            ram[port_w_addr_iv as usize] = (w0 & !port_w_wr_en) | (port_w_wr_data_iv & port_w_wr_en);
+            ram[port_w_addr_iv as usize] =
+                (w0 & !port_w_wr_en) | (port_w_wr_data_iv & port_w_wr_en);
             // println!("sram for part id {} index {sram_i_u32}: port_r_addr_iv {port_r_addr_iv} port_w_addr_iv {port_w_addr_iv} port_w_wr_en {port_w_wr_en} port_w_wr_data_iv {port_w_wr_data_iv}", parts_indices[part_i_dbg - 1]);
         }
 
@@ -371,11 +391,15 @@ fn simulate_block_v1(
             println!("debug_verbose STAGE 2");
             println!("before writeout_inv:");
             for i in 0..256 {
-                println!(" [{}] = {}", i, if i < num_ios as usize {
-                    writeouts[i]
-                } else {
-                    0
-                });
+                println!(
+                    " [{}] = {}",
+                    i,
+                    if i < num_ios as usize {
+                        writeouts[i]
+                    } else {
+                        0
+                    }
+                );
             }
         }
 
@@ -388,8 +412,16 @@ fn simulate_block_v1(
                     let t_shuffle = script[script_pi + (i * 4 + k_inner) as usize];
                     let t_shuffle_1_idx = (t_shuffle & ((1 << 16) - 1)) as u32;
                     let t_shuffle_2_idx = (t_shuffle >> 16) as u32;
-                    clken_perm[i as usize] |= (writeouts_for_clken[(t_shuffle_1_idx >> 5) as usize] >> (t_shuffle_1_idx & 31) & 1) << (k * 2);
-                    clken_perm[i as usize] |= (writeouts_for_clken[(t_shuffle_2_idx >> 5) as usize] >> (t_shuffle_2_idx & 31) & 1) << (k * 2 + 1);
+                    clken_perm[i as usize] |= (writeouts_for_clken
+                        [(t_shuffle_1_idx >> 5) as usize]
+                        >> (t_shuffle_1_idx & 31)
+                        & 1)
+                        << (k * 2);
+                    clken_perm[i as usize] |= (writeouts_for_clken
+                        [(t_shuffle_2_idx >> 5) as usize]
+                        >> (t_shuffle_2_idx & 31)
+                        & 1)
+                        << (k * 2 + 1);
                 }
             }
             script_pi += 256 * 4;
@@ -413,15 +445,167 @@ fn simulate_block_v1(
             println!("debug_verbose STAGE 3");
             println!("final writeout:");
             for i in 0..num_ios {
-                println!(" [{}] [global {}] = {}", i, io_offset + i, output_state[(io_offset + i) as usize]);
+                println!(
+                    " [{}] [global {}] = {}",
+                    i,
+                    io_offset + i,
+                    output_state[(io_offset + i) as usize]
+                );
             }
         }
 
         if is_last_part != 0 {
-            break
+            break;
         }
     }
+
     assert_eq!(script_pi, script.len());
+}
+
+fn simulate_macro_program(
+    offsets: &[u32],
+    program: &[u32],
+    edge_state: &[u32],
+    output_state: &mut [u32],
+    macro_state: &mut [u64],
+    macro_io: &mut [u64],
+    commit: bool,
+) {
+    let read_source = |state: &[u32], source: usize| -> u64 {
+        if source & 0x8000_0000 != 0 {
+            (source & 1) as u64
+        } else {
+            let pos = source & 0x3fff_ffff;
+            (((state[pos >> 5] >> (pos & 31)) & 1) as u64) ^ (((source >> 30) & 1) as u64)
+        }
+    };
+    // Gather all inputs before any output is changed (Jacobi/barrier semantics).
+    for mi in 0..offsets.len().saturating_sub(1) {
+        let d = &program[offsets[mi] as usize..offsets[mi + 1] as usize];
+        let kind = d[0];
+        let io_off = d[2] as usize;
+        let io_stride = d[3] as usize;
+        let n_in = d[5] as usize;
+        let (mut f0, mut f1, mut f2, mut f3, mut f4) = (0u64, 0u64, 0u64, 0u64, 0u64);
+        for k in (0..n_in).step_by(2) {
+            let bit = read_source(output_state, d[6 + k] as usize);
+            let field = d[6 + k + 1];
+            if kind == 0 {
+                if field < 64 {
+                    f0 |= bit << field;
+                } else if field < 128 {
+                    f1 |= bit << (field - 64);
+                } else {
+                    f2 |= bit;
+                }
+            } else if kind == 1 {
+                if field < 27 {
+                    f0 |= bit << field;
+                } else if field < 54 {
+                    f1 |= bit << (field - 27);
+                } else if field < 72 {
+                    f2 |= bit << (field - 54);
+                } else if field < 120 {
+                    f3 |= bit << (field - 72);
+                } else if field < 122 {
+                    f4 |= bit << (field - 120);
+                } else {
+                    f4 |= bit << 2;
+                }
+            } else if field == 0 {
+                f0 |= bit;
+            } else if field == 1 {
+                f0 |= bit << 1;
+            } else {
+                f0 |= bit << field;
+            }
+        }
+        macro_io[io_off] = f0;
+        macro_io[io_off + io_stride] = f1;
+        if kind != 2 {
+            macro_io[io_off + 2 * io_stride] = f2;
+        }
+        if kind == 1 {
+            macro_io[io_off + 3 * io_stride] = f3;
+            macro_io[io_off + 4 * io_stride] = f4;
+        }
+    }
+
+    let write_bit = |state: &mut [u32], pos: usize, bit: u64| {
+        let mask = 1u32 << (pos & 31);
+        state[pos >> 5] = (state[pos >> 5] & !mask) | if bit != 0 { mask } else { 0 };
+    };
+    for mi in 0..offsets.len().saturating_sub(1) {
+        let d = &program[offsets[mi] as usize..offsets[mi + 1] as usize];
+        let kind = d[0];
+        let state_off = d[1] as usize;
+        let io_off = d[2] as usize;
+        let stride = d[3] as usize;
+        let clock_active = read_source(edge_state, d[4] as usize) != 0;
+        let n_in = d[5] as usize;
+        let mut oi = 6 + n_in;
+        let n_out = d[oi] as usize;
+        oi += 1;
+        let (value0, value1) = if kind == 0 {
+            let s = macro_io[io_off];
+            let di = macro_io[io_off + stride];
+            let cin = macro_io[io_off + 2 * stride];
+            let mask = 0xfu64;
+            let aa = (s | di) & mask;
+            let bb = (!s & di) & mask;
+            let total = aa.wrapping_add(bb).wrapping_add(cin & 1);
+            (total & mask, ((total ^ aa ^ bb) >> 1) & mask)
+        } else if kind == 1 {
+            let sext = |v: u64, w: u32| -> i64 {
+                let m = 1i64 << (w - 1);
+                let v = (v & ((1u64 << w) - 1)) as i64;
+                (v ^ m) - m
+            };
+            let ctrl = macro_io[io_off + 4 * stride];
+            let a = sext(macro_io[io_off], 27);
+            let dd = sext(macro_io[io_off + stride], 27);
+            let ad = sext((a + dd * ((ctrl >> 2) & 1) as i64) as u64, 27);
+            let product = ad * sext(macro_io[io_off + 2 * stride], 18);
+            let p_cur = macro_state[state_off];
+            let next = match ctrl & 3 {
+                0 => sext(macro_io[io_off + 3 * stride], 48),
+                1 => product,
+                _ => sext(p_cur, 48).wrapping_add(product),
+            } as u64
+                & ((1u64 << 48) - 1);
+            let visible = if commit && clock_active {
+                macro_state[state_off] = next;
+                next
+            } else {
+                p_cur
+            };
+            (visible, 0)
+        } else {
+            let ctrl = macro_io[io_off];
+            let old = macro_state[state_off];
+            let shifted = ((old << 1) | (ctrl & 1)) & 0xffff_ffff;
+            let next = if (ctrl >> 1) & 1 != 0 { shifted } else { old };
+            let visible = if commit && clock_active {
+                macro_state[state_off] = next;
+                next
+            } else {
+                old
+            };
+            (
+                ((visible >> ((ctrl >> 2) & 31)) & 1) | (((visible >> 31) & 1) << 1),
+                0,
+            )
+        };
+        for k in (0..n_out).step_by(2) {
+            let out_bit = d[oi + k + 1] as usize;
+            let bit = if out_bit < 64 {
+                (value0 >> out_bit) & 1
+            } else {
+                (value1 >> (out_bit - 64)) & 1
+            };
+            write_bit(output_state, d[oi + k] as usize, bit);
+        }
+    }
 }
 
 mod ucci {
@@ -439,8 +623,9 @@ fn main() {
     let netlistdb = NetlistDB::from_sverilog_file(
         &args.netlist_verilog,
         args.top_module.as_deref(),
-        &AIGPDKLeafPins()
-    ).expect("cannot build netlist");
+        &AIGPDKLeafPins(),
+    )
+    .expect("cannot build netlist");
 
     let aig = AIG::from_netlistdb(&netlistdb);
     let stageds = build_staged_aigs(&aig, &args.level_split);
@@ -448,20 +633,36 @@ fn main() {
     let f = std::fs::File::open(&args.gemparts).unwrap();
     let mut buf = std::io::BufReader::new(f);
     let parts_in_stages: Vec<Vec<Partition>> = serde_bare::from_reader(&mut buf).unwrap();
-    clilog::info!("# of effective partitions in each stage: {:?}",
-                  parts_in_stages.iter().map(|ps| ps.len()).collect::<Vec<_>>());
+    clilog::info!(
+        "# of effective partitions in each stage: {:?}",
+        parts_in_stages
+            .iter()
+            .map(|ps| ps.len())
+            .collect::<Vec<_>>()
+    );
 
     let mut input_layout = Vec::new();
     for (i, driv) in aig.drivers.iter().enumerate() {
-        if let DriverType::InputPort(_) | DriverType::InputClockFlag(_, _) | DriverType::Macro(_, _) = driv {
+        if let DriverType::InputPort(_)
+        | DriverType::InputClockFlag(_, _)
+        | DriverType::Macro(_, _, _) = driv
+        {
             input_layout.push(i);
         }
     }
 
-    let script = FlattenedScriptV1::from(
-        &aig, &stageds.iter().map(|(_, _, staged)| staged).collect::<Vec<_>>(),
-        &parts_in_stages.iter().map(|ps| ps.as_slice()).collect::<Vec<_>>(),
-        args.num_blocks, input_layout
+    let mut script = FlattenedScriptV1::from(
+        &aig,
+        &stageds
+            .iter()
+            .map(|(_, _, staged)| staged)
+            .collect::<Vec<_>>(),
+        &parts_in_stages
+            .iter()
+            .map(|ps| ps.as_slice())
+            .collect::<Vec<_>>(),
+        args.num_blocks,
+        input_layout,
     );
 
     use std::collections::hash_map::DefaultHasher;
@@ -482,8 +683,9 @@ fn main() {
 
     let top_scope = find_top_scope(
         &header.items[..],
-        args.input_vcd_scope.as_deref().unwrap_or("")
-    ).expect("Specified top scope not found in VCD.");
+        args.input_vcd_scope.as_deref().unwrap_or(""),
+    )
+    .expect("Specified top scope not found in VCD.");
 
     let mut vcd2inp = HashMap::new();
     let mut inp_port_given = HashSet::new();
@@ -497,10 +699,10 @@ fn main() {
 
     let mut match_one_input = |var: &Var, i: Option<isize>, vcd_pos: usize| {
         let key = (VCDHier::empty(), var.reference.as_str(), i);
-        if let Some(&id) = netlistdb.pinname2id.get(
-            &key as &dyn GeneralPinName
-        ) {
-            if netlistdb.pindirect[id] != Direction::O { return }
+        if let Some(&id) = netlistdb.pinname2id.get(&key as &dyn GeneralPinName) {
+            if netlistdb.pindirect[id] != Direction::O {
+                return;
+            }
             vcd2inp.insert((var.code.0, vcd_pos), id);
             inp_port_given.insert(id);
         }
@@ -513,20 +715,14 @@ fn main() {
                 None => match var.size {
                     1 => match_one_input(var, None, 0),
                     w @ _ => {
-                        for (pos, i) in (0..w).rev()
-                            .enumerate()
-                        {
-                            match_one_input(
-                                var, Some(i as isize), pos)
+                        for (pos, i) in (0..w).rev().enumerate() {
+                            match_one_input(var, Some(i as isize), pos)
                         }
                     }
                 },
-                Some(BitSelect(i)) => match_one_input(
-                    var, Some(i as isize), 0),
+                Some(BitSelect(i)) => match_one_input(var, Some(i as isize), 0),
                 Some(Range(a, b)) => {
-                    for (pos, i) in SVerilogRange(
-                        a as isize, b as isize).enumerate()
-                    {
+                    for (pos, i) in SVerilogRange(a as isize, b as isize).enumerate() {
                         match_one_input(var, Some(i), pos);
                     }
                 }
@@ -534,14 +730,13 @@ fn main() {
         }
     }
     for i in netlistdb.cell2pin.iter_set(0) {
-        if netlistdb.pindirect[i] != Direction::I &&
-            !inp_port_given.contains(&i)
-        {
+        if netlistdb.pindirect[i] != Direction::I && !inp_port_given.contains(&i) {
             clilog::warn!(
                 GATESIM_VCDI_MISSING_PI,
                 "Primary input port {:?} not present in \
                  the VCD input",
-                netlistdb.pinnames[i]);
+                netlistdb.pinnames[i]
+            );
         }
     }
 
@@ -557,22 +752,40 @@ fn main() {
     for &scope in &output_vcd_scope {
         writer.add_module(scope).unwrap();
     }
-    let out2vcd = netlistdb.cell2pin.iter_set(0).filter_map(|i| {
-        if netlistdb.pindirect[i] == Direction::I {
-            let aigpin = aig.pin2aigpin_iv[i];
-            if matches!(aig.drivers[aigpin >> 1], DriverType::InputPort(_)) {
-                clilog::info!("skipped output for port {} as it is a pass-through of input port.", netlistdb.pinnames[i].dbg_fmt_pin());
-                return None
+    let out2vcd = netlistdb
+        .cell2pin
+        .iter_set(0)
+        .filter_map(|i| {
+            if netlistdb.pindirect[i] == Direction::I {
+                let aigpin = aig.pin2aigpin_iv[i];
+                if matches!(aig.drivers[aigpin >> 1], DriverType::InputPort(_)) {
+                    clilog::info!(
+                        "skipped output for port {} as it is a pass-through of input port.",
+                        netlistdb.pinnames[i].dbg_fmt_pin()
+                    );
+                    return None;
+                }
+                if aigpin <= 1 {
+                    return Some((
+                        aigpin,
+                        u32::MAX,
+                        writer
+                            .add_wire(1, &format!("{}", netlistdb.pinnames[i].dbg_fmt_pin()))
+                            .unwrap(),
+                    ));
+                }
+                Some((
+                    aigpin,
+                    *script.output_map.get(&aigpin).unwrap(),
+                    writer
+                        .add_wire(1, &format!("{}", netlistdb.pinnames[i].dbg_fmt_pin()))
+                        .unwrap(),
+                ))
+            } else {
+                None
             }
-            if aigpin <= 1 {
-                return Some((aigpin, u32::MAX, writer.add_wire(
-                    1, &format!("{}", netlistdb.pinnames[i].dbg_fmt_pin())).unwrap()))
-            }
-            Some((aigpin, *script.output_map.get(&aigpin).unwrap(), writer.add_wire(
-                1, &format!("{}", netlistdb.pinnames[i].dbg_fmt_pin())).unwrap()))
-        }
-        else { None }
-    }).collect::<Vec<_>>();
+        })
+        .collect::<Vec<_>>();
 
     for _ in 0..output_vcd_scope.len() {
         writer.upscope().unwrap();
@@ -585,17 +798,13 @@ fn main() {
 
     // the simulator keeps 2 previous timestamps.
     // vcd_time: the last seen timestamp.
-    // vcd_time_last_active: the last timestamp strictly before vcd_time that has
-    // active events (e.g., watched clock posedge).
-    //
-    // when a new timestamp arrives and vcd_time has active events, we simulate
-    // the circuit with {actived edge flags from vcd_time}, but do NOT include the
-    // input port value changes. then, we associate the result output port values to
-    // vcd_time_last_active.
+    // When a new timestamp arrives and vcd_time has active events, simulate
+    // the circuit with the edge flags and stable inputs from vcd_time.  The
+    // resulting state belongs to that same active timestamp.  Associating it
+    // with the previous active timestamp advances outputs by one full clock.
     //
     // the above complexity rises from the necessity to emulate {update, then propagate}
     // behavior from our actual {propagate, then update} implementation.
-    let mut vcd_time_last_active = u64::MAX;
     let mut vcd_time = 0;
     let mut last_vcd_time_active = true;
     let mut delayed_bit_changes = HashSet::new();
@@ -606,11 +815,13 @@ fn main() {
     while let Some(tok) = vcdflow.next_token().unwrap() {
         match tok {
             FastFlowToken::Timestamp(t) => {
-                if t == vcd_time { continue }
+                if t == vcd_time {
+                    continue;
+                }
                 if last_vcd_time_active {
                     // clilog::debug!("simulating t={}", vcd_time);
                     input_states.extend(state.iter().copied());
-                    offsets_timestamps.push((input_states.len(), vcd_time_last_active));
+                    offsets_timestamps.push((input_states.len(), vcd_time));
                     // reset for next timestamp
                     for (_, &(pe, ne)) in &aig.clock_pin2aigpins {
                         if pe != usize::MAX {
@@ -625,12 +836,9 @@ fn main() {
                     if let Some(max_cycles) = args.max_cycles {
                         if offsets_timestamps.len() >= max_cycles {
                             clilog::info!("reached maximum cycles, stop reading input vcd");
-                            break
+                            break;
                         }
                     }
-                }
-                if last_vcd_time_active {
-                    vcd_time_last_active = vcd_time;
                 }
                 vcd_time = t;
                 last_vcd_time_active = false;
@@ -638,7 +846,7 @@ fn main() {
                 for pos in std::mem::take(&mut delayed_bit_changes) {
                     state[(pos >> 5) as usize] ^= 1u32 << (pos & 31);
                 }
-            },
+            }
             FastFlowToken::Value(FFValueChange { id, bits }) => {
                 // A `b...` value may carry fewer characters than the
                 // signal's declared width: VCD writers drop leading
@@ -697,43 +905,86 @@ fn main() {
     let device = Device::CUDA(0);
     input_states_uvec.as_mut_uptr(device);
     let mut sram_storage = UVec::new_zeroed(script.sram_storage_size as usize, device);
+    // Move macro buffers to GPU.
+    script.macro_state_data.as_mut_uptr(device);
+    script.macro_io_data.as_mut_uptr(device);
+    script.macro_program_offsets.as_mut_uptr(device);
+    script.macro_program_data.as_mut_uptr(device);
     device.synchronize();
     let timer_sim = clilog::stimer!("simulation");
     ucci::simulate_v1_noninteractive_simple_scan(
         args.num_blocks,
         script.num_major_stages,
-        &script.blocks_start, &script.blocks_data,
+        script.num_macro_passes,
+        &script.blocks_start,
+        &script.blocks_data,
         &mut sram_storage,
         offsets_timestamps.len(),
         script.reg_io_state_size as usize,
         &mut input_states_uvec,
-        device
+        script.macro_storage.instances.len(),
+        &script.macro_program_offsets,
+        &script.macro_program_data,
+        &mut script.macro_state_data,
+        &mut script.macro_io_data,
+        device,
     );
     device.synchronize();
     clilog::finish!(timer_sim);
 
     // sanity check.
     if args.check_with_cpu {
-        let mut sram_storage_sanity = vec![0; script.sram_storage_size as usize * AIGPDK_SRAM_SIZE];
+        let mut sram_storage_sanity = vec![0; script.sram_storage_size as usize];
         let mut input_states_sanity = input_states.clone();
+        let mut macro_state_sanity = vec![0u64; script.macro_storage.total_state_words.max(1)];
+        let mut macro_io_sanity = vec![0u64; script.macro_storage.total_io_words.max(1)];
         clilog::info!("running sanity test");
         for i in 0..offsets_timestamps.len() {
             let mut output_state = vec![0; script.reg_io_state_size as usize];
-            output_state.copy_from_slice(&input_states_sanity[((i + 1) * script.reg_io_state_size as usize)..((i + 2) * script.reg_io_state_size as usize)]);
-            for stage_i in 0..script.num_major_stages {
-                for blk_i in 0..script.num_blocks {
-                    simulate_block_v1(
-                        &script.blocks_data[script.blocks_start[stage_i * script.num_blocks + blk_i]..script.blocks_start[stage_i * script.num_blocks + blk_i + 1]],
-                        &input_states_sanity[(i * script.reg_io_state_size as usize)..((i + 1) * script.reg_io_state_size as usize)],
-                        &mut output_state,
-                        &mut sram_storage_sanity,
-                        false
-                    );
+            output_state.copy_from_slice(
+                &input_states_sanity[((i + 1) * script.reg_io_state_size as usize)
+                    ..((i + 2) * script.reg_io_state_size as usize)],
+            );
+            for pass in 0..script.num_macro_passes {
+                let commit = pass == script.num_macro_passes / 2;
+                for stage_i in 0..script.num_major_stages {
+                    for blk_i in 0..script.num_blocks {
+                        simulate_block_v1(
+                            &script.blocks_data[script.blocks_start
+                                [stage_i * script.num_blocks + blk_i]
+                                ..script.blocks_start[stage_i * script.num_blocks + blk_i + 1]],
+                            &input_states_sanity[(i * script.reg_io_state_size as usize)
+                                ..((i + 1) * script.reg_io_state_size as usize)],
+                            &mut output_state,
+                            &mut sram_storage_sanity,
+                            false,
+                        );
+                    }
                 }
+                simulate_macro_program(
+                    &script.macro_program_offsets,
+                    &script.macro_program_data,
+                    &input_states_sanity[(i * script.reg_io_state_size as usize)
+                        ..((i + 1) * script.reg_io_state_size as usize)],
+                    &mut output_state,
+                    &mut macro_state_sanity,
+                    &mut macro_io_sanity,
+                    commit,
+                );
             }
-            input_states_sanity[((i + 1) * script.reg_io_state_size as usize)..((i + 2) * script.reg_io_state_size as usize)].copy_from_slice(&output_state);
-            if output_state != input_states_uvec[((i + 1) * script.reg_io_state_size as usize)..((i + 2) * script.reg_io_state_size as usize)] {
-                println!("sanity check fail at cycle {i}.\ncpu good: {:?}\ngpu bad: {:?}", output_state, &input_states_uvec[((i + 1) * script.reg_io_state_size as usize)..((i + 2) * script.reg_io_state_size as usize)]);
+            input_states_sanity[((i + 1) * script.reg_io_state_size as usize)
+                ..((i + 2) * script.reg_io_state_size as usize)]
+                .copy_from_slice(&output_state);
+            if output_state
+                != input_states_uvec[((i + 1) * script.reg_io_state_size as usize)
+                    ..((i + 2) * script.reg_io_state_size as usize)]
+            {
+                println!(
+                    "sanity check fail at cycle {i}.\ncpu good: {:?}\ngpu bad: {:?}",
+                    output_state,
+                    &input_states_uvec[((i + 1) * script.reg_io_state_size as usize)
+                        ..((i + 2) * script.reg_io_state_size as usize)]
+                );
                 panic!()
             }
         }
@@ -745,7 +996,7 @@ fn main() {
     let mut last_val = vec![2; out2vcd.len()];
     for &(offset, timestamp) in &offsets_timestamps {
         if timestamp == u64::MAX {
-            continue
+            continue;
         }
         writer.timestamp(timestamp).unwrap();
         for (i, &(output_aigpin, output_pos, vid)) in out2vcd.iter().enumerate() {
@@ -754,20 +1005,27 @@ fn main() {
                 u32::MAX => {
                     assert!(output_aigpin <= 1);
                     output_aigpin as u32
-                },
+                }
                 output_pos @ _ => {
-                    let value_new_output = input_states_uvec[offset + (output_pos >> 5) as usize] >> (output_pos & 31) & 1;
+                    let value_new_output = input_states_uvec[offset + (output_pos >> 5) as usize]
+                        >> (output_pos & 31)
+                        & 1;
                     value_new_output
-                },
+                }
             };
             if value_new == last_val[i] {
-                continue
+                continue;
             }
             last_val[i] = value_new;
-            writer.change_scalar(vid, match value_new {
-                1 => Value::V1,
-                _ => Value::V0
-            }).unwrap();
+            writer
+                .change_scalar(
+                    vid,
+                    match value_new {
+                        1 => Value::V1,
+                        _ => Value::V0,
+                    },
+                )
+                .unwrap();
         }
     }
 }

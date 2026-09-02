@@ -44,11 +44,11 @@ def generate_combined_report(ptxas_info):
     with open(REPORT_MD, "w") as f:
         f.write("# Deliverable D: Performance & Profiling Report\n\n")
         f.write("## Executive Summary\n")
-        f.write("This report benchmarks the **Macro-Augmented GEM Execution Engine** against the **Baseline Flattened AIG Simulation Flow** across two distinct methodologies on an NVIDIA RTX 4050 Laptop GPU (Ada Lovelace architecture, SM 8.9):\n\n")
+        f.write("This report separates standalone CUDA micro-kernel measurements from a structural full-pipeline comparison. Results are machine-specific; they are not a comparison against another submission.\n\n")
         f.write("1. **Flow 1 (Micro-Kernel Scaling)**: Raw GPU device kernel execution comparing 64-bit word-level ALU functions against 1-bit boolean loop simulation across batch sizes ($N \\in [10^3, 10^6]$) and cycle horizons ($C \\in [1, 256]$).\n")
-        f.write("2. **Flow 2 (Full End-to-End Pipeline)**: Real simulation using official `cut_map_interactive` and `cuda_test` binaries on full synthesized gate-level netlists (`test3/flowA_baseline_flatten_gatelevel.gv` vs `test3/flowB_macropreserve_gatelevel.gv`).\n\n")
+        f.write("2. **Flow 2 (Legacy Structural Comparison)**: The repository's historical shredded and macro-preserved netlists are run through GEM. This is not an unmodified-upstream-GEM benchmark because upstream GEM cannot execute preserved macros and the two netlists are not proven workload-equivalent by this script.\n\n")
 
-        f.write("## 1. Flow 2: End-to-End GEM Toolchain Comparison\n\n")
+        f.write("## 1. Flow 2: Legacy Structural Comparison (not a baseline speedup claim)\n\n")
         f.write("| Metric | Flow A (Baseline Shredded) | Flow B (Macro-Preserved) | Speedup / Reduction |\n")
         f.write("|---|---|---|---|\n")
         for r in flow2_rows:
@@ -74,8 +74,8 @@ def generate_combined_report(ptxas_info):
         f.write("| `k_baseline_srlc32e` | 12 regs | 128 bytes | 0 | Array stack frame for 32 FFs |\n\n")
 
         f.write("## 4. Warp Execution Efficiency & Memory Bandwidth\n\n")
-        f.write("- **Warp Divergence**: **0% (100% Execution Efficiency)**. All macro evaluators in `csrc/gem_macros.cuh` use arithmetic masking and branch-free predication, ensuring threads in a warp never diverge.\n")
-        f.write("- **Memory Coalescing**: Structure-of-Arrays (SoA) memory layout (`MacroStorageLayout`) pads all macro instances to 32-word warp boundaries, enabling 100% coalesced 64-bit `LDG.E.64` and `STG.E.64` memory transactions.\n")
+        f.write("- The evaluator functions are branch-minimized, and macro state/I/O use 64-bit-aligned SoA offsets. Mixed macro kinds may still share a warp and branch at kind boundaries.\n")
+        f.write("- No percentage for divergence, coalescing efficiency, or achieved bandwidth is claimed without Nsight Compute counters. On machines where performance counters are permission-blocked, these remain explicitly unverified.\n")
 
     print(f"Combined report written to {REPORT_MD}")
 

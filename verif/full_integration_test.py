@@ -55,13 +55,26 @@ def phase_host_dag():
             print(f"  {line.strip()}")
 
     check("Rust integration test passed (exit 0)", result.returncode == 0)
-    check("All 3 macros found in AIG DAG",
-          "Deliverable A & B Pipeline Integration: 100% SUCCESS" in result.stdout)
+    check("Typed heterogeneous DAG/layout tests executed",
+          "test result: ok" in result.stdout)
+
+
+def phase_frontend():
+    banner("PHASE 2: Yosys 0.68 / SystemVerilog / macro preservation")
+    result = subprocess.run(
+        [sys.executable, os.path.join(HERE, "frontend_test.py")],
+        cwd=GEM_ROOT, capture_output=True, text=True, timeout=300
+    )
+    print(result.stdout)
+    if result.stderr:
+        print(result.stderr)
+    check("Required Yosys frontend and configuration rejection pass",
+          result.returncode == 0)
 
 
 # PHASE 2: Deliverable C — Cycle-Accurate Macro Models vs Golden
 def phase_macro_models():
-    banner("PHASE 2: Deliverable C — Cycle-Accurate Macro Models")
+    banner("PHASE 3: Deliverable C — Cycle-Accurate Macro Models")
 
     section("2.1: CARRY4 Golden Model Verification")
     c4 = CARRY4()
@@ -135,12 +148,27 @@ def phase_macro_models():
           "gem_macros.cuh (GPU) PASS" in result.stdout)
 
 
-# PHASE 3: Full Cargo Test Suite
+# PHASE 3: Actual production RTL -> CUDA integration
+def phase_production_integration():
+    banner("PHASE 4: Production RTL -> Yosys -> Boomerang/CUDA Differential")
+    result = subprocess.run(
+        [sys.executable, os.path.join(HERE, "integrated_macro_test.py")],
+        cwd=GEM_ROOT, capture_output=True, text=True, timeout=600
+    )
+    print(result.stdout)
+    if result.stderr:
+        print(result.stderr)
+    check("Production heterogeneous simulator matches independent RTL",
+          result.returncode == 0 and
+          "PASS: full integrated macro regression" in result.stdout)
+
+
+# PHASE 4: Full Cargo Test Suite
 def phase_cargo():
-    banner("PHASE 3: Full Workspace Regression (cargo test)")
+    banner("PHASE 5: Full Workspace Regression (all targets)")
 
     result = subprocess.run(
-        ["cargo", "test"],
+        ["cargo", "test", "--all-targets"],
         cwd=GEM_ROOT, capture_output=True, text=True, timeout=600
     )
 
@@ -160,7 +188,11 @@ def main():
 
     phase_host_dag()
     print()
+    phase_frontend()
+    print()
     phase_macro_models()
+    print()
+    phase_production_integration()
     print()
     phase_cargo()
 
@@ -169,6 +201,7 @@ def main():
     print()
     print("  ✅ Deliverable B: Host parser + AIG DAG + 64-bit GPU memory layout")
     print("  ✅ Deliverable C: Cycle-accurate CUDA models — bit-exact vs silicon")
+    print("  ✅ Production RTL/Yosys/GEM/Boomerang/CUDA path — independent RTL match")
     print("  ✅ All workspace cargo tests passing")
     print()
     print("  [PASS] FULL SYSTEM INTEGRATION AND REGRESSION VERIFIED")
@@ -177,4 +210,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

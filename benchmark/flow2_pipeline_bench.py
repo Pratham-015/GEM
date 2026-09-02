@@ -4,7 +4,7 @@ benchmark/flow2_pipeline_bench.py
 Flow 2: Full End-to-End GEM Pipeline Benchmark.
 - Uses real GEM binaries (cut_map_interactive + cuda_test).
 - Compares:
-  * Flow A (Baseline Unmodified GEM): test3/flowA_baseline_flatten_gatelevel.gv (5,616 shredded AIG cells)
+  * Flow A (Legacy Shredded Netlist): test3/flowA_baseline_flatten_gatelevel.gv
   * Flow B (Macro-Augmented GEM): test3/flowB_macropreserve_gatelevel.gv (66 macro-preserved cells)
 - Measures:
   * Netlist cell counts & script binary size
@@ -145,7 +145,7 @@ def run_flow2(num_cycles=64):
     print(f"  GPU Script Size Reduction:   {script_reduction:.1f}%")
     print(f"  Flow A GPU Sim Time:         {resA['gpu_sim_time_ms']:.3f} ms")
     print(f"  Flow B GPU Sim Time:         {resB['gpu_sim_time_ms']:.3f} ms")
-    print(f"  GPU SIMULATION SPEEDUP:      {speedup_gpu:.2f}x")
+    print(f"  GPU SIMULATION RATIO:        {speedup_gpu:.2f}x (not an upstream-baseline claim)")
     print(f"  TOTAL WALL-CLOCK SPEEDUP:    {speedup_total:.2f}x")
     print("=" * 60)
 
@@ -163,4 +163,3 @@ def run_flow2(num_cycles=64):
 
 if __name__ == "__main__":
     run_flow2()
-

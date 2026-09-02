@@ -62,27 +62,44 @@ impl LeafPinProvider for AIGPDKLeafPins {
 
             // Xilinx macro cells GEM evaluates natively on the GPU rather
             // than flattening into AIG gates (see csrc/gem_macros.cuh).
-            // Pin interfaces match the validated reference models in
-            // verif/rtl/xilinx_macros_ref.v exactly, NOT the full-width
-            // real UNISIM primitives (e.g. DSP48E2 here is the simplified
-            // subset: STATE/USE_PRE instead of OPMODE/ALUMODE/INMODE).
-            //
-            // This is pin recognition only -- teaching netlistdb
-            // construction how to parse these cells. Scheduling and AIG
-            // integration (a DriverType::XilinxMacro variant analogous to
-            // DriverType::SRAM above, staging.rs/flatten.rs storage
-            // layout, pe.rs dispatch) is NOT implemented yet; see the
-            // module doc for details.
+            // GEM_DSP48E2 is the normalized PS subset emitted by the Yosys
+            // techmap.  Full DSP48E2 ports are recognized below as a guarded
+            // fallback.  AIG construction, typed dependencies, SoA storage,
+            // and CUDA scheduling are implemented in aig.rs, macro_layout.rs,
+            // flatten.rs, and csrc/kernel_v1_impl.cuh respectively.
             ("CARRY4", "CI" | "CIN" | "CYINIT", None) => Direction::I,
             ("CARRY4", "DI" | "S", Some(0..=3)) => Direction::I,
             ("CARRY4", "CO" | "O", Some(0..=3)) => Direction::O,
 
-            ("DSP48E2", "CLK" | "USE_PRE", None) => Direction::I,
-            ("DSP48E2", "A" | "D", Some(0..=26)) => Direction::I,
-            ("DSP48E2", "B", Some(0..=17)) => Direction::I,
-            ("DSP48E2", "C", Some(0..=47)) => Direction::I,
-            ("DSP48E2", "STATE", Some(0..=1)) => Direction::I,
-            ("DSP48E2", "P", Some(0..=47)) => Direction::O,
+            ("GEM_DSP48E2", "CLK" | "USE_PRE", None) => Direction::I,
+            ("GEM_DSP48E2", "A" | "D", Some(0..=26)) => Direction::I,
+            ("GEM_DSP48E2", "B", Some(0..=17)) => Direction::I,
+            ("GEM_DSP48E2", "C", Some(0..=47)) => Direction::I,
+            ("GEM_DSP48E2", "STATE", Some(0..=1)) => Direction::I,
+            ("GEM_DSP48E2", "P", Some(0..=47)) => Direction::O,
+
+            ("DSP48E2", "CLK" | "CARRYIN" | "CARRYCASCIN" | "MULTSIGNIN" |
+                "CEA1" | "CEA2" | "CEAD" | "CEALUMODE" | "CEB1" | "CEB2" |
+                "CEC" | "CECARRYIN" | "CECTRL" | "CED" | "CEINMODE" | "CEM" |
+                "CEP" | "RSTA" | "RSTALLCARRYIN" | "RSTALUMODE" | "RSTB" |
+                "RSTC" | "RSTCTRL" | "RSTD" | "RSTINMODE" | "RSTM" | "RSTP", None)
+                => Direction::I,
+            ("DSP48E2", "A" | "ACIN", Some(0..=29)) => Direction::I,
+            ("DSP48E2", "D", Some(0..=26)) => Direction::I,
+            ("DSP48E2", "B" | "BCIN", Some(0..=17)) => Direction::I,
+            ("DSP48E2", "C" | "PCIN", Some(0..=47)) => Direction::I,
+            ("DSP48E2", "OPMODE", Some(0..=8)) => Direction::I,
+            ("DSP48E2", "ALUMODE", Some(0..=3)) => Direction::I,
+            ("DSP48E2", "INMODE", Some(0..=4)) => Direction::I,
+            ("DSP48E2", "CARRYINSEL", Some(0..=2)) => Direction::I,
+            ("DSP48E2", "P" | "PCOUT", Some(0..=47)) => Direction::O,
+            ("DSP48E2", "ACOUT", Some(0..=29)) => Direction::O,
+            ("DSP48E2", "BCOUT", Some(0..=17)) => Direction::O,
+            ("DSP48E2", "CARRYOUT", Some(0..=3)) => Direction::O,
+            ("DSP48E2", "XOROUT", Some(0..=7)) => Direction::O,
+            ("DSP48E2", "CARRYCASCOUT" | "MULTSIGNOUT" | "OVERFLOW" |
+                "UNDERFLOW" | "PATTERNBDETECT" | "PATTERNDETECT", None)
+                => Direction::O,
 
             ("SRLC32E", "CLK" | "CE" | "D", None) => Direction::I,
             ("SRLC32E", "A", Some(0..=4)) => Direction::I,
@@ -120,11 +137,28 @@ impl LeafPinProvider for AIGPDKLeafPins {
             ("CARRY4", "CI" | "CIN" | "CYINIT") => None,
             ("CARRY4", "DI" | "S" | "CO" | "O") => Some(SVerilogRange(3, 0)),
 
-            ("DSP48E2", "CLK" | "USE_PRE") => None,
-            ("DSP48E2", "A" | "D") => Some(SVerilogRange(26, 0)),
-            ("DSP48E2", "B") => Some(SVerilogRange(17, 0)),
-            ("DSP48E2", "C" | "P") => Some(SVerilogRange(47, 0)),
-            ("DSP48E2", "STATE") => Some(SVerilogRange(1, 0)),
+            ("GEM_DSP48E2", "CLK" | "USE_PRE") => None,
+            ("GEM_DSP48E2", "A" | "D") => Some(SVerilogRange(26, 0)),
+            ("GEM_DSP48E2", "B") => Some(SVerilogRange(17, 0)),
+            ("GEM_DSP48E2", "C" | "P") => Some(SVerilogRange(47, 0)),
+            ("GEM_DSP48E2", "STATE") => Some(SVerilogRange(1, 0)),
+
+            ("DSP48E2", "CLK" | "CARRYIN" | "CARRYCASCIN" | "MULTSIGNIN" |
+                "CEA1" | "CEA2" | "CEAD" | "CEALUMODE" | "CEB1" | "CEB2" |
+                "CEC" | "CECARRYIN" | "CECTRL" | "CED" | "CEINMODE" | "CEM" |
+                "CEP" | "RSTA" | "RSTALLCARRYIN" | "RSTALUMODE" | "RSTB" |
+                "RSTC" | "RSTCTRL" | "RSTD" | "RSTINMODE" | "RSTM" | "RSTP" |
+                "CARRYCASCOUT" | "MULTSIGNOUT" | "OVERFLOW" | "UNDERFLOW" |
+                "PATTERNBDETECT" | "PATTERNDETECT") => None,
+            ("DSP48E2", "A" | "ACIN" | "ACOUT") => Some(SVerilogRange(29, 0)),
+            ("DSP48E2", "D") => Some(SVerilogRange(26, 0)),
+            ("DSP48E2", "B" | "BCIN" | "BCOUT") => Some(SVerilogRange(17, 0)),
+            ("DSP48E2", "C" | "P" | "PCIN" | "PCOUT") => Some(SVerilogRange(47, 0)),
+            ("DSP48E2", "OPMODE") => Some(SVerilogRange(8, 0)),
+            ("DSP48E2", "ALUMODE" | "CARRYOUT") => Some(SVerilogRange(3, 0)),
+            ("DSP48E2", "INMODE") => Some(SVerilogRange(4, 0)),
+            ("DSP48E2", "CARRYINSEL") => Some(SVerilogRange(2, 0)),
+            ("DSP48E2", "XOROUT") => Some(SVerilogRange(7, 0)),
 
             ("SRLC32E", "CLK" | "CE" | "D" | "Q" | "Q31") => None,
             ("SRLC32E", "A") => Some(SVerilogRange(4, 0)),

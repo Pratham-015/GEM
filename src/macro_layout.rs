@@ -9,7 +9,162 @@
 
 use serde::{Deserialize, Serialize};
 
+/// Stable, primitive-specific port identity.  A port name and bit number are
+/// never inferred from vector position: the frontend records them explicitly.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub enum MacroPort {
+    CarryS,
+    CarryDI,
+    CarryCI,
+    CarryCYINIT,
+    CarryO,
+    CarryCO,
+    DspA,
+    DspB,
+    DspC,
+    DspD,
+    DspState,
+    DspUsePre,
+    DspP,
+    SrlA,
+    SrlCE,
+    SrlD,
+    SrlQ,
+    SrlQ31,
+}
+
+/// How an input participates in a simulated cycle.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum MacroInputRole {
+    /// May affect a macro output in the current cycle.
+    Combinational,
+    /// Sampled to compute state committed at the global rising edge.
+    NextState,
+}
+
+/// When an output becomes visible.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum MacroOutputRole {
+    /// Derived from current inputs/current state in the current cycle.
+    Combinational,
+    /// Current registered state; next-state updates are committed atomically.
+    RegisteredState,
+}
+
+impl MacroPort {
+    pub fn input_role(self) -> Option<MacroInputRole> {
+        use MacroInputRole::{Combinational, NextState};
+        match self {
+            Self::CarryS | Self::CarryDI | Self::CarryCI | Self::CarryCYINIT | Self::SrlA => {
+                Some(Combinational)
+            }
+            Self::DspA
+            | Self::DspB
+            | Self::DspC
+            | Self::DspD
+            | Self::DspState
+            | Self::DspUsePre
+            | Self::SrlCE
+            | Self::SrlD => Some(NextState),
+            _ => None,
+        }
+    }
+
+    pub fn output_role(self) -> Option<MacroOutputRole> {
+        match self {
+            Self::CarryO | Self::CarryCO | Self::SrlQ | Self::SrlQ31 => {
+                Some(MacroOutputRole::Combinational)
+            }
+            Self::DspP => Some(MacroOutputRole::RegisteredState),
+            _ => None,
+        }
+    }
+
+    /// Field bit in the flattened macro ABI.  This mapping is explicit and
+    /// stable; it must never depend on parser iteration or lexical ordering.
+    pub fn input_abi_bit(self, bit: u8) -> Option<u16> {
+        match self {
+            Self::CarryS if bit < 4 => Some(bit as u16),
+            Self::CarryDI if bit < 4 => Some(64 + bit as u16),
+            Self::CarryCI if bit == 0 => Some(128),
+            Self::CarryCYINIT if bit == 0 => Some(129),
+            Self::DspA if bit < 27 => Some(bit as u16),
+            Self::DspD if bit < 27 => Some(27 + bit as u16),
+            Self::DspB if bit < 18 => Some(54 + bit as u16),
+            Self::DspC if bit < 48 => Some(72 + bit as u16),
+            Self::DspState if bit < 2 => Some(120 + bit as u16),
+            Self::DspUsePre if bit == 0 => Some(122),
+            Self::SrlD if bit == 0 => Some(0),
+            Self::SrlCE if bit == 0 => Some(1),
+            Self::SrlA if bit < 5 => Some(2 + bit as u16),
+            _ => None,
+        }
+    }
+
+    pub fn output_abi_bit(self, bit: u8) -> Option<u16> {
+        match self {
+            Self::CarryO if bit < 4 => Some(bit as u16),
+            Self::CarryCO if bit < 4 => Some(64 + bit as u16),
+            Self::DspP if bit < 48 => Some(bit as u16),
+            Self::SrlQ if bit == 0 => Some(0),
+            Self::SrlQ31 if bit == 0 => Some(1),
+            _ => None,
+        }
+    }
+}
+
+/// One named macro input bit. `signal_iv` uses GEM's normal encoding:
+/// `(aig_pin << 1) | inverted`, so constants 0 and 1 are preserved too.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MacroInput {
+    pub port: MacroPort,
+    pub bit: u8,
+    pub signal_iv: usize,
+}
+
+/// One named macro output bit and the AIG pin allocated for it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MacroOutput {
+    pub port: MacroPort,
+    pub bit: u8,
+    pub aig_pin: usize,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MacroClock {
+    /// Clock-enable/edge flag in normal inverted-AIG encoding.
+    pub signal_iv: usize,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum MacroDependencyTiming {
+    /// Producer output must be evaluated before the consumer in this cycle.
+    SameCycle,
+    /// Producer is registered or the consumer samples this value at the edge.
+    AcrossClockBoundary,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MacroDependency {
+    pub producer_cell_id: usize,
+    pub producer_port: MacroPort,
+    pub producer_bit: u8,
+    pub consumer_cell_id: usize,
+    pub consumer_port: MacroPort,
+    pub consumer_bit: u8,
+    pub timing: MacroDependencyTiming,
+}
+
+/// Dependency metadata produced by the frontend. `combinational_levels`
+/// contains cell ids, and is valid only for SameCycle edges.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MacroDependencyGraph {
+    pub edges: Vec<MacroDependency>,
+    pub combinational_levels: Vec<Vec<usize>>,
+}
+
 /// The kind of hardware macro.
+#[repr(u32)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum MacroKind {
     /// Fused CARRY4 carry chain — combinational (COMB).
@@ -40,8 +195,8 @@ impl MacroKind {
     pub fn io_words_per_instance(self) -> usize {
         match self {
             MacroKind::CarryChain => 8,
-            MacroKind::DSP48E2   => 8,
-            MacroKind::SRLC32E   => 4,
+            MacroKind::DSP48E2 => 8,
+            MacroKind::SRLC32E => 4,
         }
     }
 
@@ -51,8 +206,8 @@ impl MacroKind {
     pub fn state_words_per_instance(self) -> usize {
         match self {
             MacroKind::CarryChain => 0,
-            MacroKind::DSP48E2   => 1,  // 48-bit P register
-            MacroKind::SRLC32E   => 1,  // 32-bit shift register
+            MacroKind::DSP48E2 => 1, // 48-bit P register
+            MacroKind::SRLC32E => 1, // 32-bit shift register
         }
     }
 }
@@ -69,19 +224,12 @@ pub struct MacroInstance {
     pub instance_id: usize,
     /// Cell ID in the NetlistDB / AIG.
     pub cell_id: usize,
-    /// AIG pin indices (without invert bit) for the word-level input ports.
-    /// The order matches the evaluation function's argument layout:
-    /// - CarryChain: [s_aigpin, di_aigpin, cin_aigpin, n_value]
-    /// - DSP48E2   : [a_aigpin, d_aigpin, b_aigpin, c_aigpin, state_aigpin, use_pre_aigpin]
-    /// - SRLC32E   : [d_aigpin, ce_aigpin, a0..a4_aigpins (5 bits)]
-    pub input_pins: Vec<usize>,
-    /// AIG pin indices (without invert bit) for word-level output ports.
-    /// - CarryChain: [o_aigpin, co_aigpin]
-    /// - DSP48E2   : [p_aigpin]
-    /// - SRLC32E   : [q_aigpin, q31_aigpin]
-    pub output_pins: Vec<usize>,
-    /// AIG pin index for the clock (if sequential).
-    pub clock_pin: Option<usize>,
+    /// Named input bits. Parser order is deliberately irrelevant.
+    pub inputs: Vec<MacroInput>,
+    /// Named output bits. Parser order is deliberately irrelevant.
+    pub outputs: Vec<MacroOutput>,
+    /// Global rising-edge binding for stateful macros.
+    pub clock: Option<MacroClock>,
     /// Offset (in 64-bit words) into the macro state buffer.
     /// `None` for combinational macros (CarryChain).
     /// Populated by `MacroStorageLayout::build`.
@@ -89,6 +237,101 @@ pub struct MacroInstance {
     /// Offset (in 64-bit words) into the per-cycle macro I/O buffer.
     /// Populated by `MacroStorageLayout::build`.
     pub io_offset: usize,
+}
+
+impl MacroInstance {
+    pub fn sort_ports(&mut self) {
+        self.inputs.sort_by_key(|p| (p.port, p.bit));
+        self.outputs.sort_by_key(|p| (p.port, p.bit));
+    }
+
+    pub fn validate(&self) -> Result<(), String> {
+        let expected_clock = matches!(self.kind, MacroKind::DSP48E2 | MacroKind::SRLC32E);
+        if expected_clock != self.clock.is_some() {
+            return Err(format!(
+                "{:?} cell {} has invalid clock binding",
+                self.kind, self.cell_id
+            ));
+        }
+        for p in &self.inputs {
+            if p.port.input_role().is_none() || p.port.input_abi_bit(p.bit).is_none() {
+                return Err(format!(
+                    "invalid input {:?}[{}] on cell {}",
+                    p.port, p.bit, self.cell_id
+                ));
+            }
+        }
+        for p in &self.outputs {
+            if p.aig_pin == 0
+                || p.port.output_role().is_none()
+                || p.port.output_abi_bit(p.bit).is_none()
+            {
+                return Err(format!(
+                    "invalid output {:?}[{}] on cell {}",
+                    p.port, p.bit, self.cell_id
+                ));
+            }
+        }
+        let mut ins = std::collections::BTreeSet::new();
+        let mut outs = std::collections::BTreeSet::new();
+        if self.inputs.iter().any(|p| !ins.insert((p.port, p.bit)))
+            || self.outputs.iter().any(|p| !outs.insert((p.port, p.bit)))
+        {
+            return Err(format!("duplicate macro port bit on cell {}", self.cell_id));
+        }
+        let count_in = |port| self.inputs.iter().filter(|p| p.port == port).count();
+        let inputs_ok = match self.kind {
+            MacroKind::CarryChain => {
+                count_in(MacroPort::CarryS) == 4
+                    && count_in(MacroPort::CarryDI) == 4
+                    && count_in(MacroPort::CarryCI) == 1
+                    && count_in(MacroPort::CarryCYINIT) == 1
+                    && self.inputs.len() == 10
+            }
+            MacroKind::DSP48E2 => {
+                count_in(MacroPort::DspA) == 27
+                    && count_in(MacroPort::DspB) == 18
+                    && count_in(MacroPort::DspC) == 48
+                    && count_in(MacroPort::DspD) == 27
+                    && count_in(MacroPort::DspState) == 2
+                    && count_in(MacroPort::DspUsePre) == 1
+                    && self.inputs.len() == 123
+            }
+            MacroKind::SRLC32E => {
+                count_in(MacroPort::SrlA) == 5
+                    && count_in(MacroPort::SrlCE) == 1
+                    && count_in(MacroPort::SrlD) == 1
+                    && self.inputs.len() == 7
+            }
+        };
+        if !inputs_ok {
+            return Err(format!(
+                "{:?} cell {} has missing, extra, or wrong-width inputs",
+                self.kind, self.cell_id
+            ));
+        }
+        let count_out = |port| self.outputs.iter().filter(|p| p.port == port).count();
+        let outputs_ok = match self.kind {
+            MacroKind::CarryChain => {
+                count_out(MacroPort::CarryO) == 4
+                    && count_out(MacroPort::CarryCO) == 4
+                    && self.outputs.len() == 8
+            }
+            MacroKind::DSP48E2 => count_out(MacroPort::DspP) == 48 && self.outputs.len() == 48,
+            MacroKind::SRLC32E => {
+                count_out(MacroPort::SrlQ) == 1
+                    && count_out(MacroPort::SrlQ31) == 1
+                    && self.outputs.len() == 2
+            }
+        };
+        if !outputs_ok {
+            return Err(format!(
+                "{:?} cell {} has an output from another primitive",
+                self.kind, self.cell_id
+            ));
+        }
+        Ok(())
+    }
 }
 
 /// Global 64-bit memory layout descriptor for all macros in the design.
@@ -159,11 +402,23 @@ impl MacroStorageLayout {
         // Assign per-kind indices
         for inst in &mut instances {
             match inst.kind {
-                MacroKind::DSP48E2   => { inst.instance_id = num_dsp;        num_dsp += 1; }
-                MacroKind::CarryChain => { inst.instance_id = num_carrychain; num_carrychain += 1; }
-                MacroKind::SRLC32E   => { inst.instance_id = num_srl;         num_srl += 1; }
+                MacroKind::DSP48E2 => {
+                    inst.instance_id = num_dsp;
+                    num_dsp += 1;
+                }
+                MacroKind::CarryChain => {
+                    inst.instance_id = num_carrychain;
+                    num_carrychain += 1;
+                }
+                MacroKind::SRLC32E => {
+                    inst.instance_id = num_srl;
+                    num_srl += 1;
+                }
             }
         }
+        // Program thread i should access the same field as neighboring lanes.
+        // Group descriptors by primitive kind and retain per-kind lane order.
+        instances.sort_by_key(|m| (m.kind as u32, m.instance_id));
 
         // ---- State buffer layout ----
         // DSP state section: warp_pad(num_dsp) words
@@ -184,7 +439,8 @@ impl MacroStorageLayout {
         //
         // CarryChain: 8 fields × warp_pad(num_cc) words
         let carrychain_io_base = 0;
-        let carrychain_io_words = MacroKind::CarryChain.io_words_per_instance() * Self::warp_pad(num_carrychain);
+        let carrychain_io_words =
+            MacroKind::CarryChain.io_words_per_instance() * Self::warp_pad(num_carrychain);
         // DSP48E2: 8 fields × warp_pad(num_dsp) words
         let dsp_io_base = carrychain_io_base + carrychain_io_words;
         let dsp_io_words = MacroKind::DSP48E2.io_words_per_instance() * Self::warp_pad(num_dsp);
@@ -257,5 +513,19 @@ impl MacroStorageLayout {
     pub fn srl_io_field_offset(&self, instance_id: usize, field_idx: usize) -> usize {
         self.srl_io_base + field_idx * Self::warp_pad(self.num_srl) + instance_id
     }
-}
 
+    pub fn instance_by_cell(&self, cell_id: usize) -> &MacroInstance {
+        self.instances
+            .iter()
+            .find(|m| m.cell_id == cell_id)
+            .unwrap_or_else(|| panic!("macro cell {} missing from storage layout", cell_id))
+    }
+
+    pub fn io_stride(&self, kind: MacroKind) -> usize {
+        match kind {
+            MacroKind::CarryChain => Self::warp_pad(self.num_carrychain),
+            MacroKind::DSP48E2 => Self::warp_pad(self.num_dsp),
+            MacroKind::SRLC32E => Self::warp_pad(self.num_srl),
+        }
+    }
+}

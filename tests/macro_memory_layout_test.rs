@@ -1,6 +1,6 @@
 // Tests for Heterogeneous Macro CUDA Memory Layout Allocator
 
-use gem::macro_layout::{MacroStorageLayout, MacroInstance, MacroKind};
+use gem::macro_layout::{MacroInstance, MacroKind, MacroStorageLayout};
 
 #[test]
 fn test_macro_storage_layout_empty() {
@@ -19,9 +19,9 @@ fn test_macro_storage_layout_alignment_and_offsets() {
             kind: MacroKind::CarryChain,
             instance_id: 0,
             cell_id: 10,
-            input_pins: vec![0, 1, 2, 3],
-            output_pins: vec![100, 101, 102, 103],
-            clock_pin: None,
+            inputs: vec![],
+            outputs: vec![],
+            clock: None,
             state_offset: None,
             io_offset: 0,
         },
@@ -29,9 +29,9 @@ fn test_macro_storage_layout_alignment_and_offsets() {
             kind: MacroKind::DSP48E2,
             instance_id: 0,
             cell_id: 11,
-            input_pins: (4..52).collect(),
-            output_pins: (104..152).collect(),
-            clock_pin: Some(200),
+            inputs: vec![],
+            outputs: vec![],
+            clock: None,
             state_offset: None,
             io_offset: 0,
         },
@@ -39,9 +39,9 @@ fn test_macro_storage_layout_alignment_and_offsets() {
             kind: MacroKind::SRLC32E,
             instance_id: 0,
             cell_id: 12,
-            input_pins: vec![53, 54, 55, 56, 57, 58, 59],
-            output_pins: vec![153, 154],
-            clock_pin: Some(200),
+            inputs: vec![],
+            outputs: vec![],
+            clock: None,
             state_offset: None,
             io_offset: 0,
         },
@@ -52,7 +52,7 @@ fn test_macro_storage_layout_alignment_and_offsets() {
     assert_eq!(layout.num_carrychain, 1);
     assert_eq!(layout.num_dsp, 1);
     assert_eq!(layout.num_srl, 1);
-    
+
     // Check that sequential state offsets are padded to 32-word warp boundaries
     assert!(layout.total_state_words >= 64);
     assert_eq!(layout.total_state_words % 32, 0);
@@ -64,6 +64,59 @@ fn test_macro_storage_layout_alignment_and_offsets() {
 
     // Verify field offsets
     assert_eq!(layout.dsp_io_field_offset(0, 0), layout.dsp_io_base);
-    assert_eq!(layout.carrychain_io_field_offset(0, 0), layout.carrychain_io_base);
+    assert_eq!(
+        layout.carrychain_io_field_offset(0, 0),
+        layout.carrychain_io_base
+    );
     assert_eq!(layout.srl_io_field_offset(0, 0), layout.srl_io_base);
+}
+
+#[test]
+fn test_multiple_stateful_instances_do_not_alias() {
+    let make = |kind, cell_id| MacroInstance {
+        kind,
+        instance_id: 0,
+        cell_id,
+        inputs: vec![],
+        outputs: vec![],
+        clock: None,
+        state_offset: None,
+        io_offset: 0,
+    };
+    let layout = MacroStorageLayout::build(vec![
+        make(MacroKind::SRLC32E, 30),
+        make(MacroKind::DSP48E2, 20),
+        make(MacroKind::DSP48E2, 21),
+        make(MacroKind::SRLC32E, 31),
+        make(MacroKind::CarryChain, 10),
+        make(MacroKind::CarryChain, 11),
+    ]);
+    let mut state_offsets: Vec<_> = layout
+        .instances
+        .iter()
+        .filter_map(|m| m.state_offset)
+        .collect();
+    state_offsets.sort_unstable();
+    state_offsets.dedup();
+    assert_eq!(
+        state_offsets.len(),
+        4,
+        "DSP/SRL persistent states must not alias"
+    );
+    assert_eq!(
+        layout
+            .instances
+            .iter()
+            .map(|m| m.kind as u32)
+            .collect::<Vec<_>>(),
+        vec![0, 0, 1, 1, 2, 2],
+        "program order must be kind-grouped for SoA access"
+    );
+    for kind in [
+        MacroKind::CarryChain,
+        MacroKind::DSP48E2,
+        MacroKind::SRLC32E,
+    ] {
+        assert_eq!(layout.io_stride(kind) % 32, 0);
+    }
 }

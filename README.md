@@ -11,6 +11,21 @@ The synthesis and mapping is slower than the compiling/elaboration process of CP
 
 **See [usage.md](./usage.md) for usage documentation.**
 
+## Zenith heterogeneous-macro extension
+
+This tree adds native GPU execution for the required `CARRY4`, `DSP48E2`
+PS subset, and `SRLC32E` primitives.  The reproducible verification entry
+point is:
+
+```sh
+python3 verif/full_integration_test.py
+```
+
+It checks the pinned Yosys 0.68/Slang frontend, macro preservation and DSP
+configuration rejection, independent Python/Verilog/UNISIM/GPU differential
+models, the real RTL-to-CUDA integration path, and all Rust targets.  Use
+`GEM_CUDA_ARCH=sm_XX` to override automatic GPU architecture detection.
+
 ## Citation
 Please cite our paper if you find GEM useful.
 

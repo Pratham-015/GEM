@@ -38,4 +38,4 @@ opt_clean -purge
 write_verilog -noexpr -nodec test1/flowA_gatelevel_baseline.gv
 
 # 13. Printing statistics
-stat
+# stat

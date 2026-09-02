@@ -18,21 +18,37 @@ GEM_ROOT = os.path.abspath(os.path.join(HERE, ".."))
 ENGINE_BIN = os.path.join(HERE, "bench_engine")
 CSV_MICRO = os.path.join(HERE, "flow1_microbench.csv")
 
+def cuda_arch():
+    override = os.environ.get("GEM_CUDA_ARCH")
+    if override:
+        return override
+    try:
+        cap = subprocess.check_output(
+            ["nvidia-smi", "--query-gpu=compute_cap", "--format=csv,noheader"],
+            text=True, stderr=subprocess.DEVNULL).splitlines()[0].strip()
+        major, minor = cap.split(".", 1)
+        if major.isdigit() and minor.isdigit():
+            return f"sm_{major}{minor}"
+    except (OSError, subprocess.SubprocessError, IndexError, ValueError):
+        pass
+    return "compute_75"
+
 def run_cmd(cmd, cwd=GEM_ROOT):
     p = subprocess.run(cmd, shell=True, capture_output=True, text=True, cwd=cwd)
     return p.returncode, p.stdout, p.stderr
 
 def build_engine():
     print("=== Flow 1: Compiling CUDA Device Micro-Benchmark Engine ===")
+    arch = cuda_arch()
     cmd = (
-        f"/usr/local/cuda/bin/nvcc -O3 -std=c++17 -arch=sm_89 -Xptxas -v "
+        f"/usr/local/cuda/bin/nvcc -O3 -std=c++17 -arch={arch} -Xptxas -v "
         f"-I{GEM_ROOT}/csrc {HERE}/bench_engine.cu -o {ENGINE_BIN}"
     )
     rc, out, err = run_cmd(cmd)
     if rc != 0:
         print(f"Error compiling bench_engine:\n{err}")
         sys.exit(1)
-    print("Compilation successful.")
+    print(f"Compilation successful (target {arch}).")
     return err
 
 def run_flow1(batch_sizes=None, cycles_list=None):

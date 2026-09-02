@@ -4,11 +4,47 @@
 //!
 //! An AIG is derived from netlistdb synthesized in AIGPDK.
 
-use netlistdb::{NetlistDB, GeneralPinName, Direction};
-use indexmap::{IndexMap, IndexSet};
 use crate::aigpdk::AIGPDK_SRAM_ADDR_WIDTH;
-use crate::macro_layout::{MacroInstance, MacroKind};
+use crate::macro_layout::{
+    MacroClock, MacroDependency, MacroDependencyGraph, MacroDependencyTiming, MacroInput,
+    MacroInputRole, MacroInstance, MacroKind, MacroOutput, MacroOutputRole, MacroPort,
+};
+use indexmap::{IndexMap, IndexSet};
+use netlistdb::{Direction, GeneralPinName, NetlistDB};
 
+fn macro_kind(celltype: &str) -> Option<MacroKind> {
+    match celltype {
+        "CARRY4" => Some(MacroKind::CarryChain),
+        "DSP48E2" | "GEM_DSP48E2" => Some(MacroKind::DSP48E2),
+        "SRLC32E" => Some(MacroKind::SRLC32E),
+        _ => None,
+    }
+}
+
+fn macro_port(celltype: &str, pin_name: &str) -> Option<MacroPort> {
+    use MacroPort::*;
+    match (celltype, pin_name) {
+        ("CARRY4", "S") => Some(CarryS),
+        ("CARRY4", "DI") => Some(CarryDI),
+        ("CARRY4", "CI" | "CIN") => Some(CarryCI),
+        ("CARRY4", "CYINIT") => Some(CarryCYINIT),
+        ("CARRY4", "O") => Some(CarryO),
+        ("CARRY4", "CO") => Some(CarryCO),
+        ("DSP48E2" | "GEM_DSP48E2", "A") => Some(DspA),
+        ("DSP48E2" | "GEM_DSP48E2", "B") => Some(DspB),
+        ("DSP48E2" | "GEM_DSP48E2", "C") => Some(DspC),
+        ("DSP48E2" | "GEM_DSP48E2", "D") => Some(DspD),
+        ("GEM_DSP48E2", "STATE") => Some(DspState),
+        ("GEM_DSP48E2", "USE_PRE") => Some(DspUsePre),
+        ("DSP48E2" | "GEM_DSP48E2", "P") => Some(DspP),
+        ("SRLC32E", "A") => Some(SrlA),
+        ("SRLC32E", "CE") => Some(SrlCE),
+        ("SRLC32E", "D") => Some(SrlD),
+        ("SRLC32E", "Q") => Some(SrlQ),
+        ("SRLC32E", "Q31") => Some(SrlQ31),
+        _ => None,
+    }
+}
 
 /// A DFF.
 #[derive(Debug, Default, Clone)]
@@ -59,21 +95,22 @@ pub enum EndpointGroup<'i> {
     Macro(&'i MacroInstance),
 }
 
-
 impl EndpointGroup<'_> {
     /// Enumerate all related aigpin inputs for this endpoint group.
     ///
     /// The enumerated inputs may have duplicates.
     pub fn for_each_input(self, mut f_nz: impl FnMut(usize)) {
         let mut f = |i| {
-            if i >= 1 { f_nz(i); }
+            if i >= 1 {
+                f_nz(i);
+            }
         };
         match self {
             Self::PrimaryOutput(idx) => f(idx >> 1),
             Self::DFF(dff) => {
                 f(dff.en_iv >> 1);
                 f(dff.d_iv >> 1);
-            },
+            }
             Self::RAMBlock(ram) => {
                 f(ram.port_r_en_iv >> 1);
                 for i in 0..13 {
@@ -84,7 +121,7 @@ impl EndpointGroup<'_> {
                     f(ram.port_w_wr_en_iv[i] >> 1);
                     f(ram.port_w_wr_data_iv[i] >> 1);
                 }
-            },
+            }
             Self::StagedIOPin(idx) => f(idx),
             Self::Macro(m) => {
                 // All boolean input pins (word-level AIG pins driving 64-bit
@@ -93,17 +130,16 @@ impl EndpointGroup<'_> {
                 // realise them.  The output pins are primary inputs to the
                 // *next* cycle (for SEQ macros) or to downstream logic in the
                 // same cycle (for COMB macros).
-                for &pin in &m.input_pins {
-                    f(pin);
+                for pin in &m.inputs {
+                    f(pin.signal_iv >> 1);
                 }
-                if let Some(clk) = m.clock_pin {
-                    f(clk >> 1);
+                if let Some(clk) = m.clock {
+                    f(clk.signal_iv >> 1);
                 }
             }
         }
     }
 }
-
 
 /// The driver type of an AIG pin.
 #[derive(Debug, Clone)]
@@ -128,9 +164,9 @@ pub enum DriverType {
     /// From the AIG's perspective this is identical to a DFF output: a value
     /// that is available at the start of the cycle (for SEQ macros) or that
     /// is produced at a mid-cycle evaluation barrier (for COMB macros).
-    Macro(usize, usize),
+    Macro(usize, MacroPort, u8),
     /// Tie0: tied to zero. Only the 0-th aig pin is allowed to have this.
-    Tie0
+    Tie0,
 }
 
 /// An AIG associated with a netlistdb.
@@ -174,15 +210,157 @@ pub struct AIG {
     /// registered as AIG pins driven by DriverType::Macro, and the GPU
     /// kernel evaluates them via the gem_macros.cuh device functions.
     pub macros: IndexMap<usize, MacroInstance>,
+    /// Explicit macro-to-macro dependencies and same-cycle levels.
+    pub macro_dependencies: MacroDependencyGraph,
     /// The fanout CSR start array.
     pub fanouts_start: Vec<usize>,
     /// The fanout CSR array.
     pub fanouts: Vec<usize>,
 }
 
-
-
 impl AIG {
+    fn macro_sources_of_signal(&self, signal_iv: usize) -> Vec<(usize, MacroPort, u8)> {
+        fn visit(
+            aig: &AIG,
+            pin: usize,
+            visited: &mut IndexSet<usize>,
+            result: &mut Vec<(usize, MacroPort, u8)>,
+        ) {
+            if pin == 0 || !visited.insert(pin) {
+                return;
+            }
+            match aig.drivers[pin] {
+                DriverType::Macro(cell_id, port, bit) => result.push((cell_id, port, bit)),
+                DriverType::AndGate(a, b) => {
+                    visit(aig, a >> 1, visited, result);
+                    visit(aig, b >> 1, visited, result);
+                }
+                _ => {}
+            }
+        }
+
+        let mut result = Vec::new();
+        visit(self, signal_iv >> 1, &mut IndexSet::new(), &mut result);
+        result.sort_unstable();
+        result.dedup();
+        result
+    }
+
+    fn build_macro_dependency_graph(&self) -> MacroDependencyGraph {
+        let mut edges = Vec::new();
+        for consumer in self.macros.values() {
+            for input in &consumer.inputs {
+                let input_role = input.port.input_role().unwrap();
+                for (producer_cell_id, producer_port, producer_bit) in
+                    self.macro_sources_of_signal(input.signal_iv)
+                {
+                    let output_role = producer_port.output_role().unwrap();
+                    let timing = if input_role == MacroInputRole::Combinational
+                        && output_role == MacroOutputRole::Combinational
+                    {
+                        MacroDependencyTiming::SameCycle
+                    } else {
+                        MacroDependencyTiming::AcrossClockBoundary
+                    };
+                    let edge = MacroDependency {
+                        producer_cell_id,
+                        producer_port,
+                        producer_bit,
+                        consumer_cell_id: consumer.cell_id,
+                        consumer_port: input.port,
+                        consumer_bit: input.bit,
+                        timing,
+                    };
+                    if !edges.contains(&edge) {
+                        edges.push(edge);
+                    }
+                }
+            }
+        }
+        edges.sort_by_key(|e| {
+            (
+                e.producer_cell_id,
+                e.producer_port,
+                e.producer_bit,
+                e.consumer_cell_id,
+                e.consumer_port,
+                e.consumer_bit,
+            )
+        });
+
+        // Levelize only macros that produce a combinational output. Registered
+        // DSP P is a cycle-start source and therefore never forms a same-cycle
+        // combinational cycle.
+        let comb_nodes: std::collections::BTreeSet<usize> = self
+            .macros
+            .values()
+            .filter(|m| {
+                m.outputs
+                    .iter()
+                    .any(|o| o.port.output_role() == Some(MacroOutputRole::Combinational))
+            })
+            .map(|m| m.cell_id)
+            .collect();
+        let mut indegree: std::collections::BTreeMap<usize, usize> =
+            comb_nodes.iter().map(|&n| (n, 0)).collect();
+        let mut successors: std::collections::BTreeMap<usize, Vec<usize>> =
+            comb_nodes.iter().map(|&n| (n, Vec::new())).collect();
+        for e in edges
+            .iter()
+            .filter(|e| e.timing == MacroDependencyTiming::SameCycle)
+        {
+            if e.producer_cell_id == e.consumer_cell_id {
+                panic!(
+                    "combinational macro self-cycle at cell {}",
+                    e.producer_cell_id
+                );
+            }
+            let succ = successors.entry(e.producer_cell_id).or_default();
+            if !succ.contains(&e.consumer_cell_id) {
+                succ.push(e.consumer_cell_id);
+                *indegree.entry(e.consumer_cell_id).or_default() += 1;
+            }
+        }
+
+        let mut ready: Vec<usize> = indegree
+            .iter()
+            .filter_map(|(&n, &d)| (d == 0).then_some(n))
+            .collect();
+        let mut levels = Vec::new();
+        let mut visited = 0usize;
+        while !ready.is_empty() {
+            ready.sort_unstable();
+            let level = std::mem::take(&mut ready);
+            visited += level.len();
+            let mut next = Vec::new();
+            for node in &level {
+                for &succ in successors.get(node).into_iter().flatten() {
+                    let d = indegree.get_mut(&succ).unwrap();
+                    *d -= 1;
+                    if *d == 0 {
+                        next.push(succ);
+                    }
+                }
+            }
+            levels.push(level);
+            ready = next;
+        }
+        if visited != comb_nodes.len() {
+            let cyclic: Vec<_> = indegree
+                .into_iter()
+                .filter_map(|(n, d)| (d != 0).then_some(n))
+                .collect();
+            panic!(
+                "combinational macro dependency cycle involving cells {:?}",
+                cyclic
+            );
+        }
+        MacroDependencyGraph {
+            edges,
+            combinational_levels: levels,
+        }
+    }
+
     fn add_aigpin(&mut self, driver: DriverType) -> usize {
         self.num_aigpins += 1;
         self.drivers.push(driver);
@@ -193,13 +371,13 @@ impl AIG {
         assert_ne!(a | 1, usize::MAX);
         assert_ne!(b | 1, usize::MAX);
         if a == 0 || b == 0 {
-            return 0
+            return 0;
         }
         if a == 1 {
-            return b
+            return b;
         }
         if b == 1 {
-            return a
+            return a;
         }
         let (a, b) = if a < b { (a, b) } else { (b, a) };
         if let Some(o) = self.and_gate_cache.get(&(a, b)) {
@@ -219,7 +397,8 @@ impl AIG {
     fn trace_clock_pin(
         &mut self,
         netlistdb: &NetlistDB,
-        pinid: usize, is_negedge: bool,
+        pinid: usize,
+        is_negedge: bool,
         // should we ignore cklnqd in this tracing.
         // if set to true, we will treat cklnqd as a simple buffer.
         // otherwise, we assert that cklnqd/en is already built in
@@ -229,43 +408,43 @@ impl AIG {
         if netlistdb.pindirect[pinid] == Direction::I {
             let netid = netlistdb.pin2net[pinid];
             if Some(netid) == netlistdb.net_zero || Some(netid) == netlistdb.net_one {
-                return Ok(0)
+                return Ok(0);
             }
-            let root = netlistdb.net2pin.items[
-                netlistdb.net2pin.start[netid]
-            ];
-            return self.trace_clock_pin(
-                netlistdb, root, is_negedge,
-                ignore_cklnqd
-            )
+            let root = netlistdb.net2pin.items[netlistdb.net2pin.start[netid]];
+            return self.trace_clock_pin(netlistdb, root, is_negedge, ignore_cklnqd);
         }
         let cellid = netlistdb.pin2cell[pinid];
         if cellid == 0 {
-            let clkentry = self.clock_pin2aigpins.entry(pinid)
+            let clkentry = self
+                .clock_pin2aigpins
+                .entry(pinid)
                 .or_insert((usize::MAX, usize::MAX));
             let clksignal = match is_negedge {
                 false => clkentry.0,
-                true => clkentry.1
+                true => clkentry.1,
             };
             if clksignal != usize::MAX {
-                return Ok(clksignal << 1)
+                return Ok(clksignal << 1);
             }
             let aigpin = self.add_aigpin(DriverType::InputClockFlag(pinid, is_negedge as u8));
             let clkentry = self.clock_pin2aigpins.get_mut(&pinid).unwrap();
             let clksignal = match is_negedge {
                 false => &mut clkentry.0,
-                true => &mut clkentry.1
+                true => &mut clkentry.1,
             };
             *clksignal = aigpin;
-            return Ok(aigpin << 1)
+            return Ok(aigpin << 1);
         }
         let mut pin_a = usize::MAX;
         let mut pin_cp = usize::MAX;
         let mut pin_en = usize::MAX;
         let celltype = netlistdb.celltypes[cellid].as_str();
         if !matches!(celltype, "INV" | "BUF" | "CKLNQD") {
-            clilog::error!("cell type {} supported on clock path. expecting only INV, BUF, or CKLNQD", celltype);
-            return Err(pinid)
+            clilog::error!(
+                "cell type {} supported on clock path. expecting only INV, BUF, or CKLNQD",
+                celltype
+            );
+            return Err(pinid);
         }
         for ipin in netlistdb.cell2pin.iter_set(cellid) {
             if netlistdb.pindirect[ipin] == Direction::I {
@@ -275,7 +454,7 @@ impl AIG {
                     "E" => pin_en = ipin,
                     i @ _ => {
                         clilog::error!("input pin {} unexpected for ck element {}", i, celltype);
-                        return Err(ipin)
+                        return Err(ipin);
                     }
                 }
             }
@@ -283,33 +462,24 @@ impl AIG {
         match celltype {
             "INV" => {
                 assert_ne!(pin_a, usize::MAX);
-                self.trace_clock_pin(
-                    netlistdb, pin_a, !is_negedge,
-                    ignore_cklnqd
-                )
-            },
+                self.trace_clock_pin(netlistdb, pin_a, !is_negedge, ignore_cklnqd)
+            }
             "BUF" => {
                 assert_ne!(pin_a, usize::MAX);
-                self.trace_clock_pin(
-                    netlistdb, pin_a, is_negedge,
-                    ignore_cklnqd
-                )
-            },
+                self.trace_clock_pin(netlistdb, pin_a, is_negedge, ignore_cklnqd)
+            }
             "CKLNQD" => {
                 assert_ne!(pin_cp, usize::MAX);
                 assert_ne!(pin_en, usize::MAX);
-                let ck_iv = self.trace_clock_pin(
-                    netlistdb, pin_cp, is_negedge,
-                    ignore_cklnqd
-                )?;
+                let ck_iv = self.trace_clock_pin(netlistdb, pin_cp, is_negedge, ignore_cklnqd)?;
                 if ignore_cklnqd {
-                    return Ok(ck_iv)
+                    return Ok(ck_iv);
                 }
                 let en_iv = self.pin2aigpin_iv[pin_en];
                 assert_ne!(en_iv, usize::MAX, "clken not built");
                 Ok(self.add_and_gate(ck_iv, en_iv))
-            },
-            _ => unreachable!()
+            }
+            _ => unreachable!(),
         }
     }
 
@@ -326,14 +496,16 @@ impl AIG {
         netlistdb: &NetlistDB,
         topo_vis: &mut Vec<bool>,
         topo_instack: &mut Vec<bool>,
-        pinid: usize
+        pinid: usize,
     ) {
         if topo_instack[pinid] {
-            panic!("circuit has a loop around pin {}",
-                   netlistdb.pinnames[pinid].dbg_fmt_pin());
+            panic!(
+                "circuit has a loop around pin {}",
+                netlistdb.pinnames[pinid].dbg_fmt_pin()
+            );
         }
         if topo_vis[pinid] {
-            return
+            return;
         }
         topo_vis[pinid] = true;
         topo_instack[pinid] = true;
@@ -343,31 +515,20 @@ impl AIG {
         if netlistdb.pindirect[pinid] == Direction::I {
             if Some(netid) == netlistdb.net_zero {
                 self.pin2aigpin_iv[pinid] = 0;
-            }
-            else if Some(netid) == netlistdb.net_one {
+            } else if Some(netid) == netlistdb.net_one {
                 self.pin2aigpin_iv[pinid] = 1;
-            }
-            else {
-                let root = netlistdb.net2pin.items[
-                    netlistdb.net2pin.start[netid]
-                ];
-                self.dfs_netlistdb_build_aig(
-                    netlistdb, topo_vis, topo_instack,
-                    root
-                );
+            } else {
+                let root = netlistdb.net2pin.items[netlistdb.net2pin.start[netid]];
+                self.dfs_netlistdb_build_aig(netlistdb, topo_vis, topo_instack, root);
                 self.pin2aigpin_iv[pinid] = self.pin2aigpin_iv[root];
                 if cellid == 0 {
                     self.primary_outputs.insert(self.pin2aigpin_iv[pinid]);
                 }
             }
-        }
-        else if cellid == 0 {
-            let aigpin = self.add_aigpin(
-                DriverType::InputPort(pinid)
-            );
+        } else if cellid == 0 {
+            let aigpin = self.add_aigpin(DriverType::InputPort(pinid));
             self.pin2aigpin_iv[pinid] = aigpin << 1;
-        }
-        else if matches!(celltype, "DFF" | "DFFSR") {
+        } else if matches!(celltype, "DFF" | "DFFSR") {
             let q = self.add_aigpin(DriverType::DFF(cellid));
             let dff = self.dffs.entry(cellid).or_default();
             dff.q = q;
@@ -376,41 +537,37 @@ impl AIG {
             let mut q_out = q << 1;
             for pinid in netlistdb.cell2pin.iter_set(cellid) {
                 if !matches!(netlistdb.pinnames[pinid].1.as_str(), "S" | "R") {
-                    continue
+                    continue;
                 }
-                self.dfs_netlistdb_build_aig(
-                    netlistdb, topo_vis, topo_instack, pinid
-                );
+                self.dfs_netlistdb_build_aig(netlistdb, topo_vis, topo_instack, pinid);
                 let prev = self.pin2aigpin_iv[pinid];
                 match netlistdb.pinnames[pinid].1.as_str() {
                     "S" => ap_s_iv = prev,
                     "R" => ap_r_iv = prev,
-                    _ => unreachable!()
+                    _ => unreachable!(),
                 }
             }
             q_out = self.add_and_gate(q_out ^ 1, ap_s_iv) ^ 1;
             q_out = self.add_and_gate(q_out, ap_r_iv);
             self.pin2aigpin_iv[pinid] = q_out;
-        }
-        else if celltype == "LATCH" {
-            panic!("latches are intentionally UNSUPPORTED by GEM, \
+        } else if celltype == "LATCH" {
+            panic!(
+                "latches are intentionally UNSUPPORTED by GEM, \
                     except in identified gated clocks. \n\
                     you can link a FF&MUX-based LATCH module, \
                     but most likely that is NOT the right solution. \n\
                     check all your assignments inside always@(*) block \
-                    to make sure they cover all scenarios.");
-        }
-        else if celltype == "$__RAMGEM_SYNC_" {
+                    to make sure they cover all scenarios."
+            );
+        } else if celltype == "$__RAMGEM_SYNC_" {
             let o = self.add_aigpin(DriverType::SRAM(cellid));
             self.pin2aigpin_iv[pinid] = o << 1;
-            assert_eq!(netlistdb.pinnames[pinid].1.as_str(),
-                       "PORT_R_RD_DATA");
+            assert_eq!(netlistdb.pinnames[pinid].1.as_str(), "PORT_R_RD_DATA");
             let sram = self.srams.entry(cellid).or_default();
             sram.port_r_rd_data[netlistdb.pinnames[pinid].2.unwrap() as usize] = o;
-        }
-        else if matches!(celltype, "CARRY4" | "DSP48E2" | "SRLC32E") {
+        } else if matches!(celltype, "CARRY4" | "DSP48E2" | "GEM_DSP48E2" | "SRLC32E") {
             // Word-level hardware macro: register each output port as an AIG
-            // pin driven by DriverType::Macro(cell_id, port_index).
+            // pin driven by DriverType::Macro(cell_id, named port, bit).
             //
             // We only handle output pins here (the DFS visits input pins as
             // well, but input pin p2a mappings are set up during the
@@ -421,41 +578,40 @@ impl AIG {
             let pin_name = netlistdb.pinnames[pinid].1.as_str();
             let is_output = matches!(
                 (celltype, pin_name),
-                ("CARRY4",  "O" | "CO") |
-                ("DSP48E2", "P")         |
+                ("CARRY4", "O" | "CO") |
+                ("DSP48E2" | "GEM_DSP48E2", "P") |
                 ("SRLC32E", "Q" | "Q31")
             );
             if is_output {
-                // Use pin bit-index as port index for DriverType::Macro.
-                let port_idx = netlistdb.pinnames[pinid].2
-                    .map(|i| i as usize).unwrap_or(0);
-                let aigpin = self.add_aigpin(DriverType::Macro(cellid, port_idx));
+                let port = macro_port(celltype, pin_name)
+                    .expect("recognized macro output must have a typed port");
+                let bit = netlistdb.pinnames[pinid].2.unwrap_or(0) as u8;
+                let aigpin = self.add_aigpin(DriverType::Macro(cellid, port, bit));
                 self.pin2aigpin_iv[pinid] = aigpin << 1;
-                // Register the macro instance entry (output_pins populated in post-pass).
-                self.macros.entry(cellid).or_insert_with(|| {
-                    let kind = match celltype {
-                        "CARRY4"  => MacroKind::CarryChain,
-                        "DSP48E2" => MacroKind::DSP48E2,
-                        "SRLC32E" => MacroKind::SRLC32E,
-                        _ => unreachable!()
-                    };
-                    MacroInstance {
-                        kind,
-                        instance_id: 0,
-                        cell_id: cellid,
-                        input_pins: vec![],
-                        output_pins: vec![],
-                        clock_pin: None,
-                        state_offset: None,
-                        io_offset: 0,
-                    }
+                // Register the macro instance entry (inputs populated in post-pass).
+                self.macros.entry(cellid).or_insert_with(|| MacroInstance {
+                    kind: macro_kind(celltype).unwrap(),
+                    instance_id: 0,
+                    cell_id: cellid,
+                    inputs: vec![],
+                    outputs: vec![],
+                    clock: None,
+                    state_offset: None,
+                    io_offset: 0,
                 });
                 let m = self.macros.get_mut(&cellid).unwrap();
-                m.output_pins.push(aigpin);
+                m.outputs.push(MacroOutput {
+                    port,
+                    bit,
+                    aig_pin: aigpin,
+                });
+            } else if celltype == "DSP48E2" && netlistdb.pindirect[pinid] == Direction::O {
+                // The PS explicitly permits ignoring auxiliary DSP status and
+                // cascade outputs. Drive them deterministically low rather
+                // than leaving an unmapped pin that can crash a legal design.
+                self.pin2aigpin_iv[pinid] = 0;
             }
-        }
-
-        else if celltype == "CKLNQD" {
+        } else if celltype == "CKLNQD" {
             let mut prev_cp = usize::MAX;
             let mut prev_en = usize::MAX;
             for pinid in netlistdb.cell2pin.iter_set(cellid) {
@@ -468,14 +624,10 @@ impl AIG {
             assert_ne!(prev_cp, usize::MAX);
             assert_ne!(prev_en, usize::MAX);
             for prev in [prev_cp, prev_en] {
-                self.dfs_netlistdb_build_aig(
-                    netlistdb, topo_vis, topo_instack,
-                    prev
-                );
+                self.dfs_netlistdb_build_aig(netlistdb, topo_vis, topo_instack, prev);
             }
             // do not define pin2aigpin_iv[pinid] which is CKLNQD/Q and unused in logic.
-        }
-        else {
+        } else {
             let mut prev_a = usize::MAX;
             let mut prev_b = usize::MAX;
             for pinid in netlistdb.cell2pin.iter_set(cellid) {
@@ -487,10 +639,7 @@ impl AIG {
             }
             for prev in [prev_a, prev_b] {
                 if prev != usize::MAX {
-                    self.dfs_netlistdb_build_aig(
-                        netlistdb, topo_vis, topo_instack,
-                        prev
-                    );
+                    self.dfs_netlistdb_build_aig(netlistdb, topo_vis, topo_instack, prev);
                 }
             }
             match celltype {
@@ -506,16 +655,16 @@ impl AIG {
                         self.pin2aigpin_iv[prev_b] ^ (iv_b as usize),
                     ) ^ (iv_y as usize);
                     self.pin2aigpin_iv[pinid] = apid;
-                },
+                }
                 "INV" => {
                     assert_ne!(prev_a, usize::MAX);
                     self.pin2aigpin_iv[pinid] = self.pin2aigpin_iv[prev_a] ^ 1;
-                },
+                }
                 "BUF" => {
                     assert_ne!(prev_a, usize::MAX);
                     self.pin2aigpin_iv[pinid] = self.pin2aigpin_iv[prev_a];
-                },
-                _ => unreachable!()
+                }
+                _ => unreachable!(),
             }
         }
         topo_instack[pinid] = false;
@@ -530,26 +679,30 @@ impl AIG {
         };
 
         for cellid in 1..netlistdb.num_cells {
-            if !matches!(netlistdb.celltypes[cellid].as_str(),
-                         "DFF" | "DFFSR" | "$__RAMGEM_SYNC_" | "DSP48E2" | "SRLC32E") {
-                continue
+            if !matches!(
+                netlistdb.celltypes[cellid].as_str(),
+                "DFF" | "DFFSR" | "$__RAMGEM_SYNC_" |
+                "DSP48E2" | "GEM_DSP48E2" | "SRLC32E"
+            ) {
+                continue;
             }
             for pinid in netlistdb.cell2pin.iter_set(cellid) {
-                if !matches!(netlistdb.pinnames[pinid].1.as_str(),
-                            "CLK" | "PORT_R_CLK" | "PORT_W_CLK") {
-                    continue
-                }
-                if let Err(pinid) = aig.trace_clock_pin(
-                    netlistdb, pinid, false,
-                    true
+                if !matches!(
+                    netlistdb.pinnames[pinid].1.as_str(),
+                    "CLK" | "PORT_R_CLK" | "PORT_W_CLK"
                 ) {
+                    continue;
+                }
+                if let Err(pinid) = aig.trace_clock_pin(netlistdb, pinid, false, true) {
                     use netlistdb::GeneralHierName;
-                    panic!("Tracing clock pin of cell {} error: \
+                    panic!(
+                        "Tracing clock pin of cell {} error: \
                             there is a multi-input cell driving {} \
                             that clocks this sequential element. \
                             Clock gating need to be manually patched atm.",
-                           netlistdb.cellnames[cellid].dbg_fmt_hier(),
-                           netlistdb.pinnames[pinid].dbg_fmt_pin());
+                        netlistdb.cellnames[cellid].dbg_fmt_hier(),
+                        netlistdb.pinnames[pinid].dbg_fmt_pin()
+                    );
                 }
             }
         }
@@ -561,7 +714,7 @@ impl AIG {
                 match (flagr, flagf) {
                     (_, usize::MAX) => "posedge",
                     (usize::MAX, _) => "negedge",
-                    _ => "posedge & negedge"
+                    _ => "posedge & negedge",
                 }
             );
         }
@@ -570,10 +723,7 @@ impl AIG {
         let mut topo_instack = vec![false; netlistdb.num_pins];
 
         for pinid in 0..netlistdb.num_pins {
-            aig.dfs_netlistdb_build_aig(
-                netlistdb, &mut topo_vis, &mut topo_instack,
-                pinid
-            );
+            aig.dfs_netlistdb_build_aig(netlistdb, &mut topo_vis, &mut topo_instack, pinid);
         }
 
         for cellid in 0..netlistdb.num_cells {
@@ -588,10 +738,10 @@ impl AIG {
                         "D" => ap_d_iv = pin_iv,
                         "S" => ap_s_iv = pin_iv,
                         "R" => ap_r_iv = pin_iv,
-                        "CLK" => ap_clken_iv = aig.trace_clock_pin(
-                            netlistdb, pinid, false,
-                            false
-                        ).unwrap(),
+                        "CLK" => {
+                            ap_clken_iv =
+                                aig.trace_clock_pin(netlistdb, pinid, false, false).unwrap()
+                        }
                         _ => {}
                     }
                 }
@@ -605,8 +755,7 @@ impl AIG {
                 dff.en_iv = ap_clken_iv;
                 dff.d_iv = d_in;
                 assert_ne!(dff.q, 0);
-            }
-            else if netlistdb.celltypes[cellid].as_str() == "$__RAMGEM_SYNC_" {
+            } else if netlistdb.celltypes[cellid].as_str() == "$__RAMGEM_SYNC_" {
                 let mut sram = aig.srams.entry(cellid).or_default().clone();
                 let mut write_clken_iv = 0;
                 for pinid in netlistdb.cell2pin.iter_set(cellid) {
@@ -615,94 +764,172 @@ impl AIG {
                     match netlistdb.pinnames[pinid].1.as_str() {
                         "PORT_R_ADDR" => {
                             sram.port_r_addr_iv[bit.unwrap()] = pin_iv;
-                        },
+                        }
                         "PORT_R_CLK" => {
-                            sram.port_r_en_iv = aig.trace_clock_pin(
-                                netlistdb, pinid, false,
-                                false
-                            ).unwrap();
-                        },
+                            sram.port_r_en_iv =
+                                aig.trace_clock_pin(netlistdb, pinid, false, false).unwrap();
+                        }
                         "PORT_W_ADDR" => {
                             sram.port_w_addr_iv[bit.unwrap()] = pin_iv;
                         }
                         "PORT_W_CLK" => {
-                            write_clken_iv = aig.trace_clock_pin(
-                                netlistdb, pinid, false,
-                                false
-                            ).unwrap();
-                        },
+                            write_clken_iv =
+                                aig.trace_clock_pin(netlistdb, pinid, false, false).unwrap();
+                        }
                         "PORT_W_WR_DATA" => {
                             sram.port_w_wr_data_iv[bit.unwrap()] = pin_iv;
-                        },
+                        }
                         "PORT_W_WR_EN" => {
                             sram.port_w_wr_en_iv[bit.unwrap()] = pin_iv;
-                        },
+                        }
                         _ => {}
                     }
                 }
                 for i in 0..32 {
                     let or_en = sram.port_w_wr_en_iv[i];
-                    let or_en = aig.add_and_gate(
-                        or_en, write_clken_iv
-                    );
+                    let or_en = aig.add_and_gate(or_en, write_clken_iv);
                     sram.port_w_wr_en_iv[i] = or_en;
                 }
                 *aig.srams.get_mut(&cellid).unwrap() = sram;
-            }
-            else if matches!(netlistdb.celltypes[cellid].as_str(),
-                             "CARRY4" | "DSP48E2" | "SRLC32E")
-            {
+            } else if matches!(
+                netlistdb.celltypes[cellid].as_str(),
+                "CARRY4" | "DSP48E2" | "GEM_DSP48E2" | "SRLC32E"
+            ) {
                 let celltype = netlistdb.celltypes[cellid].as_str();
-                let mut clock_pin = None;
-                let mut input_pins_map: std::collections::BTreeMap<String, usize> = Default::default();
+                let mut clock = None;
+                let mut inputs = Vec::new();
+                let mut opmode = [usize::MAX; 9];
+                let mut inmode = [usize::MAX; 5];
 
                 for pinid in netlistdb.cell2pin.iter_set(cellid) {
                     let pin_name = netlistdb.pinnames[pinid].1.as_str();
-                    let pin_bit  = netlistdb.pinnames[pinid].2;
-                    let pin_iv   = aig.pin2aigpin_iv[pinid];
+                    let pin_bit = netlistdb.pinnames[pinid].2;
+                    let pin_iv = aig.pin2aigpin_iv[pinid];
                     let is_output = matches!(
                         (celltype, pin_name),
-                        ("CARRY4",  "O" | "CO") |
-                        ("DSP48E2", "P")         |
+                        ("CARRY4", "O" | "CO") |
+                        ("DSP48E2" | "GEM_DSP48E2", "P") |
                         ("SRLC32E", "Q" | "Q31")
                     );
-                    if is_output { continue }
+                    if is_output {
+                        continue;
+                    }
+                    // Full DSP48E2 has many ignored status/cascade outputs.
+                    if netlistdb.pindirect[pinid] != Direction::I {
+                        continue;
+                    }
                     match pin_name {
                         "CLK" => {
-                            let clk_iv = aig.trace_clock_pin(netlistdb, pinid, false, false).unwrap();
-                            clock_pin = Some(clk_iv >> 1);
+                            let clk_iv =
+                                aig.trace_clock_pin(netlistdb, pinid, false, false).unwrap();
+                            clock = Some(MacroClock { signal_iv: clk_iv });
+                        }
+                        "OPMODE" if celltype == "DSP48E2" => {
+                            opmode[pin_bit.unwrap() as usize] = pin_iv;
+                        }
+                        "INMODE" if celltype == "DSP48E2" => {
+                            inmode[pin_bit.unwrap() as usize] = pin_iv;
+                        }
+                        "A" | "B" | "C" | "D" if celltype == "DSP48E2" => {
+                            let bit = pin_bit.unwrap_or(0) as u8;
+                            // Real DSP48E2 A is 30 bits; the PS explicitly
+                            // defines the native arithmetic input as A[26:0].
+                            if pin_name != "A" || bit < 27 {
+                                inputs.push(MacroInput {
+                                    port: macro_port(celltype, pin_name).unwrap(),
+                                    bit,
+                                    signal_iv: pin_iv,
+                                });
+                            }
+                        }
+                        _ if celltype == "DSP48E2" => {
+                            // Remaining native ports select datapaths outside
+                            // the required simplified subset. The synthesis
+                            // driver validates their static configuration.
                         }
                         _ => {
-                            let key = format!("{}{}", pin_name,
-                                pin_bit.map(|b| format!("{:04}", b)).unwrap_or_default());
-                            input_pins_map.insert(key, pin_iv >> 1);
+                            let port = macro_port(celltype, pin_name).unwrap_or_else(|| {
+                                panic!("unrecognized {} input port {}", celltype, pin_name)
+                            });
+                            inputs.push(MacroInput {
+                                port,
+                                bit: pin_bit.unwrap_or(0) as u8,
+                                signal_iv: pin_iv,
+                            });
                         }
                     }
                 }
 
+                if celltype == "DSP48E2" {
+                    assert!(opmode.iter().all(|&v| v != usize::MAX),
+                        "DSP48E2 cell {} has incomplete OPMODE", cellid);
+                    assert!(inmode[2] != usize::MAX,
+                        "DSP48E2 cell {} has incomplete INMODE", cellid);
+                    let mut eq_opmode = |value: usize| {
+                        let mut eq = 1usize;
+                        for (bit, &signal) in opmode.iter().enumerate() {
+                            let literal = signal ^ (((value >> bit) & 1) ^ 1);
+                            eq = aig.add_and_gate(eq, literal);
+                        }
+                        eq
+                    };
+                    // Legal PS encodings: C bypass, M, and P+M. An invalid
+                    // encoding maps to state 0; the synthesis validator emits
+                    // a hard error for statically-invalid controls.
+                    inputs.push(MacroInput {
+                        port: MacroPort::DspState,
+                        bit: 0,
+                        signal_iv: eq_opmode(0x005),
+                    });
+                    inputs.push(MacroInput {
+                        port: MacroPort::DspState,
+                        bit: 1,
+                        signal_iv: eq_opmode(0x025),
+                    });
+                    inputs.push(MacroInput {
+                        port: MacroPort::DspUsePre,
+                        bit: 0,
+                        signal_iv: inmode[2],
+                    });
+                }
+
                 let m = aig.macros.entry(cellid).or_insert_with(|| MacroInstance {
-                    kind: match celltype {
-                        "CARRY4"  => MacroKind::CarryChain,
-                        "DSP48E2" => MacroKind::DSP48E2,
-                        "SRLC32E" => MacroKind::SRLC32E,
-                        _ => unreachable!()
-                    },
+                    kind: macro_kind(celltype).unwrap(),
                     instance_id: 0,
                     cell_id: cellid,
-                    input_pins: vec![],
-                    output_pins: vec![],
-                    clock_pin: None,
+                    inputs: vec![],
+                    outputs: vec![],
+                    clock: None,
                     state_offset: None,
                     io_offset: 0,
                 });
-                m.clock_pin = clock_pin;
-                m.input_pins = input_pins_map.into_values().collect();
+                m.clock = clock;
+                m.inputs = inputs;
+                m.sort_ports();
+                m.validate()
+                    .unwrap_or_else(|e| panic!("invalid macro netlist: {}", e));
 
-                clilog::info!("Registered macro: {:?} cell_id={} inputs={} outputs={}",
-                    m.kind, m.cell_id, m.input_pins.len(), m.output_pins.len());
+                clilog::info!(
+                    "Registered macro: {:?} cell_id={} inputs={} outputs={}",
+                    m.kind,
+                    m.cell_id,
+                    m.inputs.len(),
+                    m.outputs.len()
+                );
             }
         }
 
+        let macro_clocks: std::collections::BTreeSet<usize> = aig
+            .macros
+            .values()
+            .filter_map(|m| m.clock.map(|clock| clock.signal_iv))
+            .collect();
+        if macro_clocks.len() > 1 {
+            panic!("DSP48E2 and SRLC32E instances must share one global rising-edge clock; inferred clock flags {:?}",
+                macro_clocks);
+        }
+
+        aig.macro_dependencies = aig.build_macro_dependency_graph();
 
         aig.fanouts_start = vec![0; aig.num_aigpins + 2];
         for (_i, driver) in aig.drivers.iter().enumerate() {
@@ -744,9 +971,15 @@ impl AIG {
     ) -> Vec<usize> {
         let mut vis = IndexSet::new();
         let mut ret = Vec::new();
-        fn dfs_topo(aig: &AIG, vis: &mut IndexSet<usize>, ret: &mut Vec<usize>, is_primary_input: Option<&IndexSet<usize>>, u: usize) {
+        fn dfs_topo(
+            aig: &AIG,
+            vis: &mut IndexSet<usize>,
+            ret: &mut Vec<usize>,
+            is_primary_input: Option<&IndexSet<usize>>,
+            u: usize,
+        ) {
             if vis.contains(&u) {
-                return
+                return;
             }
             vis.insert(u);
             if let DriverType::AndGate(a, b) = aig.drivers[u] {
@@ -765,8 +998,7 @@ impl AIG {
             for &endpoint in endpoints {
                 dfs_topo(self, &mut vis, &mut ret, is_primary_input, endpoint);
             }
-        }
-        else {
+        } else {
             for i in 1..self.num_aigpins + 1 {
                 dfs_topo(self, &mut vis, &mut ret, is_primary_input, i);
             }
@@ -781,16 +1013,17 @@ impl AIG {
     pub fn get_endpoint_group(&self, endpt_id: usize) -> EndpointGroup {
         if endpt_id < self.primary_outputs.len() {
             EndpointGroup::PrimaryOutput(*self.primary_outputs.get_index(endpt_id).unwrap())
-        }
-        else if endpt_id < self.primary_outputs.len() + self.dffs.len() {
+        } else if endpt_id < self.primary_outputs.len() + self.dffs.len() {
             EndpointGroup::DFF(&self.dffs[endpt_id - self.primary_outputs.len()])
-        }
-        else if endpt_id < self.primary_outputs.len() + self.dffs.len() + self.srams.len() {
-            EndpointGroup::RAMBlock(&self.srams[endpt_id - self.primary_outputs.len() - self.dffs.len()])
-        }
-        else {
-            EndpointGroup::Macro(&self.macros[endpt_id - self.primary_outputs.len() - self.dffs.len() - self.srams.len()])
+        } else if endpt_id < self.primary_outputs.len() + self.dffs.len() + self.srams.len() {
+            EndpointGroup::RAMBlock(
+                &self.srams[endpt_id - self.primary_outputs.len() - self.dffs.len()],
+            )
+        } else {
+            EndpointGroup::Macro(
+                &self.macros
+                    [endpt_id - self.primary_outputs.len() - self.dffs.len() - self.srams.len()],
+            )
         }
     }
 }
-

@@ -119,8 +119,9 @@ static bool run_carrychain(const char *sim_out) {
                            cudaMemcpyHostToDevice));
 
     gem_u32 n = GEM_CARRYCHAIN_MAX_BITS;
-    gem_u32 threads = 256, blocks = (vecs.size() + threads - 1) / threads;
-    k_carrychain<<<blocks, threads>>>(d_in, d_o, d_co, n, (gem_u32)vecs.size());
+    gem_u32 threads = 256;
+    gem_u32 blocks = static_cast<gem_u32>((vecs.size() + threads - 1) / threads);
+    k_carrychain<<<blocks, threads>>>(d_in, d_o, d_co, n, static_cast<gem_u32>(vecs.size()));
     CUDA_CHECK(cudaGetLastError());
     CUDA_CHECK(cudaDeviceSynchronize());
 
@@ -157,7 +158,7 @@ static bool run_dsp48e2(const char *sim_out) {
     CUDA_CHECK(cudaMemcpy(d_in, vecs.data(), vecs.size() * sizeof(DspVec),
                            cudaMemcpyHostToDevice));
 
-    k_dsp48e2<<<1, 1>>>(d_in, d_p, (gem_u32)vecs.size());
+    k_dsp48e2<<<1, 1>>>(d_in, d_p, static_cast<gem_u32>(vecs.size()));
     CUDA_CHECK(cudaGetLastError());
     CUDA_CHECK(cudaDeviceSynchronize());
 
@@ -186,6 +187,7 @@ static bool run_srlc32e(const char *sim_out) {
     fclose(fi);
     if (vecs.empty()) { fprintf(stderr, "SRLC32E: no vectors read\n"); return false; }
 
+    DspVec *d_in_srl; /* placeholder */ (void)d_in_srl;
     SrlVec *d_in; gem_u32 *d_q, *d_q31; gem_u64 *d_state;
     CUDA_CHECK(cudaMalloc(&d_in, vecs.size() * sizeof(SrlVec)));
     CUDA_CHECK(cudaMalloc(&d_q, vecs.size() * sizeof(gem_u32)));
@@ -194,7 +196,7 @@ static bool run_srlc32e(const char *sim_out) {
     CUDA_CHECK(cudaMemcpy(d_in, vecs.data(), vecs.size() * sizeof(SrlVec),
                            cudaMemcpyHostToDevice));
 
-    k_srlc32e<<<1, 1>>>(d_in, d_q, d_q31, d_state, (gem_u32)vecs.size());
+    k_srlc32e<<<1, 1>>>(d_in, d_q, d_q31, d_state, static_cast<gem_u32>(vecs.size()));
     CUDA_CHECK(cudaGetLastError());
     CUDA_CHECK(cudaDeviceSynchronize());
 

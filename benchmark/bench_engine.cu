@@ -57,28 +57,33 @@ struct SrlInput {
 __global__ void k_baseline_carrychain(const CarryInput *__restrict__ in,
                                       gem_u64 *__restrict__ o_out,
                                       gem_u64 *__restrict__ co_out,
-                                      gem_u32 count) {
+                                      gem_u32 count,
+                                      gem_u32 cycles) {
     gem_u32 idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx >= count) return;
 
     gem_u64 s = in[idx].s;
     gem_u64 di = in[idx].di;
-    gem_u32 c = in[idx].cin & 1;
     gem_u32 bits = in[idx].bits;
 
     gem_u64 o = 0;
     gem_u64 co = 0;
 
-    // Serial ripple loop emulating discrete 1-bit AIG nodes
-    #pragma unroll 1
-    for (gem_u32 i = 0; i < bits; i++) {
-        gem_u32 s_i = (s >> i) & 1;
-        gem_u32 di_i = (di >> i) & 1;
-        gem_u32 o_i = s_i ^ c;
-        gem_u32 c_next = (s_i & c) | ((~s_i & 1) & di_i);
-        o |= ((gem_u64)o_i << i);
-        co |= ((gem_u64)c_next << i);
-        c = c_next;
+    for (gem_u32 cyc = 0; cyc < cycles; cyc++) {
+        gem_u32 c = (in[idx].cin ^ cyc) & 1;
+        o = 0;
+        co = 0;
+        // Serial ripple loop emulating discrete 1-bit Boolean operations.
+        #pragma unroll 1
+        for (gem_u32 i = 0; i < bits; i++) {
+            gem_u32 s_i = (s >> i) & 1;
+            gem_u32 di_i = (di >> i) & 1;
+            gem_u32 o_i = s_i ^ c;
+            gem_u32 c_next = (s_i & c) | ((~s_i & 1) & di_i);
+            o |= ((gem_u64)o_i << i);
+            co |= ((gem_u64)c_next << i);
+            c = c_next;
+        }
     }
 
     o_out[idx] = o;
@@ -175,12 +180,16 @@ __global__ void k_baseline_srlc32e(const SrlInput *__restrict__ in,
 __global__ void k_macro_carrychain(const CarryInput *__restrict__ in,
                                    gem_u64 *__restrict__ o_out,
                                    gem_u64 *__restrict__ co_out,
-                                   gem_u32 count) {
+                                   gem_u32 count,
+                                   gem_u32 cycles) {
     gem_u32 idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx >= count) return;
 
-    CarryChainIn ci{in[idx].s, in[idx].di, in[idx].cin, in[idx].bits};
-    CarryChainOut r = gem_eval_carrychain(ci);
+    CarryChainOut r{};
+    for (gem_u32 cyc = 0; cyc < cycles; cyc++) {
+        CarryChainIn ci{in[idx].s, in[idx].di, in[idx].cin ^ (cyc & 1), in[idx].bits};
+        r = gem_eval_carrychain(ci);
+    }
     o_out[idx] = r.o;
     co_out[idx] = r.co;
 }
@@ -273,9 +282,9 @@ int main(int argc, char **argv) {
         std::vector<CarryInput> h_carry(count);
         for (gem_u32 i = 0; i < count; i++) {
             h_carry[i] = CarryInput{
-                (gem_u64)rand() | ((gem_u64)rand() << 32),
-                (gem_u64)rand() | ((gem_u64)rand() << 32),
-                (gem_u32)(rand() & 1),
+                static_cast<gem_u64>(static_cast<gem_u64>(static_cast<gem_u32>(rand())) | (static_cast<gem_u64>(static_cast<gem_u32>(rand())) << 32)),
+                static_cast<gem_u64>(static_cast<gem_u64>(static_cast<gem_u32>(rand())) | (static_cast<gem_u64>(static_cast<gem_u32>(rand())) << 32)),
+                static_cast<gem_u32>(static_cast<gem_u32>(rand()) & 1u),
                 60
             };
         }
@@ -290,7 +299,7 @@ int main(int argc, char **argv) {
 
         // Baseline Timing
         CUDA_CHECK(cudaEventRecord(ev_start));
-        k_baseline_carrychain<<<blocks, threads>>>(d_carry, d_o, d_co, count);
+        k_baseline_carrychain<<<blocks, threads>>>(d_carry, d_o, d_co, count, cycles);
         CUDA_CHECK(cudaEventRecord(ev_stop));
         CUDA_CHECK(cudaEventSynchronize(ev_stop));
         float t_base = 0;
@@ -298,17 +307,17 @@ int main(int argc, char **argv) {
 
         // Macro Timing
         CUDA_CHECK(cudaEventRecord(ev_start));
-        k_macro_carrychain<<<blocks, threads>>>(d_carry, d_o, d_co, count);
+        k_macro_carrychain<<<blocks, threads>>>(d_carry, d_o, d_co, count, cycles);
         CUDA_CHECK(cudaEventRecord(ev_stop));
         CUDA_CHECK(cudaEventSynchronize(ev_stop));
         float t_macro = 0;
         CUDA_CHECK(cudaEventElapsedTime(&t_macro, ev_start, ev_stop));
 
         float speedup = t_base / t_macro;
-        double mevals = (double)count / (t_macro * 1000.0);
+        double mevals = (double)count * cycles / (t_macro * 1000.0);
 
         printf("  [CARRYCHAIN 60-bit]\n");
-        printf("    Baseline (1-bit ripple) : %8.3f ms\n", t_base);
+        printf("    Synthetic 1-bit ripple  : %8.3f ms\n", t_base);
         printf("    Macro (64-bit fused)    : %8.3f ms\n", t_macro);
         printf("    Speedup                 : %8.2fx\n", speedup);
         printf("    Throughput              : %8.2f MEvals/sec\n\n", mevals);
@@ -329,12 +338,12 @@ int main(int argc, char **argv) {
         std::vector<DspInput> h_dsp(count);
         for (gem_u32 i = 0; i < count; i++) {
             h_dsp[i] = DspInput{
-                (gem_u64)(rand() & 0x7FFFFFF),
-                (gem_u64)(rand() & 0x7FFFFFF),
-                (gem_u64)(rand() & 0x3FFFF),
-                (gem_u64)(rand() | ((gem_u64)rand() << 32)) & 0xFFFFFFFFFFFFULL,
-                (gem_u32)(rand() % 3),
-                (gem_u32)(rand() & 1)
+                static_cast<gem_u64>(static_cast<gem_u32>(rand()) & 0x7FFFFFFu),
+                static_cast<gem_u64>(static_cast<gem_u32>(rand()) & 0x7FFFFFFu),
+                static_cast<gem_u64>(static_cast<gem_u32>(rand()) & 0x3FFFFu),
+                static_cast<gem_u64>(static_cast<gem_u64>(static_cast<gem_u32>(rand())) | (static_cast<gem_u64>(static_cast<gem_u32>(rand())) << 32)) & 0xFFFFFFFFFFFFULL,
+                static_cast<gem_u32>(static_cast<gem_u32>(rand()) % 3u),
+                static_cast<gem_u32>(static_cast<gem_u32>(rand()) & 1u)
             };
         }
 
@@ -365,7 +374,7 @@ int main(int argc, char **argv) {
         double mevals = (double)(count * cycles) / (t_macro * 1000.0);
 
         printf("  [DSP48E2 MAC %u cycles]\n", cycles);
-        printf("    Baseline (AIG netlist)  : %8.3f ms\n", t_base);
+        printf("    Synthetic bit-loop      : %8.3f ms\n", t_base);
         printf("    Macro (64-bit native)   : %8.3f ms\n", t_macro);
         printf("    Speedup                 : %8.2fx\n", speedup);
         printf("    Throughput              : %8.2f MEvals/sec\n\n", mevals);
@@ -385,9 +394,9 @@ int main(int argc, char **argv) {
         std::vector<SrlInput> h_srl(count);
         for (gem_u32 i = 0; i < count; i++) {
             h_srl[i] = SrlInput{
-                (gem_u32)(rand() & 1),
-                (gem_u32)(rand() & 1),
-                (gem_u32)(rand() % 32)
+                static_cast<gem_u32>(static_cast<gem_u32>(rand()) & 1u),
+                static_cast<gem_u32>(static_cast<gem_u32>(rand()) & 1u),
+                static_cast<gem_u32>(static_cast<gem_u32>(rand()) % 32u)
             };
         }
 
@@ -418,7 +427,7 @@ int main(int argc, char **argv) {
         double mevals = (double)(count * cycles) / (t_macro * 1000.0);
 
         printf("  [SRLC32E Shift LUT %u cycles]\n", cycles);
-        printf("    Baseline (32 FF + mux)  : %8.3f ms\n", t_base);
+        printf("    Synthetic 32 FF + mux   : %8.3f ms\n", t_base);
         printf("    Macro (64-bit barrel)   : %8.3f ms\n", t_macro);
         printf("    Speedup                 : %8.2fx\n", speedup);
         printf("    Throughput              : %8.2f MEvals/sec\n\n", mevals);

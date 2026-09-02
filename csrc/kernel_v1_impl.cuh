@@ -4,6 +4,11 @@
 #include <crates/ulib/includes.hpp>
 #include <cstdio>
 #include <cooperative_groups.h>
+// Word-level macro evaluation: CARRYCHAIN, DSP48E2, SRLC32E.
+// Same source compiles as device code here and as host code in the CPU
+// reference path, eliminating any host/device model divergence.
+#include "gem_macros.cuh"
+using namespace gem;
 
 struct alignas(8) VectorRead2 {
   u32 c1, c2;
@@ -305,21 +310,147 @@ __device__ void simulate_block_v1(
       u32 wo = (old_wo & ~clken_perm) | (writeout_inv & clken_perm);
       output_state[io_offset + threadIdx.x] = wo;
     }
+    __syncthreads();
 
     if(is_last_part) break;
   }
   assert(script_size == script_pi);
 }
 
+__device__ __forceinline__ u32 macro_read_source(
+  const u32 *__restrict__ state, u32 source)
+{
+  if(source & 0x80000000u) return source & 1u;
+  u32 pos = source & 0x3fffffffu;
+  return ((state[pos >> 5] >> (pos & 31)) & 1u) ^ ((source >> 30) & 1u);
+}
+
+__device__ __forceinline__ void macro_write_bit(
+  u32 *__restrict__ state, u32 pos, u32 bit)
+{
+  u32 mask = 1u << (pos & 31);
+  if(bit) atomicOr(state + (pos >> 5), mask);
+  else atomicAnd(state + (pos >> 5), ~mask);
+}
+
+// Phase 1: gather every macro's Boolean inputs into the 64-bit SoA buffer.
+// A grid barrier after this function prevents any macro output write from
+// racing another macro's input gather in the same relaxation pass.
+__device__ void gather_macro_program(
+  usize num_macros,
+  const u32 *__restrict__ offsets,
+  const u32 *__restrict__ program,
+  const u32 *__restrict__ state,
+  u64 *__restrict__ io)
+{
+  usize tid = (usize)blockIdx.x * blockDim.x + threadIdx.x;
+  usize stride_threads = (usize)gridDim.x * blockDim.x;
+  for(usize mi = tid; mi < num_macros; mi += stride_threads) {
+    const u32 *d = program + offsets[mi];
+    u32 kind = d[0], io_off = d[2], io_stride = d[3], n_in = d[5];
+    gem_u64 f0 = 0, f1 = 0, f2 = 0, f3 = 0, f4 = 0;
+    for(u32 k = 0; k < n_in; k += 2) {
+      u32 bit = macro_read_source(state, d[6 + k]);
+      u32 field_bit = d[6 + k + 1];
+      if(kind == GEM_MACRO_CARRYCHAIN) {
+        if(field_bit < 64u) f0 |= (gem_u64)bit << field_bit;
+        else if(field_bit < 128u) f1 |= (gem_u64)bit << (field_bit - 64u);
+        else f2 |= bit;
+      } else if(kind == GEM_MACRO_DSP48E2) {
+        if(field_bit < 27u) f0 |= (gem_u64)bit << field_bit;
+        else if(field_bit < 54u) f1 |= (gem_u64)bit << (field_bit - 27u);
+        else if(field_bit < 72u) f2 |= (gem_u64)bit << (field_bit - 54u);
+        else if(field_bit < 120u) f3 |= (gem_u64)bit << (field_bit - 72u);
+        else if(field_bit < 122u) f4 |= (gem_u64)bit << (field_bit - 120u);
+        else f4 |= (gem_u64)bit << 2;
+      } else {
+        if(field_bit == 0u) f0 |= bit;
+        else if(field_bit == 1u) f0 |= (gem_u64)bit << 1;
+        else f0 |= (gem_u64)bit << field_bit;
+      }
+    }
+    io[io_off] = f0;
+    io[io_off + io_stride] = f1;
+    if(kind != GEM_MACRO_SRLC32E) {
+      io[io_off + 2u * io_stride] = f2;
+    }
+    if(kind == GEM_MACRO_DSP48E2) {
+      io[io_off + 3u * io_stride] = f3;
+      io[io_off + 4u * io_stride] = f4;
+    }
+  }
+}
+
+// Phase 2: one CUDA thread performs one native word-level macro operation.
+__device__ void evaluate_macro_program(
+  usize num_macros,
+  const u32 *__restrict__ offsets,
+  const u32 *__restrict__ program,
+  const u32 *__restrict__ edge_state,
+  u32 *__restrict__ state,
+  u64 *__restrict__ macro_state,
+  const u64 *__restrict__ io,
+  bool commit)
+{
+  usize tid = (usize)blockIdx.x * blockDim.x + threadIdx.x;
+  usize stride_threads = (usize)gridDim.x * blockDim.x;
+  for(usize mi = tid; mi < num_macros; mi += stride_threads) {
+    const u32 *d = program + offsets[mi];
+    u32 kind = d[0], state_off = d[1], io_off = d[2], io_stride = d[3];
+    bool clock_active = macro_read_source(edge_state, d[4]);
+    u32 n_in = d[5];
+    const u32 *out_desc = d + 6 + n_in;
+    u32 n_out = *out_desc++;
+    gem_u64 value0 = 0, value1 = 0;
+    if(kind == GEM_MACRO_CARRYCHAIN) {
+      CarryChainIn in = {io[io_off], io[io_off + io_stride],
+                         (gem_u32)io[io_off + 2u * io_stride], 4u};
+      CarryChainOut out = gem_eval_carrychain(in);
+      value0 = out.o; value1 = out.co;
+    } else if(kind == GEM_MACRO_DSP48E2) {
+      gem_u64 ctrl = io[io_off + 4u * io_stride];
+      Dsp48e2In in = {io[io_off], io[io_off + io_stride],
+                      io[io_off + 2u * io_stride], io[io_off + 3u * io_stride],
+                      (gem_u32)(ctrl & 3u), (gem_u32)((ctrl >> 2) & 1u)};
+      gem_u64 visible = macro_state[state_off];
+      if(commit && clock_active) {
+        visible = gem_eval_dsp48e2_next_p(in, visible);
+        macro_state[state_off] = visible;
+      }
+      value0 = visible;
+    } else {
+      gem_u64 ctrl = io[io_off];
+      gem_u64 visible = macro_state[state_off];
+      if(commit && clock_active) {
+        visible = gem_eval_srlc32e_next(visible, ctrl & 1u, (ctrl >> 1) & 1u);
+        macro_state[state_off] = visible;
+      }
+      value0 = gem_eval_srlc32e_read(visible, (ctrl >> 2) & 31u);
+    }
+    for(u32 k = 0; k < n_out; k += 2) {
+      u32 out_bit = out_desc[k + 1];
+      u32 bit = out_bit < 64u ? ((value0 >> out_bit) & 1u)
+                              : ((value1 >> (out_bit - 64u)) & 1u);
+      macro_write_bit(state, out_desc[k], bit);
+    }
+  }
+}
+
 __global__ void simulate_v1_noninteractive_simple_scan(
   usize num_blocks,
   usize num_major_stages,
+  usize num_macro_passes,
   const usize *__restrict__ blocks_start,
   const u32 *__restrict__ blocks_data,
   u32 *__restrict__ sram_data,
   usize num_cycles,
   usize state_size,
-  u32 *__restrict__ states_noninteractive
+  u32 *__restrict__ states_noninteractive,
+  usize num_macros,
+  const u32 *__restrict__ macro_program_offsets,
+  const u32 *__restrict__ macro_program_data,
+  u64 *__restrict__ macro_state_data,
+  u64 *__restrict__ macro_io_data
   )
 {
   assert(num_blocks == gridDim.x);
@@ -334,16 +465,29 @@ __global__ void simulate_v1_noninteractive_simple_scan(
     script_sizes[threadIdx.x] = blocks_start[threadIdx.x * num_blocks + blockIdx.x + 1] - script_starts[threadIdx.x];
   }
   __syncthreads();
+  assert(num_macro_passes >= 1);
   for(usize cycle_i = 0; cycle_i < num_cycles; ++cycle_i) {
-    for(usize stage_i = 0; stage_i < num_major_stages; ++stage_i) {
-      simulate_block_v1(
-        blocks_data + script_starts[stage_i],
-        script_sizes[stage_i],
-        states_noninteractive + cycle_i * state_size,
+    for(usize macro_pass = 0; macro_pass < num_macro_passes; ++macro_pass) {
+      bool commit_macro_state = macro_pass == num_macro_passes / 2;
+      for(usize stage_i = 0; stage_i < num_major_stages; ++stage_i) {
+        simulate_block_v1(
+          blocks_data + script_starts[stage_i],
+          script_sizes[stage_i],
+          states_noninteractive + cycle_i * state_size,
+          states_noninteractive + (cycle_i + 1) * state_size,
+          sram_data,
+          shared_metadata, shared_writeouts, shared_state
+          );
+        cooperative_groups::this_grid().sync();
+      }
+      gather_macro_program(num_macros, macro_program_offsets,
+        macro_program_data, states_noninteractive + (cycle_i + 1) * state_size,
+        macro_io_data);
+      cooperative_groups::this_grid().sync();
+      evaluate_macro_program(num_macros, macro_program_offsets,
+        macro_program_data, states_noninteractive + cycle_i * state_size,
         states_noninteractive + (cycle_i + 1) * state_size,
-        sram_data,
-        shared_metadata, shared_writeouts, shared_state
-        );
+        macro_state_data, macro_io_data, commit_macro_state);
       cooperative_groups::this_grid().sync();
     }
   }

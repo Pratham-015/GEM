@@ -44,7 +44,6 @@ struct SimulatorArgs {
     #[clap(long)]
     include_wires: bool,
 }
-
 /// Hierarchical name representation in VCD.
 #[derive(PartialEq, Eq, Clone, Debug)]
 struct VCDHier {

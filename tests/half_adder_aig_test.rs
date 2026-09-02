@@ -47,4 +47,3 @@ fn test_half_adder_netlist_and_aig_construction() {
 
     assert_eq!(aig.primary_outputs.len(), 2, "Expected 2 primary outputs (Sum, Carry)");
 }
-

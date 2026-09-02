@@ -19,7 +19,6 @@ pub struct StagedAIG {
     /// the endpoint indices of original AIG fulfilled by current level.
     pub endpoints: Vec<usize>,
 }
-
 impl StagedAIG {
     /// Get the number of endpoint groups that should be fulfilled
     /// with this staged AIG.

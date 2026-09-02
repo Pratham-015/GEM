@@ -34,7 +34,6 @@ struct SimulatorArgs {
     #[clap(long, default_value_t=0)]
     max_stage_degrad: usize,
 }
-
 fn main() {
     clilog::init_stderr_color_debug();
     clilog::set_max_print_count(clilog::Level::Warn, "NL_SV_LIT", 1);

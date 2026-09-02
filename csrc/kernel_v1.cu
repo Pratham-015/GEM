@@ -17,19 +17,28 @@ extern "C"
 void simulate_v1_noninteractive_simple_scan_cuda(
   usize num_blocks,
   usize num_major_stages,
+  usize num_macro_passes,
   const usize *blocks_start,
   const u32 *blocks_data,
   u32 *sram_data,
   usize num_cycles,
   usize state_size,
-  u32 *states_noninteractive
+  u32 *states_noninteractive,
+  usize num_macros,
+  const u32 *macro_program_offsets,
+  const u32 *macro_program_data,
+  u64 *macro_state_data,
+  u64 *macro_io_data
   )
 {
-  void *arg_ptrs[8] = {
-    (void *)&num_blocks, (void *)&num_major_stages,
+  void *arg_ptrs[14] = {
+    (void *)&num_blocks, (void *)&num_major_stages, (void *)&num_macro_passes,
     (void *)&blocks_start, (void *)&blocks_data,
     (void *)&sram_data, (void *)&num_cycles, (void *)&state_size,
-    (void *)&states_noninteractive
+    (void *)&states_noninteractive,
+    (void *)&num_macros, (void *)&macro_program_offsets,
+    (void *)&macro_program_data,
+    (void *)&macro_state_data, (void *)&macro_io_data
   };
   checkCudaErrors(cudaLaunchCooperativeKernel(
     (void *)simulate_v1_noninteractive_simple_scan, num_blocks, 256,

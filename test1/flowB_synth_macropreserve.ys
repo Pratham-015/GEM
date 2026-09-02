@@ -38,4 +38,4 @@ opt_clean -purge
 write_verilog -noexpr -nodec test1/flowB_gatelevel_macropreserve.gv
 
 # 13. Printing statistics
-stat
+# stat

@@ -96,6 +96,29 @@ SIM_OUT = os.path.join(STAGE, "sim_out")
 os.makedirs(SIM_OUT, exist_ok=True)
 
 
+def cuda_arch():
+    """Return a portable nvcc architecture for the machine under test.
+
+    GEM_CUDA_ARCH is the reproducible override (for example ``sm_80``).
+    Otherwise use the first visible GPU's compute capability.  The conservative
+    fallback is deliberately PTX rather than an Ada-only cubin, so source
+    verification can still compile on a build host without nvidia-smi.
+    """
+    override = os.environ.get("GEM_CUDA_ARCH")
+    if override:
+        return override
+    try:
+        cap = subprocess.check_output(
+            ["nvidia-smi", "--query-gpu=compute_cap", "--format=csv,noheader"],
+            text=True, stderr=subprocess.DEVNULL).splitlines()[0].strip()
+        major, minor = cap.split(".", 1)
+        if major.isdigit() and minor.isdigit():
+            return "sm_" + major + minor
+    except (OSError, subprocess.SubprocessError, IndexError, ValueError):
+        pass
+    return "compute_75"
+
+
 def stim_path(name):
     return os.path.join(SIM_OUT, name)
 
@@ -229,12 +252,12 @@ def report(label, golden, actual, signals):
 
 
 def test_carry4(rng):
-    slice_vecs = []
-    for s in (0x0, 0xF, 0xA, 0x5, 0x1, 0x8):
-        for di in (0x0, 0xF, 0xA, 0x5):
-            for cin in (0, 1):
-                for cyi in (0, 1):
-                    slice_vecs.append((s, di, cin, cyi))
+    # Complete truth table: 16 * 16 * 2 * 2 = 1024 legal inputs.
+    slice_vecs = [(s, di, cin, cyi)
+                  for s in range(16)
+                  for di in range(16)
+                  for cin in range(2)
+                  for cyi in range(2)]
     for _ in range(N_RANDOM):
         slice_vecs.append((rng.getrandbits(4), rng.getrandbits(4),
                            rng.getrandbits(1), rng.getrandbits(1)))
@@ -415,7 +438,9 @@ def read_stim(name, ncol):
 
 def compile_cuda_test():
     exe = os.path.join(STAGE, "test_gem_macros")
-    r = run([NVCC, "-O2", "-arch=sm_89", "-I", GEM_CSRC, "-o", exe,
+    arch = cuda_arch()
+    print("  CUDA compile target: %s" % arch)
+    r = run([NVCC, "-O2", "-arch=" + arch, "-I", GEM_CSRC, "-o", exe,
              os.path.join(CSRC, "test_gem_macros.cu")], STAGE)
     if r.returncode != 0:
         return None, "nvcc failed:\n" + r.stdout

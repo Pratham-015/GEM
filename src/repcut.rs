@@ -20,7 +20,6 @@ const REPCUT_BITSET_BLOCK_SIZE: usize = 4096;
 struct EndpointSetSegment {
     bs_set: [u64; REPCUT_BITSET_BLOCK_SIZE / 64],
 }
-
 impl Default for EndpointSetSegment {
     fn default() -> Self {
         EndpointSetSegment {

@@ -1,0 +1,15 @@
+read_verilog -lib aigpdk/aigpdk_macros_bb.v
+read_verilog -sv verif/rtl/test_designs/integrated_macro_top.sv
+hierarchy -check -top integrated_macro_top
+synth -flatten
+delete t:$print
+techmap -map aigpdk/dsp48e2_ps_map.v
+dfflibmap -liberty aigpdk/aigpdk_nomem.lib
+opt_clean -purge
+abc -liberty aigpdk/aigpdk_nomem.lib
+opt_clean -purge
+techmap
+abc -liberty aigpdk/aigpdk_nomem.lib
+opt_clean -purge
+write_json /tmp/gem_integrated_gatelevel.json
+write_verilog -noexpr -nodec /tmp/gem_integrated_gatelevel.gv

@@ -8,14 +8,14 @@ fn test_parse_macro_gatelevel_netlist() {
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let netlist_path = manifest_dir.join("test3/flowB_macropreserve_gatelevel.gv");
 
-    let db = NetlistDB::from_sverilog_file(
-        &netlist_path,
-        Some("signal_processor"),
-        &AIGPDKLeafPins(),
-    ).expect("Failed to parse structural netlist with macros");
+    let db =
+        NetlistDB::from_sverilog_file(&netlist_path, Some("signal_processor"), &AIGPDKLeafPins())
+            .expect("Failed to parse structural netlist with macros");
 
-    println!("Parsed NetlistDB with {} cells, {} pins, {} nets",
-             db.num_cells, db.num_pins, db.num_nets);
+    println!(
+        "Parsed NetlistDB with {} cells, {} pins, {} nets",
+        db.num_cells, db.num_pins, db.num_nets
+    );
 
     // Check that cells are recognized
     let mut found_dsp = false;
@@ -27,7 +27,7 @@ fn test_parse_macro_gatelevel_netlist() {
     for cell_id in 1..db.num_cells {
         let ctype = db.celltypes[cell_id].as_str();
         match ctype {
-            "DSP48E2" => found_dsp = true,
+            "GEM_DSP48E2" => found_dsp = true,
             "CARRY4" => found_carry4 = true,
             "SRLC32E" => found_srlc32e = true,
             "DFF" => found_dff = true,
@@ -53,4 +53,3 @@ fn test_parse_macro_gatelevel_netlist() {
         );
     }
 }
-
