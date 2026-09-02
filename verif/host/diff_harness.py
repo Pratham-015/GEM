@@ -85,7 +85,7 @@ IVERILOG = "iverilog"
 VVP = "vvp"
 NVCC = shutil.which("nvcc") or "/usr/local/cuda/bin/nvcc"
 CUDA_AVAILABLE = os.path.isfile(NVCC) if os.path.isabs(NVCC) else bool(shutil.which(NVCC))
-STAGE = "/home/pratham_sharma/gem/build/gemdiff"
+STAGE = os.path.abspath(os.path.join(HERE, "..", "..", "build", "gemdiff"))
 # The testbenches open every file -- stimulus in, results out, VCD -- relative
 # to their own cwd, under sim_out/, so the stimulus this harness generates has
 # to land there too. Writing it to the STAGE root instead makes the tb's

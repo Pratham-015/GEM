@@ -550,7 +550,14 @@ fn simulate_macro_program(
             let s = macro_io[io_off];
             let di = macro_io[io_off + stride];
             let cin = macro_io[io_off + 2 * stride];
-            let mask = 0xfu64;
+            let mut n_bits = 4u32;
+            for k in (0..n_in).step_by(2) {
+                let field = d[6 + k + 1];
+                if field < 64 && (field + 1) as u32 > n_bits {
+                    n_bits = (field + 1) as u32;
+                }
+            }
+            let mask = if n_bits >= 64 { !0u64 } else { (1u64 << n_bits) - 1 };
             let aa = (s | di) & mask;
             let bb = (!s & di) & mask;
             let total = aa.wrapping_add(bb).wrapping_add(cin & 1);
@@ -873,14 +880,13 @@ fn main() {
                             };
                             let old_value = state[(pos >> 5) as usize] >> (pos & 31) & 1;
                             if old_value != match $b { b'1' => 1, _ => 0 } {
+                                last_vcd_time_active = true;
                                 if let Some((pe, ne)) = aig.clock_pin2aigpins.get(&pin).copied() {
                                     if pe != usize::MAX && old_value == 0 {
-                                        last_vcd_time_active = true;
                                         let p = *script.input_map.get(&pe).unwrap();
                                         state[p as usize >> 5] |= 1 << (p & 31);
                                     }
                                     if ne != usize::MAX && old_value == 1 {
-                                        last_vcd_time_active = true;
                                         let p = *script.input_map.get(&ne).unwrap();
                                         state[p as usize >> 5] |= 1 << (p & 31);
                                     }

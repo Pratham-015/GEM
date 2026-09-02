@@ -871,14 +871,13 @@ fn main() {
                         {
                             continue;
                         }
+                        last_vcd_time_active = true;
                         if let Some((pe, ne)) = aig.clock_pin2aigpins.get(&pin).copied() {
                             if pe != usize::MAX && old_value == 0 {
-                                last_vcd_time_active = true;
                                 let p = *script.input_map.get(&pe).unwrap();
                                 state[p as usize >> 5] |= 1 << (p & 31);
                             }
                             if ne != usize::MAX && old_value == 1 {
-                                last_vcd_time_active = true;
                                 let p = *script.input_map.get(&ne).unwrap();
                                 state[p as usize >> 5] |= 1 << (p & 31);
                             }

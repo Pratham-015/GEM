@@ -23,6 +23,9 @@ def main():
     parser.add_argument("sources", nargs="+")
     args = parser.parse_args()
 
+    import shutil
+    if shutil.which("yosys") is None:
+        raise SystemExit("SKIPPED: required Yosys 0.68 is not installed in PATH on this system")
     version = subprocess.check_output(["yosys", "-V"], text=True).strip()
     if not version.startswith("Yosys 0.68 "):
         raise SystemExit(f"ERROR: required Yosys 0.68, found {version}")

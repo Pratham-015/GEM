@@ -24,15 +24,34 @@ module DSP48E2_PS_MAP #(
     input [3:0] ALUMODE,
     input [4:0] INMODE
 );
-    wire _TECHMAP_FAIL_ = AREG != 0 || BREG != 0 || CREG != 0 ||
-        DREG != 0 || ADREG != 0 || MREG != 0 || PREG != 1;
+    // Reject unsupported pipeline registers, control registers, and non-PS structural configurations
+    wire invalid_param =
+        AREG != 0 || BREG != 0 || CREG != 0 || DREG != 0 ||
+        ADREG != 0 || MREG != 0 || PREG != 1 ||
+        ACASCREG != 0 || BCASCREG != 0 || ALUMODEREG != 0 ||
+        INMODEREG != 0 || OPMODEREG != 0 || CARRYINREG != 0 ||
+        CARRYINSELREG != 0 || AMULTSEL != "A" || BMULTSEL != "B" ||
+        PREADDINSEL != "A" || USE_MULT != "MULTIPLY" || USE_SIMD != "ONE48";
 
     // Exact encodings established against DSP48E2 UNISIM:
-    // 0x030: C, 0x005: M, 0x025: P+M. ALUMODE must select plain add.
-    wire [1:0] state = (ALUMODE == 4'b0000 && OPMODE == 9'h005) ? 2'd1 :
-                       (ALUMODE == 4'b0000 && OPMODE == 9'h025) ? 2'd2 : 2'd0;
-    // The supported pre-adder modes are 00000 (A) and 00100 (A+D).
-    wire use_pre = INMODE == 5'b00100;
+    // 0x030: C (bypass), 0x005: M (mult), 0x025: P+M (accumulate).
+    // ALUMODE must be 4'b0000 (plain add).
+    wire is_bypass = (ALUMODE == 4'b0000) && (OPMODE == 9'h030);
+    wire is_mult   = (ALUMODE == 4'b0000) && (OPMODE == 9'h005);
+    wire is_mac    = (ALUMODE == 4'b0000) && (OPMODE == 9'h025);
+    wire valid_op_alu = is_bypass || is_mult || is_mac;
+
+    // Supported pre-adder modes: 5'b00000 (A) and 5'b00100 (A+D).
+    wire is_inmode_a  = (INMODE == 5'b00000);
+    wire is_inmode_ad = (INMODE == 5'b00100);
+    wire valid_inmode = is_inmode_a || is_inmode_ad;
+
+    // Reject unsupported dynamic or static OPMODE / ALUMODE / INMODE configurations
+    wire _TECHMAP_FAIL_ = invalid_param || !valid_op_alu || !valid_inmode;
+
+    wire [1:0] state = is_mult ? 2'd1 :
+                       is_mac  ? 2'd2 : 2'd0;
+    wire use_pre = is_inmode_ad;
 
     GEM_DSP48E2 _TECHMAP_REPLACE_ (
         .P(P), .CLK(CLK), .A(A[26:0]), .B(B), .C(C), .D(D),

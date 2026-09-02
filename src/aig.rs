@@ -919,6 +919,8 @@ impl AIG {
             }
         }
 
+        aig.fuse_carry_chains();
+
         let macro_clocks: std::collections::BTreeSet<usize> = aig
             .macros
             .values()
@@ -1024,6 +1026,70 @@ impl AIG {
                 &self.macros
                     [endpt_id - self.primary_outputs.len() - self.dffs.len() - self.srams.len()],
             )
+        }
+    }
+
+    pub fn fuse_carry_chains(&mut self) {
+        loop {
+            let mut fused_pair = None;
+            for (&b_id, b_inst) in &self.macros {
+                if b_inst.kind != MacroKind::CarryChain {
+                    continue;
+                }
+                let ci_input = b_inst.inputs.iter().find(|i| i.port == MacroPort::CarryCI);
+                let cyinit_input = b_inst.inputs.iter().find(|i| i.port == MacroPort::CarryCYINIT);
+                if let Some(cyinit) = cyinit_input {
+                    if cyinit.signal_iv != 0 {
+                        continue;
+                    }
+                }
+                if let Some(ci) = ci_input {
+                    if ci.signal_iv <= 1 {
+                        continue;
+                    }
+                    let pin = ci.signal_iv >> 1;
+                    if let DriverType::Macro(a_id, MacroPort::CarryCO, a_bit) = self.drivers[pin] {
+                        if a_id != b_id && self.macros.contains_key(&a_id) {
+                            let a_inst = &self.macros[&a_id];
+                            if a_inst.kind == MacroKind::CarryChain {
+                                let a_width = a_inst.inputs.iter().filter(|i| i.port == MacroPort::CarryS).count() as u8;
+                                let b_width = b_inst.inputs.iter().filter(|i| i.port == MacroPort::CarryS).count() as u8;
+                                if a_bit == a_width - 1 && (a_width + b_width) <= 60 {
+                                    fused_pair = Some((a_id, b_id, a_width));
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if let Some((a_id, b_id, a_width)) = fused_pair {
+                let b_inst = self.macros.remove(&b_id).unwrap();
+                let a_inst = self.macros.get_mut(&a_id).unwrap();
+                for input in b_inst.inputs {
+                    if input.port == MacroPort::CarryS || input.port == MacroPort::CarryDI {
+                        a_inst.inputs.push(MacroInput {
+                            port: input.port,
+                            bit: a_width + input.bit,
+                            signal_iv: input.signal_iv,
+                        });
+                    }
+                }
+                for output in b_inst.outputs {
+                    let new_bit = a_width + output.bit;
+                    a_inst.outputs.push(MacroOutput {
+                        port: output.port,
+                        bit: new_bit,
+                        aig_pin: output.aig_pin,
+                    });
+                    self.drivers[output.aig_pin] = DriverType::Macro(a_id, output.port, new_bit);
+                }
+                a_inst.sort_ports();
+                a_inst.validate().unwrap_or_else(|e| panic!("invalid fused carry chain: {}", e));
+            } else {
+                break;
+            }
         }
     }
 }

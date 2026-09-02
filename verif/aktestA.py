@@ -39,7 +39,10 @@ def find_design_file() -> Path:
             counts = count_instantiations(path)
         except RuntimeError:
             continue
-        if all(counts.get(target, 0) > 0 for target in TARGET_TYPES):
+        if all(
+            counts.get(target, 0) + (counts.get("GEM_DSP48E2", 0) if target == "DSP48E2" else 0) > 0
+            for target in TARGET_TYPES
+        ):
             return path
 
     for path in candidates:
@@ -74,6 +77,8 @@ def validate_target(filepath: Path, target: str) -> tuple[bool, int]:
     """Check whether the target primitive exists in the design."""
     counts = count_instantiations(filepath)
     found = counts.get(target, 0)
+    if target == "DSP48E2":
+        found += counts.get("GEM_DSP48E2", 0)
     return found > 0, found
 
 

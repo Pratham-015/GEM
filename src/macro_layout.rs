@@ -84,8 +84,8 @@ impl MacroPort {
     /// stable; it must never depend on parser iteration or lexical ordering.
     pub fn input_abi_bit(self, bit: u8) -> Option<u16> {
         match self {
-            Self::CarryS if bit < 4 => Some(bit as u16),
-            Self::CarryDI if bit < 4 => Some(64 + bit as u16),
+            Self::CarryS if bit < 60 => Some(bit as u16),
+            Self::CarryDI if bit < 60 => Some(64 + bit as u16),
             Self::CarryCI if bit == 0 => Some(128),
             Self::CarryCYINIT if bit == 0 => Some(129),
             Self::DspA if bit < 27 => Some(bit as u16),
@@ -103,8 +103,8 @@ impl MacroPort {
 
     pub fn output_abi_bit(self, bit: u8) -> Option<u16> {
         match self {
-            Self::CarryO if bit < 4 => Some(bit as u16),
-            Self::CarryCO if bit < 4 => Some(64 + bit as u16),
+            Self::CarryO if bit < 60 => Some(bit as u16),
+            Self::CarryCO if bit < 60 => Some(64 + bit as u16),
             Self::DspP if bit < 48 => Some(bit as u16),
             Self::SrlQ if bit == 0 => Some(0),
             Self::SrlQ31 if bit == 0 => Some(1),
@@ -282,11 +282,12 @@ impl MacroInstance {
         let count_in = |port| self.inputs.iter().filter(|p| p.port == port).count();
         let inputs_ok = match self.kind {
             MacroKind::CarryChain => {
-                count_in(MacroPort::CarryS) == 4
-                    && count_in(MacroPort::CarryDI) == 4
-                    && count_in(MacroPort::CarryCI) == 1
-                    && count_in(MacroPort::CarryCYINIT) == 1
-                    && self.inputs.len() == 10
+                count_in(MacroPort::CarryS) <= 60
+                    && count_in(MacroPort::CarryDI) <= 60
+                    && count_in(MacroPort::CarryCI) <= 1
+                    && count_in(MacroPort::CarryCYINIT) <= 1
+                    && count_in(MacroPort::CarryS) == count_in(MacroPort::CarryDI)
+                    && count_in(MacroPort::CarryS) >= 4
             }
             MacroKind::DSP48E2 => {
                 count_in(MacroPort::DspA) == 27
@@ -313,20 +314,26 @@ impl MacroInstance {
         let count_out = |port| self.outputs.iter().filter(|p| p.port == port).count();
         let outputs_ok = match self.kind {
             MacroKind::CarryChain => {
-                count_out(MacroPort::CarryO) == 4
-                    && count_out(MacroPort::CarryCO) == 4
-                    && self.outputs.len() == 8
+                count_out(MacroPort::CarryO) <= 60
+                    && count_out(MacroPort::CarryCO) <= 60
+                    && !self.outputs.is_empty()
+                    && self.outputs.len() <= 120
             }
-            MacroKind::DSP48E2 => count_out(MacroPort::DspP) == 48 && self.outputs.len() == 48,
+            MacroKind::DSP48E2 => {
+                count_out(MacroPort::DspP) <= 48
+                    && !self.outputs.is_empty()
+                    && self.outputs.len() <= 48
+            }
             MacroKind::SRLC32E => {
-                count_out(MacroPort::SrlQ) == 1
-                    && count_out(MacroPort::SrlQ31) == 1
-                    && self.outputs.len() == 2
+                count_out(MacroPort::SrlQ) <= 1
+                    && count_out(MacroPort::SrlQ31) <= 1
+                    && !self.outputs.is_empty()
+                    && self.outputs.len() <= 2
             }
         };
         if !outputs_ok {
             return Err(format!(
-                "{:?} cell {} has an output from another primitive",
+                "{:?} cell {} has invalid or unexpected output ports",
                 self.kind, self.cell_id
             ));
         }

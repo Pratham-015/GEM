@@ -46,7 +46,7 @@ fn test_64bit_chained_carry_topology_and_dag() {
         );
     }
 
-    // 2. Build AIG
+    // 2. Build AIG with CarryChain Fusion
     let aig = AIG::from_netlistdb(&db);
     println!(
         "AIG pins: {}, Primary outputs: {}",
@@ -55,77 +55,54 @@ fn test_64bit_chained_carry_topology_and_dag() {
     );
     assert_eq!(
         aig.macros.len(),
-        16,
-        "AIG must record all 16 macro instances"
+        2,
+        "16 CARRY4 macros must be fused into 2 bounded segments (60b + 4b)"
     );
 
-    // Every physical bit retains its named port identity.  In particular,
-    // O[0] and CO[0] must not collapse to the same anonymous output index.
+    let mut total_s_bits = 0;
+    let mut total_di_bits = 0;
+    let mut total_o_bits = 0;
+    let mut total_co_bits = 0;
+
     for m in aig.macros.values() {
-        assert_eq!(
-            m.inputs
-                .iter()
-                .filter(|p| p.port == MacroPort::CarryS)
-                .count(),
-            4
-        );
-        assert_eq!(
-            m.inputs
-                .iter()
-                .filter(|p| p.port == MacroPort::CarryDI)
-                .count(),
-            4
-        );
-        assert_eq!(
-            m.outputs
-                .iter()
-                .filter(|p| p.port == MacroPort::CarryO)
-                .count(),
-            4
-        );
-        assert_eq!(
-            m.outputs
-                .iter()
-                .filter(|p| p.port == MacroPort::CarryCO)
-                .count(),
-            4
-        );
+        total_s_bits += m.inputs.iter().filter(|p| p.port == MacroPort::CarryS).count();
+        total_di_bits += m.inputs.iter().filter(|p| p.port == MacroPort::CarryDI).count();
+        total_o_bits += m.outputs.iter().filter(|p| p.port == MacroPort::CarryO).count();
+        total_co_bits += m.outputs.iter().filter(|p| p.port == MacroPort::CarryCO).count();
         assert!(m.validate().is_ok());
     }
 
-    // The 16 CARRY4 ripple is a true heterogeneous DAG, not merely 16 counted
-    // metadata records.  Each CO[3] -> CI connection must be an explicit edge.
+    assert_eq!(total_s_bits, 64, "Total S input bits across fused segments must be 64");
+    assert_eq!(total_di_bits, 64, "Total DI input bits across fused segments must be 64");
+    assert_eq!(total_o_bits, 64, "Total O output bits across fused segments must be 64");
+    assert_eq!(total_co_bits, 64, "Total CO output bits across fused segments must be 64");
+
+    // The fused segments only require inter-segment dependencies at segment boundaries (bit 59 -> CI).
     let ripple_edges: Vec<_> = aig
         .macro_dependencies
         .edges
         .iter()
         .filter(|e| {
             e.producer_port == MacroPort::CarryCO
-                && e.producer_bit == 3
                 && e.consumer_port == MacroPort::CarryCI
                 && e.timing == MacroDependencyTiming::SameCycle
         })
         .collect();
     assert_eq!(
         ripple_edges.len(),
-        15,
-        "missing CARRY4-to-CARRY4 dependencies"
+        1,
+        "Fusing 16 CARRY4 blocks into two segments leaves exactly 1 inter-segment ripple edge"
     );
     assert_eq!(
         aig.macro_dependencies.combinational_levels.len(),
-        16,
-        "a 16-cell ripple must require 16 same-cycle macro levels"
+        2,
+        "A fused 64-bit adder requires only 2 macro levels instead of 16"
     );
-    assert!(aig
-        .macro_dependencies
-        .combinational_levels
-        .iter()
-        .all(|l| l.len() == 1));
 
     // 3. Verify Memory Layout Allocation
     let macro_instances: Vec<_> = aig.macros.values().cloned().collect();
     let layout = MacroStorageLayout::build(macro_instances);
-    assert_eq!(layout.num_carrychain, 16);
+    assert_eq!(layout.num_carrychain, 2);
     assert_eq!(layout.total_io_words % 32, 0, "Warp padding verified");
-    println!("Memory layout for 16-block carry chain allocated successfully.");
+    println!("Memory layout for fused carry chain allocated successfully.");
 }

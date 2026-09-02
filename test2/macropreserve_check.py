@@ -55,7 +55,8 @@ def main():
 
     print("\n  Preservation checks:")
     check("CARRY4 preserved in netlist", cells.get("CARRY4", 0) == 1)
-    check("DSP48E2 preserved in netlist", cells.get("DSP48E2", 0) == 1)
+    dsp_count = cells.get("DSP48E2", 0) + cells.get("GEM_DSP48E2", 0)
+    check("DSP48E2 preserved in netlist", dsp_count == 1)
     check("SRLC32E preserved in netlist", cells.get("SRLC32E", 0) == 1)
     check("DFF cells present", cells.get("DFF", 0) == 4)
     aig_count = sum(v for k, v in cells.items() if k.startswith("AND2_"))

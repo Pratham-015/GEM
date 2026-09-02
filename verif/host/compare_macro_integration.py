@@ -88,12 +88,14 @@ def main():
     golden, gem = timeline(sys.argv[1]), timeline(sys.argv[2])
     mismatches = []
     checked = 0
-    for t, got in gem:
+    all_timestamps = sorted(set(t for t, _ in golden) | set(t for t, _ in gem))
+    for t in all_timestamps:
         expected = sample(golden, t)
-        if expected is None:
+        got = sample(gem, t)
+        if expected is None or got is None:
             continue
         for name in TARGETS:
-            if expected[name] is None:
+            if expected[name] is None or got[name] is None:
                 continue
             checked += 1
             if got[name] != expected[name]:

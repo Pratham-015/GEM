@@ -403,8 +403,15 @@ __device__ void evaluate_macro_program(
     u32 n_out = *out_desc++;
     gem_u64 value0 = 0, value1 = 0;
     if(kind == GEM_MACRO_CARRYCHAIN) {
+      u32 n_bits = 4u;
+      for(u32 k = 0; k < n_in; k += 2) {
+        u32 fb = d[6 + k + 1];
+        if(fb < 64u && (fb + 1u) > n_bits) {
+          n_bits = fb + 1u;
+        }
+      }
       CarryChainIn in = {io[io_off], io[io_off + io_stride],
-                         (gem_u32)io[io_off + 2u * io_stride], 4u};
+                         (gem_u32)(io[io_off + 2u * io_stride] & 1u), n_bits};
       CarryChainOut out = gem_eval_carrychain(in);
       value0 = out.o; value1 = out.co;
     } else if(kind == GEM_MACRO_DSP48E2) {

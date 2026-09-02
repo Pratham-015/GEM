@@ -19,13 +19,18 @@ def count_cells(filepath):
 def has_macro(filepath, macro_name):
     with open(filepath) as f:
         content = f.read()
+    if macro_name == "DSP48E2":
+        return bool(re.search(r'\b(DSP48E2|GEM_DSP48E2)\b', content))
     return bool(re.search(r'\b' + macro_name + r'\b', content))
 
 def count_macro_instances(filepath, macro_name):
     count = 0
     with open(filepath) as f:
         for line in f:
-            m = re.match(r'\s+' + macro_name + r'\s+\w+\s+\(', line)
+            if macro_name == "DSP48E2":
+                m = re.match(r'\s+(DSP48E2|GEM_DSP48E2)\s+\w+\s*\(', line)
+            else:
+                m = re.match(r'\s+' + macro_name + r'\s+\w+\s*\(', line)
             if m:
                 count += 1
     return count
@@ -33,8 +38,8 @@ def count_macro_instances(filepath, macro_name):
 def print_cell_table(label, counts):
     print(f"\n  {label}")
     print(f"  {'Cell Type':<24} {'Count':>8}")
-    macro_cells = {k: v for k, v in sorted(counts.items()) if k in MACROS}
-    aig_cells   = {k: v for k, v in sorted(counts.items()) if k not in MACROS}
+    macro_cells = {k: v for k, v in sorted(counts.items()) if k in MACROS or k == "GEM_DSP48E2"}
+    aig_cells   = {k: v for k, v in sorted(counts.items()) if k not in MACROS and k != "GEM_DSP48E2"}
     if macro_cells:
         for cell, n in sorted(macro_cells.items()):
             print(f"  {'>> ' + cell:<24} {n:>8}   [MACRO]")
@@ -70,7 +75,7 @@ def main():
             all_macros_pass = False
 
     print("\n  GATE COUNT COMPARISON")
-    pres_macro_count = sum(pres_cells.get(m, 0) for m in MACROS)
+    pres_macro_count = sum(pres_cells.get(m, 0) for m in MACROS) + pres_cells.get("GEM_DSP48E2", 0)
     pres_aig_only    = pres_total - pres_macro_count
     saved = base_total - pres_total
     pct = saved / base_total * 100 if base_total > 0 else 0

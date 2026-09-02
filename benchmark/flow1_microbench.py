@@ -12,6 +12,7 @@ import os
 import sys
 import subprocess
 import csv
+import shutil
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 GEM_ROOT = os.path.abspath(os.path.join(HERE, ".."))
@@ -40,8 +41,9 @@ def run_cmd(cmd, cwd=GEM_ROOT):
 def build_engine():
     print("=== Flow 1: Compiling CUDA Device Micro-Benchmark Engine ===")
     arch = cuda_arch()
+    nvcc = shutil.which("nvcc") or os.path.join(os.environ.get("CUDA_HOME", "/usr/local/cuda"), "bin", "nvcc")
     cmd = (
-        f"/usr/local/cuda/bin/nvcc -O3 -std=c++17 -arch={arch} -Xptxas -v "
+        f"{nvcc} -O3 -std=c++17 -arch={arch} -Xptxas -v "
         f"-I{GEM_ROOT}/csrc {HERE}/bench_engine.cu -o {ENGINE_BIN}"
     )
     rc, out, err = run_cmd(cmd)
