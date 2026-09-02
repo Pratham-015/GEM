@@ -223,7 +223,7 @@ module mixed_circuit(clk, rst, op_a, op_b, cin, dsp_a, dsp_b, dsp_c, dsp_d, dsp_
     .S(s_wire)
   );
   (* module_not_derived = 32'h00000001 *)
-  (* src = "test2/mixed_circuit.sv:55.13-64.6" *)
+  (* src = "test2/mixed_circuit.sv:55.17-64.6" *)
   GEM_DSP48E2 u_dsp (
     .A(dsp_a),
     .B(dsp_b),

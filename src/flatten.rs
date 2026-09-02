@@ -24,9 +24,11 @@ pub struct FlattenedScriptV1 {
     pub num_blocks: usize,
     /// the number of major stages
     pub num_major_stages: usize,
-    /// Number of Boolean/macro relaxation passes per simulated cycle.
-    /// The last pass alone commits sequential macro state.
-    pub num_macro_passes: usize,
+    /// Number of explicit same-cycle combinational macro levels.
+    /// The CUDA scheduler dispatches exactly one level between Boolean
+    /// propagation barriers; sequential state is committed once between the
+    /// pre-edge and post-edge level walks.
+    pub num_macro_levels: usize,
     /// the CSR start indices of stages and blocks.
     ///
     /// this length is num_blocks * num_major_stages + 1
@@ -139,6 +141,13 @@ fn build_macro_program(
     output_map: &IndexMap<usize, u32>,
     macro_output_map: &IndexMap<usize, u32>,
 ) -> (Vec<u32>, Vec<u32>) {
+    let macro_level: BTreeMap<usize, u32> = aig
+        .macro_dependencies
+        .combinational_levels
+        .iter()
+        .enumerate()
+        .flat_map(|(level, cells)| cells.iter().map(move |&cell| (cell, level as u32)))
+        .collect();
     let mut offsets = Vec::with_capacity(storage.instances.len() + 1);
     let mut data = Vec::new();
     for m in &storage.instances {
@@ -157,6 +166,13 @@ fn build_macro_program(
             }) | (((clock.signal_iv & 1) as u32) << 30)
         });
         data.push(clock_source);
+        // u32::MAX marks a purely registered macro (DSP48E2).  CARRY4 and
+        // SRLC32E must have an explicit topological COMB level.
+        let level = macro_level.get(&m.cell_id).copied().unwrap_or(u32::MAX);
+        if m.kind.is_combinational() {
+            assert_ne!(level, u32::MAX, "combinational macro missing schedule level");
+        }
+        data.push(level);
         data.push(m.inputs.len() as u32 * 2);
         for input in &m.inputs {
             let source = if input.signal_iv <= 1 {
@@ -934,8 +950,31 @@ fn build_flattened_script_v1(
     num_blocks: usize,
     mut input_layout: Vec<usize>,
 ) -> FlattenedScriptV1 {
-    let macro_instances: Vec<MacroInstance> = aig.macros.values().cloned().collect();
+    let macro_level: BTreeMap<usize, usize> = aig
+        .macro_dependencies
+        .combinational_levels
+        .iter()
+        .enumerate()
+        .flat_map(|(level, cells)| cells.iter().map(move |&cell| (cell, level)))
+        .collect();
+    let mut macro_instances: Vec<MacroInstance> = aig.macros.values().cloned().collect();
+    // Preserve kind-contiguous SoA ranges, and additionally place equal-level
+    // COMB instances next to one another inside each kind.  A level dispatch
+    // therefore contains long uniform warp cohorts instead of parser-order
+    // lane holes.
+    macro_instances.sort_by_key(|m| {
+        (
+            m.kind as u32,
+            macro_level.get(&m.cell_id).copied().unwrap_or(usize::MAX),
+            m.cell_id,
+        )
+    });
     let macro_storage = MacroStorageLayout::build(macro_instances);
+    clilog::info!(
+        "heterogeneous COMB macro schedule: {} levels {:?}",
+        aig.macro_dependencies.combinational_levels.len(),
+        aig.macro_dependencies.combinational_levels
+    );
     // determine the output position.
     // this is the prerequisite for generating the read
     // permutations and more.
@@ -1124,15 +1163,7 @@ fn build_flattened_script_v1(
     FlattenedScriptV1 {
         num_blocks,
         num_major_stages,
-        num_macro_passes: if aig.macros.is_empty() {
-            1
-        } else {
-            // Symmetric fixed-point phases around exactly one atomic state
-            // commit. Registered outputs may feed an entire combinational
-            // macro/AIG chain, so post-edge convergence needs the same depth
-            // as pre-edge convergence, not merely one cleanup pass.
-            2 * aig.macro_dependencies.combinational_levels.len() + 3
-        },
+        num_macro_levels: aig.macro_dependencies.combinational_levels.len(),
         blocks_start: blocks_start.into(),
         blocks_data: blocks_data.into(),
         reg_io_state_size: sum_state_start,
@@ -1182,7 +1213,7 @@ impl FlattenedScriptV1 {
         for (i, instance) in storage.instances.iter().enumerate() {
             let start = self.macro_program_offsets[i] as usize;
             let end = self.macro_program_offsets[i + 1] as usize;
-            if start > end || end > self.macro_program_data.len() || end - start < 7 {
+            if start > end || end > self.macro_program_data.len() || end - start < 8 {
                 return Err(format!("macro descriptor {i} has invalid CSR bounds"));
             }
             let descriptor = &self.macro_program_data[start..end];
@@ -1211,12 +1242,20 @@ impl FlattenedScriptV1 {
                 return Err(format!("macro descriptor {i} I/O offset is out of bounds"));
             }
 
-            let input_words = descriptor[5] as usize;
-            if input_words % 2 != 0 || 6 + input_words >= descriptor.len() {
+            let schedule_level = descriptor[5];
+            if instance.kind.is_combinational() {
+                if schedule_level as usize >= self.num_macro_levels {
+                    return Err(format!("macro descriptor {i} has invalid schedule level"));
+                }
+            } else if schedule_level != u32::MAX {
+                return Err(format!("registered macro descriptor {i} has a COMB schedule level"));
+            }
+            let input_words = descriptor[6] as usize;
+            if input_words % 2 != 0 || 7 + input_words >= descriptor.len() {
                 return Err(format!("macro descriptor {i} has a malformed input table"));
             }
-            let output_words = descriptor[6 + input_words] as usize;
-            if output_words % 2 != 0 || 7 + input_words + output_words != descriptor.len() {
+            let output_words = descriptor[7 + input_words] as usize;
+            if output_words % 2 != 0 || 8 + input_words + output_words != descriptor.len() {
                 return Err(format!("macro descriptor {i} has a malformed output table"));
             }
         }

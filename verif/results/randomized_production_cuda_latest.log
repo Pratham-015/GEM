@@ -1,0 +1,418 @@
+recorded_utc: 2026-09-02T18:56:09.696578+00:00
+command: /usr/bin/python3 verif/host/randomized_production_dag.py --seeds 4 --cycles 48
+returncode: 0
+--- output ---
++ cargo build --release --features cuda --bin cut_map_interactive --bin cuda_test
+warning: ulib@0.3.13: nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+warning: ulib@0.3.13: nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+warning: field `name` is never read
+   --> eda-infra-rs/ulib_zeroable_derive/src/datastructure.rs:144:9
+    |
+132 | pub struct Struct<'a> {
+    |            ------ field in this struct
+...
+144 |     pub name: &'a Ident,
+    |         ^^^^
+    |
+    = note: `Struct` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `ulib_zeroable_derive` (lib) generated 1 warning
+warning: hiding a lifetime that's elided elsewhere is confusing
+   --> eda-infra-rs/vcd-ng/src/lib.rs:394:17
+    |
+394 |     pub fn iter(&self) -> VecValueIter {
+    |                 ^^^^^     ^^^^^^^^^^^^ the same lifetime is hidden here
+    |                 |
+    |                 the lifetime is elided here
+    |
+    = help: the same lifetime is referred to in inconsistent ways, making the signature confusing
+    = note: `#[warn(mismatched_lifetime_syntaxes)]` on by default
+help: use `'_` for type paths
+    |
+394 |     pub fn iter(&self) -> VecValueIter<'_> {
+    |                                       ++++
+
+warning: hiding a lifetime that's elided elsewhere is confusing
+  --> eda-infra-rs/netlistdb/src/hier_name.rs:81:17
+   |
+81 |     pub fn iter(&self) -> HierNameRevIter {
+   |                 ^^^^^     ^^^^^^^^^^^^^^^ the same lifetime is hidden here
+   |                 |
+   |                 the lifetime is elided here
+   |
+   = help: the same lifetime is referred to in inconsistent ways, making the signature confusing
+   = note: `#[warn(mismatched_lifetime_syntaxes)]` on by default
+help: use `'_` for type paths
+   |
+81 |     pub fn iter(&self) -> HierNameRevIter<'_> {
+   |                                          ++++
+
+warning: hiding a lifetime that's elided elsewhere is confusing
+   --> eda-infra-rs/netlistdb/src/hier_name.rs:159:19
+    |
+159 |     fn ident_iter(&self) -> DynIter<&str>;
+    |                   ^^^^^     ^^^^^^^^^^^^^
+    |                   |         |       |
+    |                   |         |       the same lifetime is elided here
+    |                   |         the same lifetime is hidden here
+    |                   the lifetime is elided here
+    |
+    = help: the same lifetime is referred to in inconsistent ways, making the signature confusing
+help: use `'_` for type paths
+    |
+159 |     fn ident_iter(&self) -> DynIter<'_, &str>;
+    |                                     +++
+
+warning: hiding a lifetime that's elided elsewhere is confusing
+   --> eda-infra-rs/netlistdb/src/hier_name.rs:175:19
+    |
+175 |     fn ident_iter(&self) -> DynIter<&str> {
+    |                   ^^^^^     ^^^^^^^^^^^^^
+    |                   |         |       |
+    |                   |         |       the same lifetime is elided here
+    |                   |         the same lifetime is hidden here
+    |                   the lifetime is elided here
+    |
+    = help: the same lifetime is referred to in inconsistent ways, making the signature confusing
+help: use `'_` for type paths
+    |
+175 |     fn ident_iter(&self) -> DynIter<'_, &str> {
+    |                                     +++
+
+warning: `vcd-ng` (lib) generated 1 warning (run `cargo fix --lib -p vcd-ng` to apply 1 suggestion)
+warning: `netlistdb` (lib) generated 3 warnings (run `cargo fix --lib -p netlistdb` to apply 3 suggestions)
+warning: gem@0.1.0: nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+warning: gem@0.1.0: nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+warning: use of deprecated method `indexmap::IndexMap::<K, V, S>::remove`: `remove` disrupts the map order -- use `swap_remove` or `shift_remove` for explicit behavior.
+    --> src/aig.rs:1084:42
+     |
+1084 | ...   let b_inst = self.macros.remove(&b_id).unwrap();
+     |                                ^^^^^^
+     |
+     = note: `#[warn(deprecated)]` on by default
+
+warning: hiding a lifetime that's elided elsewhere is confusing
+    --> src/aig.rs:1020:31
+     |
+1020 | ...roup(&self, endpt_id: usize) -> EndpointGroup {
+     |         ^^^^^                      ^^^^^^^^^^^^^ the same lifetime is hidden here
+     |         |
+     |         the lifetime is elided here
+     |
+     = help: the same lifetime is referred to in inconsistent ways, making the signature confusing
+     = note: `#[warn(mismatched_lifetime_syntaxes)]` on by default
+help: use `'_` for type paths
+     |
+1020 |     pub fn get_endpoint_group(&self, endpt_id: usize) -> EndpointGroup<'_> {
+     |                                                                       ++++
+
+warning: `gem` (lib) generated 2 warnings (run `cargo fix --lib -p gem` to apply 1 suggestion)
+warning: hiding a lifetime that's elided elsewhere is confusing
+   --> src/bin/cuda_test.rs:132:13
+    |
+132 |     fn iter(&self) -> VCDHierRevIter {
+    |             ^^^^^     ^^^^^^^^^^^^^^ the same lifetime is hidden here
+    |             |
+    |             the lifetime is elided here
+    |
+    = help: the same lifetime is referred to in inconsistent ways, making the signature confusing
+    = note: `#[warn(mismatched_lifetime_syntaxes)]` on by default
+help: use `'_` for type paths
+    |
+132 |     fn iter(&self) -> VCDHierRevIter<'_> {
+    |                                     ++++
+
+warning: `gem` (bin "cuda_test") generated 1 warning (run `cargo fix --bin "cuda_test" -p gem` to apply 1 suggestion)
+    Finished `release` profile [optimized] target(s) in 0.09s
+warning: the following packages contain code that will be rejected by a future version of Rust: proc-macro-error2 v2.0.1
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
++ /usr/bin/python3 scripts/synthesize_macros.py --top random_dag_1 --output /tmp/gem_random_dag_4gv_rhu7/random_dag_1.gv --json /tmp/gem_random_dag_4gv_rhu7/random_dag_1.json /tmp/gem_random_dag_4gv_rhu7/random_dag_1.sv
+PASS: Yosys 0.68 (git sha1 38e001a6f, Release, GNU /usr/bin/c++ 13.3.0); preserved/normalized macros {'CARRY4': 3, 'GEM_DSP48E2': 2, 'SRLC32E': 3}
++ iverilog -g2012 -DGOLDEN -s tb -o /tmp/gem_random_dag_4gv_rhu7/random_dag_1.out verif/rtl/xilinx_macros_ref.v /tmp/gem_random_dag_4gv_rhu7/random_dag_1.sv /tmp/gem_random_dag_4gv_rhu7/tb_random_dag_1.sv
++ vvp /tmp/gem_random_dag_4gv_rhu7/random_dag_1.out
+VCD info: dumpfile /tmp/gem_random_dag_4gv_rhu7/random_dag_1_gold.vcd opened for output.
+/tmp/gem_random_dag_4gv_rhu7/tb_random_dag_1.sv:17: $finish called at 486000 (1ps)
++ target/release/cut_map_interactive /tmp/gem_random_dag_4gv_rhu7/random_dag_1.gv /tmp/gem_random_dag_4gv_rhu7/random_dag_1.gemparts --top-module random_dag_1
+18:56:16 [INFO] Simulator args:
+SimulatorArgs {
+    netlist_verilog: "/tmp/gem_random_dag_4gv_rhu7/random_dag_1.gv",
+    top_module: Some(
+        "random_dag_1",
+    ),
+    level_split: [],
+    parts_out: "/tmp/gem_random_dag_4gv_rhu7/random_dag_1.gemparts",
+    max_stage_degrad: 0,
+}
+18:56:16 [INFO] inferred clock port clk (posedge)
+18:56:16 [INFO] Registered macro: CarryChain cell_id=199 inputs=10 outputs=8
+18:56:16 [INFO] Registered macro: CarryChain cell_id=200 inputs=10 outputs=8
+18:56:16 [INFO] Registered macro: CarryChain cell_id=201 inputs=10 outputs=8
+18:56:16 [INFO] Registered macro: DSP48E2 cell_id=202 inputs=123 outputs=48
+18:56:16 [INFO] Registered macro: DSP48E2 cell_id=203 inputs=123 outputs=48
+18:56:16 [INFO] Registered macro: SRLC32E cell_id=204 inputs=7 outputs=2
+18:56:16 [INFO] Registered macro: SRLC32E cell_id=205 inputs=7 outputs=2
+18:56:16 [INFO] Registered macro: SRLC32E cell_id=206 inputs=7 outputs=2
+netlist has 1410 pins, 579 aig pins, 172 and gates
+18:56:16 [INFO] interactive partitioning stage 0-max
+18:56:16 [INFO] current: 132 endpoints, try 1 parts
+18:56:16 [DEBUG] cut_map_interactive: [src/bin/cut_map_interactive.rs:20] invoking partitioner (#parts 1)
+18:56:16 [INFO] interactive partition completed: 1 in total. merging started.
+18:56:16 [INFO] part 0: #stages 1
+18:56:16 [INFO] after merging: 1 parts.
++ target/release/cuda_test /tmp/gem_random_dag_4gv_rhu7/random_dag_1.gv /tmp/gem_random_dag_4gv_rhu7/random_dag_1.gemparts /tmp/gem_random_dag_4gv_rhu7/random_dag_1_gold.vcd /tmp/gem_random_dag_4gv_rhu7/random_dag_1_gpu.vcd 1 --top-module random_dag_1 --input-vcd-scope tb/dut --check-with-cpu
+18:56:16 [INFO] Simulator args:
+SimulatorArgs {
+    netlist_verilog: "/tmp/gem_random_dag_4gv_rhu7/random_dag_1.gv",
+    top_module: Some(
+        "random_dag_1",
+    ),
+    level_split: [],
+    gemparts: "/tmp/gem_random_dag_4gv_rhu7/random_dag_1.gemparts",
+    input_vcd: "/tmp/gem_random_dag_4gv_rhu7/random_dag_1_gold.vcd",
+    input_vcd_scope: Some(
+        "tb/dut",
+    ),
+    output_vcd: "/tmp/gem_random_dag_4gv_rhu7/random_dag_1_gpu.vcd",
+    output_vcd_scope: None,
+    num_blocks: 1,
+    check_with_cpu: true,
+    max_cycles: None,
+}
+18:56:16 [INFO] inferred clock port clk (posedge)
+18:56:16 [INFO] Registered macro: CarryChain cell_id=199 inputs=10 outputs=8
+18:56:16 [INFO] Registered macro: CarryChain cell_id=200 inputs=10 outputs=8
+18:56:16 [INFO] Registered macro: CarryChain cell_id=201 inputs=10 outputs=8
+18:56:16 [INFO] Registered macro: DSP48E2 cell_id=202 inputs=123 outputs=48
+18:56:16 [INFO] Registered macro: DSP48E2 cell_id=203 inputs=123 outputs=48
+18:56:16 [INFO] Registered macro: SRLC32E cell_id=204 inputs=7 outputs=2
+18:56:16 [INFO] Registered macro: SRLC32E cell_id=205 inputs=7 outputs=2
+18:56:16 [INFO] Registered macro: SRLC32E cell_id=206 inputs=7 outputs=2
+18:56:16 [INFO] # of effective partitions in each stage: [1]
+18:56:16 [INFO] heterogeneous COMB macro schedule: 1 levels [[199, 204, 205, 206]]
+18:56:16 [DEBUG] gem::flatten: [src/flatten.rs:1059] major stage 0: max total boomerang depth (w/ cost) 4
+18:56:16 [INFO] Built script for 1 blocks, reg/io state size 144, sram size 0, script size 18176
+Script hash: 13171376581010163976
+18:56:16 [INFO] total number of cycles: 146
+18:56:16 [DEBUG] TimerStarting: [src/bin/cuda_test.rs:964] simulation
+18:56:16 [DEBUG] TimerFinished: [src/bin/cuda_test.rs:964] simulation, Elapsed=25.266876ms
+18:56:16 [INFO] running sanity test
+18:56:16 [INFO] sanity test passed!
+18:56:16 [INFO] write out vcd
++ /usr/bin/python3 verif/host/compare_macro_integration.py /tmp/gem_random_dag_4gv_rhu7/random_dag_1_gold.vcd /tmp/gem_random_dag_4gv_rhu7/random_dag_1_gpu.vcd --signals p0:48,p1:48,carry_o:12,carry_co:12,q_vec:3,q31_vec:3,digest:8
+checked=1029 mismatches=0
+PASS: integrated CPU RTL and GEM CUDA outputs match
+PASS seed=1 topology=DSP->CARRY4x3->SRLC32Ex3->DSP
++ /usr/bin/python3 scripts/synthesize_macros.py --top random_dag_2 --output /tmp/gem_random_dag_4gv_rhu7/random_dag_2.gv --json /tmp/gem_random_dag_4gv_rhu7/random_dag_2.json /tmp/gem_random_dag_4gv_rhu7/random_dag_2.sv
+PASS: Yosys 0.68 (git sha1 38e001a6f, Release, GNU /usr/bin/c++ 13.3.0); preserved/normalized macros {'CARRY4': 1, 'GEM_DSP48E2': 2, 'SRLC32E': 1}
++ iverilog -g2012 -DGOLDEN -s tb -o /tmp/gem_random_dag_4gv_rhu7/random_dag_2.out verif/rtl/xilinx_macros_ref.v /tmp/gem_random_dag_4gv_rhu7/random_dag_2.sv /tmp/gem_random_dag_4gv_rhu7/tb_random_dag_2.sv
++ vvp /tmp/gem_random_dag_4gv_rhu7/random_dag_2.out
+VCD info: dumpfile /tmp/gem_random_dag_4gv_rhu7/random_dag_2_gold.vcd opened for output.
+/tmp/gem_random_dag_4gv_rhu7/tb_random_dag_2.sv:17: $finish called at 486000 (1ps)
++ target/release/cut_map_interactive /tmp/gem_random_dag_4gv_rhu7/random_dag_2.gv /tmp/gem_random_dag_4gv_rhu7/random_dag_2.gemparts --top-module random_dag_2
+18:56:17 [INFO] Simulator args:
+SimulatorArgs {
+    netlist_verilog: "/tmp/gem_random_dag_4gv_rhu7/random_dag_2.gv",
+    top_module: Some(
+        "random_dag_2",
+    ),
+    level_split: [],
+    parts_out: "/tmp/gem_random_dag_4gv_rhu7/random_dag_2.gemparts",
+    max_stage_degrad: 0,
+}
+18:56:17 [INFO] inferred clock port clk (posedge)
+18:56:17 [INFO] Registered macro: CarryChain cell_id=88 inputs=10 outputs=8
+18:56:17 [INFO] Registered macro: DSP48E2 cell_id=89 inputs=123 outputs=48
+18:56:17 [INFO] Registered macro: DSP48E2 cell_id=90 inputs=123 outputs=48
+18:56:17 [INFO] Registered macro: SRLC32E cell_id=91 inputs=7 outputs=2
+netlist has 992 pins, 439 aig pins, 70 and gates
+18:56:17 [INFO] interactive partitioning stage 0-max
+18:56:17 [INFO] current: 110 endpoints, try 1 parts
+18:56:17 [DEBUG] cut_map_interactive: [src/bin/cut_map_interactive.rs:20] invoking partitioner (#parts 1)
+18:56:17 [INFO] interactive partition completed: 1 in total. merging started.
+18:56:17 [INFO] part 0: #stages 1
+18:56:17 [INFO] after merging: 1 parts.
++ target/release/cuda_test /tmp/gem_random_dag_4gv_rhu7/random_dag_2.gv /tmp/gem_random_dag_4gv_rhu7/random_dag_2.gemparts /tmp/gem_random_dag_4gv_rhu7/random_dag_2_gold.vcd /tmp/gem_random_dag_4gv_rhu7/random_dag_2_gpu.vcd 1 --top-module random_dag_2 --input-vcd-scope tb/dut --check-with-cpu
+18:56:17 [INFO] Simulator args:
+SimulatorArgs {
+    netlist_verilog: "/tmp/gem_random_dag_4gv_rhu7/random_dag_2.gv",
+    top_module: Some(
+        "random_dag_2",
+    ),
+    level_split: [],
+    gemparts: "/tmp/gem_random_dag_4gv_rhu7/random_dag_2.gemparts",
+    input_vcd: "/tmp/gem_random_dag_4gv_rhu7/random_dag_2_gold.vcd",
+    input_vcd_scope: Some(
+        "tb/dut",
+    ),
+    output_vcd: "/tmp/gem_random_dag_4gv_rhu7/random_dag_2_gpu.vcd",
+    output_vcd_scope: None,
+    num_blocks: 1,
+    check_with_cpu: true,
+    max_cycles: None,
+}
+18:56:17 [INFO] inferred clock port clk (posedge)
+18:56:17 [INFO] Registered macro: CarryChain cell_id=88 inputs=10 outputs=8
+18:56:17 [INFO] Registered macro: DSP48E2 cell_id=89 inputs=123 outputs=48
+18:56:17 [INFO] Registered macro: DSP48E2 cell_id=90 inputs=123 outputs=48
+18:56:17 [INFO] Registered macro: SRLC32E cell_id=91 inputs=7 outputs=2
+18:56:17 [INFO] # of effective partitions in each stage: [1]
+18:56:17 [INFO] heterogeneous COMB macro schedule: 1 levels [[88, 91]]
+18:56:17 [DEBUG] gem::flatten: [src/flatten.rs:1059] major stage 0: max total boomerang depth (w/ cost) 4
+18:56:17 [INFO] Built script for 1 blocks, reg/io state size 144, sram size 0, script size 18176
+Script hash: 14216798675433478051
+18:56:17 [INFO] total number of cycles: 146
+18:56:18 [DEBUG] TimerStarting: [src/bin/cuda_test.rs:964] simulation
+18:56:18 [DEBUG] TimerFinished: [src/bin/cuda_test.rs:964] simulation, Elapsed=19.482361ms
+18:56:18 [INFO] running sanity test
+18:56:18 [INFO] sanity test passed!
+18:56:18 [INFO] write out vcd
++ /usr/bin/python3 verif/host/compare_macro_integration.py /tmp/gem_random_dag_4gv_rhu7/random_dag_2_gold.vcd /tmp/gem_random_dag_4gv_rhu7/random_dag_2_gpu.vcd --signals p0:48,p1:48,carry_o:4,carry_co:4,q_vec:1,q31_vec:1,digest:8
+checked=1029 mismatches=0
+PASS: integrated CPU RTL and GEM CUDA outputs match
+PASS seed=2 topology=DSP->CARRY4x1->SRLC32Ex1->DSP
++ /usr/bin/python3 scripts/synthesize_macros.py --top random_dag_3 --output /tmp/gem_random_dag_4gv_rhu7/random_dag_3.gv --json /tmp/gem_random_dag_4gv_rhu7/random_dag_3.json /tmp/gem_random_dag_4gv_rhu7/random_dag_3.sv
+PASS: Yosys 0.68 (git sha1 38e001a6f, Release, GNU /usr/bin/c++ 13.3.0); preserved/normalized macros {'CARRY4': 2, 'GEM_DSP48E2': 2, 'SRLC32E': 2}
++ iverilog -g2012 -DGOLDEN -s tb -o /tmp/gem_random_dag_4gv_rhu7/random_dag_3.out verif/rtl/xilinx_macros_ref.v /tmp/gem_random_dag_4gv_rhu7/random_dag_3.sv /tmp/gem_random_dag_4gv_rhu7/tb_random_dag_3.sv
++ vvp /tmp/gem_random_dag_4gv_rhu7/random_dag_3.out
+VCD info: dumpfile /tmp/gem_random_dag_4gv_rhu7/random_dag_3_gold.vcd opened for output.
+/tmp/gem_random_dag_4gv_rhu7/tb_random_dag_3.sv:17: $finish called at 486000 (1ps)
++ target/release/cut_map_interactive /tmp/gem_random_dag_4gv_rhu7/random_dag_3.gv /tmp/gem_random_dag_4gv_rhu7/random_dag_3.gemparts --top-module random_dag_3
+18:56:18 [INFO] Simulator args:
+SimulatorArgs {
+    netlist_verilog: "/tmp/gem_random_dag_4gv_rhu7/random_dag_3.gv",
+    top_module: Some(
+        "random_dag_3",
+    ),
+    level_split: [],
+    parts_out: "/tmp/gem_random_dag_4gv_rhu7/random_dag_3.gemparts",
+    max_stage_degrad: 0,
+}
+18:56:18 [INFO] inferred clock port clk (posedge)
+18:56:18 [INFO] Registered macro: CarryChain cell_id=145 inputs=10 outputs=8
+18:56:18 [INFO] Registered macro: CarryChain cell_id=146 inputs=10 outputs=8
+18:56:18 [INFO] Registered macro: DSP48E2 cell_id=147 inputs=123 outputs=48
+18:56:18 [INFO] Registered macro: DSP48E2 cell_id=148 inputs=123 outputs=48
+18:56:18 [INFO] Registered macro: SRLC32E cell_id=149 inputs=7 outputs=2
+18:56:18 [INFO] Registered macro: SRLC32E cell_id=150 inputs=7 outputs=2
+netlist has 1204 pins, 509 aig pins, 121 and gates
+18:56:18 [INFO] interactive partitioning stage 0-max
+18:56:18 [INFO] current: 121 endpoints, try 1 parts
+18:56:18 [DEBUG] cut_map_interactive: [src/bin/cut_map_interactive.rs:20] invoking partitioner (#parts 1)
+18:56:18 [INFO] interactive partition completed: 1 in total. merging started.
+18:56:18 [INFO] part 0: #stages 1
+18:56:18 [INFO] after merging: 1 parts.
++ target/release/cuda_test /tmp/gem_random_dag_4gv_rhu7/random_dag_3.gv /tmp/gem_random_dag_4gv_rhu7/random_dag_3.gemparts /tmp/gem_random_dag_4gv_rhu7/random_dag_3_gold.vcd /tmp/gem_random_dag_4gv_rhu7/random_dag_3_gpu.vcd 1 --top-module random_dag_3 --input-vcd-scope tb/dut --check-with-cpu
+18:56:18 [INFO] Simulator args:
+SimulatorArgs {
+    netlist_verilog: "/tmp/gem_random_dag_4gv_rhu7/random_dag_3.gv",
+    top_module: Some(
+        "random_dag_3",
+    ),
+    level_split: [],
+    gemparts: "/tmp/gem_random_dag_4gv_rhu7/random_dag_3.gemparts",
+    input_vcd: "/tmp/gem_random_dag_4gv_rhu7/random_dag_3_gold.vcd",
+    input_vcd_scope: Some(
+        "tb/dut",
+    ),
+    output_vcd: "/tmp/gem_random_dag_4gv_rhu7/random_dag_3_gpu.vcd",
+    output_vcd_scope: None,
+    num_blocks: 1,
+    check_with_cpu: true,
+    max_cycles: None,
+}
+18:56:18 [INFO] inferred clock port clk (posedge)
+18:56:18 [INFO] Registered macro: CarryChain cell_id=145 inputs=10 outputs=8
+18:56:18 [INFO] Registered macro: CarryChain cell_id=146 inputs=10 outputs=8
+18:56:18 [INFO] Registered macro: DSP48E2 cell_id=147 inputs=123 outputs=48
+18:56:18 [INFO] Registered macro: DSP48E2 cell_id=148 inputs=123 outputs=48
+18:56:18 [INFO] Registered macro: SRLC32E cell_id=149 inputs=7 outputs=2
+18:56:18 [INFO] Registered macro: SRLC32E cell_id=150 inputs=7 outputs=2
+18:56:18 [INFO] # of effective partitions in each stage: [1]
+18:56:18 [INFO] heterogeneous COMB macro schedule: 1 levels [[145, 149, 150]]
+18:56:18 [DEBUG] gem::flatten: [src/flatten.rs:1059] major stage 0: max total boomerang depth (w/ cost) 4
+18:56:18 [INFO] Built script for 1 blocks, reg/io state size 143, sram size 0, script size 18176
+Script hash: 7381667630347854686
+18:56:18 [INFO] total number of cycles: 146
+18:56:19 [DEBUG] TimerStarting: [src/bin/cuda_test.rs:964] simulation
+18:56:19 [DEBUG] TimerFinished: [src/bin/cuda_test.rs:964] simulation, Elapsed=25.155434ms
+18:56:19 [INFO] running sanity test
+18:56:19 [INFO] sanity test passed!
+18:56:19 [INFO] write out vcd
++ /usr/bin/python3 verif/host/compare_macro_integration.py /tmp/gem_random_dag_4gv_rhu7/random_dag_3_gold.vcd /tmp/gem_random_dag_4gv_rhu7/random_dag_3_gpu.vcd --signals p0:48,p1:48,carry_o:8,carry_co:8,q_vec:2,q31_vec:2,digest:8
+checked=1029 mismatches=0
+PASS: integrated CPU RTL and GEM CUDA outputs match
+PASS seed=3 topology=DSP->CARRY4x2->SRLC32Ex2->DSP
++ /usr/bin/python3 scripts/synthesize_macros.py --top random_dag_4 --output /tmp/gem_random_dag_4gv_rhu7/random_dag_4.gv --json /tmp/gem_random_dag_4gv_rhu7/random_dag_4.json /tmp/gem_random_dag_4gv_rhu7/random_dag_4.sv
+PASS: Yosys 0.68 (git sha1 38e001a6f, Release, GNU /usr/bin/c++ 13.3.0); preserved/normalized macros {'CARRY4': 2, 'GEM_DSP48E2': 2, 'SRLC32E': 2}
++ iverilog -g2012 -DGOLDEN -s tb -o /tmp/gem_random_dag_4gv_rhu7/random_dag_4.out verif/rtl/xilinx_macros_ref.v /tmp/gem_random_dag_4gv_rhu7/random_dag_4.sv /tmp/gem_random_dag_4gv_rhu7/tb_random_dag_4.sv
++ vvp /tmp/gem_random_dag_4gv_rhu7/random_dag_4.out
+VCD info: dumpfile /tmp/gem_random_dag_4gv_rhu7/random_dag_4_gold.vcd opened for output.
+/tmp/gem_random_dag_4gv_rhu7/tb_random_dag_4.sv:17: $finish called at 486000 (1ps)
++ target/release/cut_map_interactive /tmp/gem_random_dag_4gv_rhu7/random_dag_4.gv /tmp/gem_random_dag_4gv_rhu7/random_dag_4.gemparts --top-module random_dag_4
+18:56:19 [INFO] Simulator args:
+SimulatorArgs {
+    netlist_verilog: "/tmp/gem_random_dag_4gv_rhu7/random_dag_4.gv",
+    top_module: Some(
+        "random_dag_4",
+    ),
+    level_split: [],
+    parts_out: "/tmp/gem_random_dag_4gv_rhu7/random_dag_4.gemparts",
+    max_stage_degrad: 0,
+}
+18:56:19 [INFO] inferred clock port clk (posedge)
+18:56:19 [INFO] Registered macro: CarryChain cell_id=141 inputs=10 outputs=8
+18:56:19 [INFO] Registered macro: CarryChain cell_id=142 inputs=10 outputs=8
+18:56:19 [INFO] Registered macro: DSP48E2 cell_id=143 inputs=123 outputs=48
+18:56:19 [INFO] Registered macro: DSP48E2 cell_id=144 inputs=123 outputs=48
+18:56:19 [INFO] Registered macro: SRLC32E cell_id=145 inputs=7 outputs=2
+18:56:19 [INFO] Registered macro: SRLC32E cell_id=146 inputs=7 outputs=2
+netlist has 1195 pins, 508 aig pins, 120 and gates
+18:56:19 [INFO] interactive partitioning stage 0-max
+18:56:19 [INFO] current: 121 endpoints, try 1 parts
+18:56:19 [DEBUG] cut_map_interactive: [src/bin/cut_map_interactive.rs:20] invoking partitioner (#parts 1)
+18:56:19 [INFO] interactive partition completed: 1 in total. merging started.
+18:56:19 [INFO] part 0: #stages 1
+18:56:19 [INFO] after merging: 1 parts.
++ target/release/cuda_test /tmp/gem_random_dag_4gv_rhu7/random_dag_4.gv /tmp/gem_random_dag_4gv_rhu7/random_dag_4.gemparts /tmp/gem_random_dag_4gv_rhu7/random_dag_4_gold.vcd /tmp/gem_random_dag_4gv_rhu7/random_dag_4_gpu.vcd 1 --top-module random_dag_4 --input-vcd-scope tb/dut --check-with-cpu
+18:56:19 [INFO] Simulator args:
+SimulatorArgs {
+    netlist_verilog: "/tmp/gem_random_dag_4gv_rhu7/random_dag_4.gv",
+    top_module: Some(
+        "random_dag_4",
+    ),
+    level_split: [],
+    gemparts: "/tmp/gem_random_dag_4gv_rhu7/random_dag_4.gemparts",
+    input_vcd: "/tmp/gem_random_dag_4gv_rhu7/random_dag_4_gold.vcd",
+    input_vcd_scope: Some(
+        "tb/dut",
+    ),
+    output_vcd: "/tmp/gem_random_dag_4gv_rhu7/random_dag_4_gpu.vcd",
+    output_vcd_scope: None,
+    num_blocks: 1,
+    check_with_cpu: true,
+    max_cycles: None,
+}
+18:56:19 [INFO] inferred clock port clk (posedge)
+18:56:19 [INFO] Registered macro: CarryChain cell_id=141 inputs=10 outputs=8
+18:56:19 [INFO] Registered macro: CarryChain cell_id=142 inputs=10 outputs=8
+18:56:19 [INFO] Registered macro: DSP48E2 cell_id=143 inputs=123 outputs=48
+18:56:19 [INFO] Registered macro: DSP48E2 cell_id=144 inputs=123 outputs=48
+18:56:19 [INFO] Registered macro: SRLC32E cell_id=145 inputs=7 outputs=2
+18:56:19 [INFO] Registered macro: SRLC32E cell_id=146 inputs=7 outputs=2
+18:56:19 [INFO] # of effective partitions in each stage: [1]
+18:56:19 [INFO] heterogeneous COMB macro schedule: 1 levels [[141, 145, 146]]
+18:56:19 [DEBUG] gem::flatten: [src/flatten.rs:1059] major stage 0: max total boomerang depth (w/ cost) 4
+18:56:19 [INFO] Built script for 1 blocks, reg/io state size 147, sram size 0, script size 18176
+Script hash: 9699599820975504608
+18:56:19 [INFO] total number of cycles: 146
+18:56:20 [DEBUG] TimerStarting: [src/bin/cuda_test.rs:964] simulation
+18:56:20 [DEBUG] TimerFinished: [src/bin/cuda_test.rs:964] simulation, Elapsed=20.437318ms
+18:56:20 [INFO] running sanity test
+18:56:20 [INFO] sanity test passed!
+18:56:20 [INFO] write out vcd
++ /usr/bin/python3 verif/host/compare_macro_integration.py /tmp/gem_random_dag_4gv_rhu7/random_dag_4_gold.vcd /tmp/gem_random_dag_4gv_rhu7/random_dag_4_gpu.vcd --signals p0:48,p1:48,carry_o:8,carry_co:8,q_vec:2,q31_vec:2,digest:8
+checked=1029 mismatches=0
+PASS: integrated CPU RTL and GEM CUDA outputs match
+PASS seed=4 topology=DSP->CARRY4x2->SRLC32Ex2->DSP
+PASS: 4 production CUDA topologies, 192 randomized stimulus cycles

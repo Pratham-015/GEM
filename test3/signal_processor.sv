@@ -22,7 +22,7 @@ module signal_processor(
     );
     
     wire [47:0] mac_out;
-    DSP48E2 dsp (
+    GEM_DSP48E2 dsp (
         .P(mac_out),
         .CLK(clk),
         .USE_PRE(1'b0),

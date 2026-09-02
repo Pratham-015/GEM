@@ -1,6 +1,6 @@
 Metric,FlowA_Baseline,FlowB_MacroPreserve,Speedup_or_Reduction
 Cycles,64,64,-
 ScriptSizeBytes,56832,26112,54.1% reduction
-PartitionTime_ms,214.88,68.36,3.14x
-GPUSimTime_ms,15.636,43.116,0.36x
-TotalWallTime_ms,965.27,470.55,2.05x
+PartitionTime_ms,207.91,49.68,4.18x
+GPUSimTime_ms,11.631,22.970,0.51x
+TotalWallTime_ms,885.02,412.85,2.14x

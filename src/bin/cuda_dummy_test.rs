@@ -155,7 +155,7 @@ fn main() {
     ucci::simulate_v1_noninteractive_simple_scan(
         args.num_blocks,
         script.num_major_stages,
-        script.num_macro_passes,
+        script.num_macro_levels,
         &script.blocks_start,
         &script.blocks_data,
         &mut sram_storage,
@@ -193,7 +193,7 @@ fn main() {
     ucci::simulate_v1_noninteractive_simple_scan(
         args.num_blocks,
         script.num_major_stages,
-        script.num_macro_passes,
+        script.num_macro_levels,
         &script.blocks_start,
         &script.blocks_data,
         &mut sram_storage,

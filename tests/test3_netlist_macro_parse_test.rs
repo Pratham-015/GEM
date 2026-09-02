@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
+// Parses test3/flowB_macropreserve_gatelevel.gv and asserts all macro cell types
+// are recognized by the NetlistDB with no unresolved pin directions.
+// Python counterpart: test3/compare_flows.py
+//   Runs both Yosys flows to produce the .gv files and compares macro presence
+//   and gate count between baseline (shredded) and macro-preserving outputs.
 use gem::aigpdk::AIGPDKLeafPins;
 use netlistdb::{Direction, NetlistDB};
 use std::path::PathBuf;

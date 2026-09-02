@@ -622,7 +622,7 @@ module signal_processor(clk, in_a, in_b, coeff, tap_sel, out_p, out_parity);
     .S({ _007_, _006_, _005_, _004_ })
   );
   (* module_not_derived = 32'h00000001 *)
-  (* src = "test3/signal_processor.sv:25.13-34.6" *)
+  (* src = "test3/signal_processor.sv:25.17-34.6" *)
   GEM_DSP48E2 dsp (
     .A({ s_sum[7], s_sum[7], s_sum[7], s_sum[7], s_sum[7], s_sum[7], s_sum[7], s_sum[7], s_sum[7], s_sum[7], s_sum[7], s_sum[7], s_sum[7], s_sum[7], s_sum[7], s_sum[7], s_sum[7], s_sum[7], s_sum[7], s_sum }),
     .B(coeff),

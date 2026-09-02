@@ -1,0 +1,33 @@
+recorded_utc: 2026-09-02T18:56:09.696578+00:00
+binary: target/release/cuda_test
+shared_bytes_by_arch: [15616, 15616, 15616]
+production_kernel_has_shared_memory: PASS
+macro_tile_is_12288_bytes: PASS
+compiled_shared_store_64: PASS
+compiled_shared_load_64: PASS
+compiled_warp_vote: PASS
+--- representative SASS ---
+/*0c28*/                   VOTE.ANY R0, PT, PT ;                                 /* 0x50d9e38000070000 */
+/*0c30*/                   VOTE.ANY R3, PT, P0 ;                                 /* 0x50d9e00000070003 */
+/*0e28*/                   STS.64 [R85], R8 ;                                    /* 0xef5d000000075508 */
+/*0e30*/                   STS.64 [R79], R10 ;                                   /* 0xef5d000000074f0a */
+/*0e48*/                   STS.64 [R86], R14 ;                                   /* 0xef5d00000007560e */
+/*0e50*/                   STS.64 [R68], R32 ;                                   /* 0xef5d000000074420 */
+/*0e58*/                   STS.64 [R116], R34 ;                                  /* 0xef5d000000077422 */
+/*0e88*/                   STS.64 [R25], R4 ;                                    /* 0xef5d000000071904 */
+/*0f78*/                   VOTE.ANY R0, PT, PT ;                                 /* 0x50d9e38000070000 */
+/*0f88*/                   VOTE.ANY R3, PT, !P6 ;                                /* 0x50d9e70000070003 */
+/*10d8*/                   LDS.U.64 R4, [R85] ;                                  /* 0xef4d100000075504 */
+/*1598*/                   LDS.U.64 R4, [R85] ;                                  /* 0xef4d100000075504 */
+/*15b0*/                   LDS.U.64 R6, [R79] ;                                  /* 0xef4d100000074f06 */
+/*18f0*/                   VOTE.ANY R0, PT, PT ;                                 /* 0x50d9e38000070000 */
+/*4608*/                   VOTE.ANY R0, PT, PT ;                                 /* 0x50d9e38000070000 */
+/*4a28*/                   VOTE.ANY R0, PT, PT ;                                 /* 0x50d9e38000070000 */
+/*4a30*/                   VOTE.ANY R3, PT, !P6 ;                                /* 0x50d9e70000070003 */
+/*5330*/                   VOTE.ANY R0, PT, PT ;                                 /* 0x50d9e38000070000 */
+/*5338*/                   VOTE.ANY R3, PT, !P6 ;                                /* 0x50d9e70000070003 */
+/*5c38*/                   VOTE.ANY R0, PT, PT ;                                 /* 0x50d9e38000070000 */
+/*5c48*/                   VOTE.ANY R3, PT, !P6 ;                                /* 0x50d9e70000070003 */
+/*63c8*/                   VOTE.ANY R0, PT, PT ;                                 /* 0x50d9e38000070000 */
+/*68f0*/                   VOTE.ANY R3, PT, PT ;                                 /* 0x50d9e38000070003 */
+/*6928*/                   VOTE.ANY R6, PT, P0 ;                                 /* 0x50d9e00000070006 */

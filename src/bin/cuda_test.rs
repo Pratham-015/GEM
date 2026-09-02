@@ -469,7 +469,8 @@ fn simulate_macro_program(
     output_state: &mut [u32],
     macro_state: &mut [u64],
     macro_io: &mut [u64],
-    commit: bool,
+    target_level: Option<u32>,
+    commit_phase: bool,
 ) {
     let read_source = |state: &[u32], source: usize| -> u64 {
         if source & 0x8000_0000 != 0 {
@@ -479,17 +480,25 @@ fn simulate_macro_program(
             (((state[pos >> 5] >> (pos & 31)) & 1) as u64) ^ (((source >> 30) & 1) as u64)
         }
     };
-    // Gather all inputs before any output is changed (Jacobi/barrier semantics).
+    // Gather the selected level's inputs before any output is changed.
     for mi in 0..offsets.len().saturating_sub(1) {
         let d = &program[offsets[mi] as usize..offsets[mi + 1] as usize];
         let kind = d[0];
+        let selected = if commit_phase {
+            kind != 0
+        } else {
+            target_level == Some(d[5])
+        };
+        if !selected {
+            continue;
+        }
         let io_off = d[2] as usize;
         let io_stride = d[3] as usize;
-        let n_in = d[5] as usize;
+        let n_in = d[6] as usize;
         let (mut f0, mut f1, mut f2, mut f3, mut f4) = (0u64, 0u64, 0u64, 0u64, 0u64);
         for k in (0..n_in).step_by(2) {
-            let bit = read_source(output_state, d[6 + k] as usize);
-            let field = d[6 + k + 1];
+            let bit = read_source(output_state, d[7 + k] as usize);
+            let field = d[7 + k + 1];
             if kind == 0 {
                 if field < 64 {
                     f0 |= bit << field;
@@ -538,12 +547,20 @@ fn simulate_macro_program(
     for mi in 0..offsets.len().saturating_sub(1) {
         let d = &program[offsets[mi] as usize..offsets[mi + 1] as usize];
         let kind = d[0];
+        let selected = if commit_phase {
+            kind != 0
+        } else {
+            target_level == Some(d[5])
+        };
+        if !selected {
+            continue;
+        }
         let state_off = d[1] as usize;
         let io_off = d[2] as usize;
         let stride = d[3] as usize;
         let clock_active = read_source(edge_state, d[4] as usize) != 0;
-        let n_in = d[5] as usize;
-        let mut oi = 6 + n_in;
+        let n_in = d[6] as usize;
+        let mut oi = 7 + n_in;
         let n_out = d[oi] as usize;
         oi += 1;
         let (value0, value1) = if kind == 0 {
@@ -552,7 +569,7 @@ fn simulate_macro_program(
             let cin = macro_io[io_off + 2 * stride];
             let mut n_bits = 4u32;
             for k in (0..n_in).step_by(2) {
-                let field = d[6 + k + 1];
+                let field = d[7 + k + 1];
                 if field < 64 && (field + 1) as u32 > n_bits {
                     n_bits = (field + 1) as u32;
                 }
@@ -584,7 +601,7 @@ fn simulate_macro_program(
                 _ => sext(p_cur, 48).wrapping_add(product),
             } as u64
                 & ((1u64 << 48) - 1);
-            let visible = if commit && clock_active {
+            let visible = if commit_phase && clock_active {
                 macro_state[state_off] = next;
                 next
             } else {
@@ -596,7 +613,7 @@ fn simulate_macro_program(
             let old = macro_state[state_off];
             let shifted = ((old << 1) | (ctrl & 1)) & 0xffff_ffff;
             let next = if (ctrl >> 1) & 1 != 0 { shifted } else { old };
-            let visible = if commit && clock_active {
+            let visible = if commit_phase && clock_active {
                 macro_state[state_off] = next;
                 next
             } else {
@@ -948,7 +965,7 @@ fn main() {
     ucci::simulate_v1_noninteractive_simple_scan(
         args.num_blocks,
         script.num_major_stages,
-        script.num_macro_passes,
+        script.num_macro_levels,
         &script.blocks_start,
         &script.blocks_data,
         &mut sram_storage,
@@ -980,8 +997,7 @@ fn main() {
                 &input_states_sanity[((i + 1) * script.reg_io_state_size as usize)
                     ..((i + 2) * script.reg_io_state_size as usize)],
             );
-            for pass in 0..script.num_macro_passes {
-                let commit = pass == script.num_macro_passes / 2;
+            if script.macro_storage.instances.is_empty() {
                 for stage_i in 0..script.num_major_stages {
                     for blk_i in 0..script.num_blocks {
                         simulate_block_v1(
@@ -996,16 +1012,65 @@ fn main() {
                         );
                     }
                 }
+            } else {
                 simulate_macro_program(
-                    &script.macro_program_offsets,
-                    &script.macro_program_data,
-                    &input_states_sanity[(i * script.reg_io_state_size as usize)
-                        ..((i + 1) * script.reg_io_state_size as usize)],
-                    &mut output_state,
-                    &mut macro_state_sanity,
-                    &mut macro_io_sanity,
-                    commit,
+                &script.macro_program_offsets,
+                &script.macro_program_data,
+                &input_states_sanity[(i * script.reg_io_state_size as usize)
+                    ..((i + 1) * script.reg_io_state_size as usize)],
+                &mut output_state,
+                &mut macro_state_sanity,
+                &mut macro_io_sanity,
+                Some(u32::MAX),
+                false,
                 );
+                for edge_phase in 0..2 {
+                for macro_level in 0..=script.num_macro_levels {
+                    for stage_i in 0..script.num_major_stages {
+                        for blk_i in 0..script.num_blocks {
+                            simulate_block_v1(
+                                &script.blocks_data[script.blocks_start
+                                    [stage_i * script.num_blocks + blk_i]
+                                    ..script.blocks_start
+                                        [stage_i * script.num_blocks + blk_i + 1]],
+                                &input_states_sanity
+                                    [(i * script.reg_io_state_size as usize)
+                                        ..((i + 1) * script.reg_io_state_size as usize)],
+                                &mut output_state,
+                                &mut sram_storage_sanity,
+                                false,
+                            );
+                        }
+                    }
+                    if macro_level == script.num_macro_levels {
+                        break;
+                    }
+                    simulate_macro_program(
+                        &script.macro_program_offsets,
+                        &script.macro_program_data,
+                        &input_states_sanity[(i * script.reg_io_state_size as usize)
+                            ..((i + 1) * script.reg_io_state_size as usize)],
+                        &mut output_state,
+                        &mut macro_state_sanity,
+                        &mut macro_io_sanity,
+                        Some(macro_level as u32),
+                        false,
+                    );
+                }
+                if edge_phase == 0 {
+                    simulate_macro_program(
+                        &script.macro_program_offsets,
+                        &script.macro_program_data,
+                        &input_states_sanity[(i * script.reg_io_state_size as usize)
+                            ..((i + 1) * script.reg_io_state_size as usize)],
+                        &mut output_state,
+                        &mut macro_state_sanity,
+                        &mut macro_io_sanity,
+                        None,
+                        true,
+                    );
+                }
+                }
             }
             input_states_sanity[((i + 1) * script.reg_io_state_size as usize)
                 ..((i + 2) * script.reg_io_state_size as usize)]

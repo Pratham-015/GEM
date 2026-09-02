@@ -1,3 +1,13 @@
+#!/usr/bin/env python3
+"""
+test3/compare_flows.py
+Compares Flow A (all macros shredded) vs Flow B (all macros preserved) on the
+realistic signal_processor pipeline (2x CARRY4, 1x DSP48E2, 1x SRLC32E).
+
+Rust counterpart: tests/test3_netlist_macro_parse_test.rs
+  Loads test3/flowB_macropreserve_gatelevel.gv and verifies that the NetlistDB
+  parser correctly identifies all macro and AIG cell types via `cargo test`.
+"""
 import re
 import sys
 import os

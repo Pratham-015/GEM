@@ -11,6 +11,7 @@ module carry_chain_64b (
     logic [63:0] s;
     logic [63:0] di;
     logic [16:0] carry;
+    logic [3:0] carry_co [0:15];
 
     assign carry[0] = cin;
 
@@ -21,17 +22,20 @@ module carry_chain_64b (
             assign di[i*4 +: 4] = a[i*4 +: 4];
 
             CARRY4 carry4_inst (
-                .CO(carry[i+1]),    // carry[i+1] captures CO[3]
+                .CO(carry_co[i]),
                 .O(sum[i*4 +: 4]),
                 .CI(carry[i]),
                 .CYINIT(1'b0),
                 .DI(di[i*4 +: 4]),
                 .S(s[i*4 +: 4])
             );
+
+            // The cascade input is specifically CO[3].  Connecting the
+            // four-bit CO port directly to a scalar would truncate to CO[0].
+            assign carry[i+1] = carry_co[i][3];
         end
     endgenerate
 
     assign cout = carry[16];
 
 endmodule
-

@@ -31,12 +31,19 @@ def main():
         raise SystemExit(f"ERROR: required Yosys 0.68, found {version}")
 
     resolved_sources = [pathlib.Path(s).resolve() for s in args.sources]
-    if any(any(ch.isspace() for ch in str(path)) for path in resolved_sources):
-        raise SystemExit("ERROR: read_slang source paths containing whitespace are unsupported")
-    sources = " ".join(str(path) for path in resolved_sources)
+    # Yosys' command parser does not preserve quoted read_slang positional
+    # arguments, while Slang command files do.  Put every path in a temporary
+    # -f file so valid checkouts and benchmark names containing whitespace are
+    # accepted without shell/Yosys tokenization ambiguity.
+    with tempfile.NamedTemporaryFile("w", suffix=".f", delete=False) as filelist:
+        filelist.write("-v\n")
+        filelist.write(ys_quote(ROOT / "aigpdk/aigpdk_macros_bb.v") + "\n")
+        for source in resolved_sources:
+            filelist.write(ys_quote(source) + "\n")
+        filelist_path = pathlib.Path(filelist.name)
     commands = [
         f"read_slang --std 1800-2017 --top {args.top} "
-        f"-v {ROOT / 'aigpdk/aigpdk_macros_bb.v'} {sources}",
+        f"-f {filelist_path}",
         f"hierarchy -check -top {args.top}",
         "synth -flatten",
         "delete t:$print",
@@ -58,6 +65,7 @@ def main():
         subprocess.run(["yosys", "-q", str(script_path)], cwd=ROOT, check=True)
     finally:
         script_path.unlink(missing_ok=True)
+        filelist_path.unlink(missing_ok=True)
 
     with open(args.json, encoding="utf-8") as stream:
         netlist = json.load(stream)

@@ -120,3 +120,51 @@ fn test_multiple_stateful_instances_do_not_alias() {
         assert_eq!(layout.io_stride(kind) % 32, 0);
     }
 }
+
+#[test]
+fn test_warp_scale_soa_addresses_are_contiguous_and_non_overlapping() {
+    let make = |kind, cell_id| MacroInstance {
+        kind,
+        instance_id: 0,
+        cell_id,
+        inputs: vec![],
+        outputs: vec![],
+        clock: None,
+        state_offset: None,
+        io_offset: 0,
+    };
+    let mut instances = Vec::new();
+    for id in 0..65 {
+        instances.push(make(MacroKind::CarryChain, 1000 + id));
+        instances.push(make(MacroKind::DSP48E2, 2000 + id));
+        instances.push(make(MacroKind::SRLC32E, 3000 + id));
+    }
+    let layout = MacroStorageLayout::build(instances);
+
+    // 65 lanes round to three complete warps.  For every field, adjacent
+    // instance IDs must be adjacent u64 addresses; fields must be separated by
+    // exactly the padded stride and kind sections must never overlap.
+    for kind in [
+        MacroKind::CarryChain,
+        MacroKind::DSP48E2,
+        MacroKind::SRLC32E,
+    ] {
+        assert_eq!(layout.io_stride(kind), 96);
+        for field in 0..kind.io_words_per_instance() {
+            let offsets: Vec<_> = (0..65)
+                .map(|id| match kind {
+                    MacroKind::CarryChain => layout.carrychain_io_field_offset(id, field),
+                    MacroKind::DSP48E2 => layout.dsp_io_field_offset(id, field),
+                    MacroKind::SRLC32E => layout.srl_io_field_offset(id, field),
+                })
+                .collect();
+            assert!(offsets.windows(2).all(|pair| pair[1] == pair[0] + 1));
+        }
+    }
+    assert_eq!(layout.carrychain_io_base % 32, 0);
+    assert_eq!(layout.dsp_io_base % 32, 0);
+    assert_eq!(layout.srl_io_base % 32, 0);
+    assert!(layout.carrychain_io_base < layout.dsp_io_base);
+    assert!(layout.dsp_io_base < layout.srl_io_base);
+    assert_eq!(layout.total_io_words % 32, 0);
+}

@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // Integration test verifying Deliverables A & B on the test2 heterogeneous circuit.
+// Python counterpart: test2/heterogeneous_integration_check.py
+//   Runs Yosys synthesis (test2/heterogeneous_integration_synth.ys) to produce
+//   the .gv file loaded here and validates macro cell counts in the netlist.
 
 use gem::aig::AIG;
 use gem::aigpdk::AIGPDKLeafPins;
@@ -10,7 +13,7 @@ use std::path::PathBuf;
 #[test]
 fn test_heterogeneous_pipeline_integration() {
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let netlist_path = manifest_dir.join("test2/macropreserve_gatelevel.gv");
+    let netlist_path = manifest_dir.join("test2/heterogeneous_integration_gatelevel.gv");
 
     // 1. Parse into NetlistDB
     let db = NetlistDB::from_sverilog_file(&netlist_path, Some("mixed_circuit"), &AIGPDKLeafPins())

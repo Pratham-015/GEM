@@ -335,7 +335,7 @@ __device__ __forceinline__ void macro_write_bit(
 
 // Phase 1: gather every macro's Boolean inputs into the 64-bit SoA buffer.
 // A grid barrier after this function prevents any macro output write from
-// racing another macro's input gather in the same relaxation pass.
+// racing another macro's input gather in the same topological level.
 __device__ void gather_macro_range(
   usize first_macro,
   usize num_macros,
@@ -343,14 +343,20 @@ __device__ void gather_macro_range(
   const u32 *__restrict__ offsets,
   const u32 *__restrict__ program,
   const u32 *__restrict__ state,
-  u64 *__restrict__ io)
+  u64 *__restrict__ io,
+  u32 target_level,
+  bool commit_phase)
 {
   usize tid = (usize)blockIdx.x * blockDim.x + threadIdx.x;
   usize stride_threads = (usize)gridDim.x * blockDim.x;
   for(usize local_i = tid; local_i < num_macros; local_i += stride_threads) {
     usize mi = first_macro + local_i;
     const u32 *d = program + offsets[mi];
-    u32 kind = d[0], io_off = d[2], io_stride = d[3], n_in = d[5];
+    u32 kind = d[0], io_off = d[2], io_stride = d[3];
+    bool selected = commit_phase ? kind != GEM_MACRO_CARRYCHAIN
+                                 : d[5] == target_level;
+    if(!selected) continue;
+    u32 n_in = d[6];
     // MacroStorageLayout groups descriptors by kind.  Dispatching one range
     // at a time keeps all active lanes on the same evaluator path instead of
     // mixing 1-bit carry/SRL work and 48-bit DSP work inside one warp.
@@ -359,8 +365,8 @@ __device__ void gather_macro_range(
     assert(__all_sync(cohort_mask, kind == expected_kind));
     gem_u64 f0 = 0, f1 = 0, f2 = 0, f3 = 0, f4 = 0;
     for(u32 k = 0; k < n_in; k += 2) {
-      u32 bit = macro_read_source(state, d[6 + k]);
-      u32 field_bit = d[6 + k + 1];
+      u32 bit = macro_read_source(state, d[7 + k]);
+      u32 field_bit = d[7 + k + 1];
       if(kind == GEM_MACRO_CARRYCHAIN) {
         if(field_bit < 64u) f0 |= (gem_u64)bit << field_bit;
         else if(field_bit < 128u) f1 |= (gem_u64)bit << (field_bit - 64u);
@@ -401,67 +407,112 @@ __device__ void evaluate_macro_range(
   u32 *__restrict__ state,
   u64 *__restrict__ macro_state,
   const u64 *__restrict__ io,
-  bool commit)
+  u64 *__restrict__ shared_macro_fields,
+  u32 target_level,
+  bool commit_phase)
 {
   usize tid = (usize)blockIdx.x * blockDim.x + threadIdx.x;
   usize stride_threads = (usize)gridDim.x * blockDim.x;
-  for(usize local_i = tid; local_i < num_macros; local_i += stride_threads) {
+  // The global I/O array is the required grid-wide exchange boundary: a
+  // producer and consumer may reside in different CUDA blocks.  Once the
+  // cooperative grid barrier has made it visible, stage a block tile in
+  // shared memory.  This gives the native evaluators an explicit,
+  // block-local global->shared->register path while preserving the SoA
+  // coalescing of the global loads.  Every thread participates in both
+  // barriers, including tail lanes, so partial macro cohorts cannot deadlock.
+  usize rounds = (num_macros + stride_threads - 1u) / stride_threads;
+  for(usize round = 0; round < rounds; ++round) {
+    usize local_i = tid + round * stride_threads;
+    bool active = local_i < num_macros;
     usize mi = first_macro + local_i;
-    const u32 *d = program + offsets[mi];
-    u32 kind = d[0], state_off = d[1], io_off = d[2], io_stride = d[3];
-    assert(kind == expected_kind);
-    unsigned cohort_mask = __activemask();
-    assert(__all_sync(cohort_mask, kind == expected_kind));
-    bool clock_active = macro_read_source(edge_state, d[4]);
-    u32 n_in = d[5];
-    const u32 *out_desc = d + 6 + n_in;
-    u32 n_out = *out_desc++;
-    gem_u64 value0 = 0, value1 = 0;
-    if(kind == GEM_MACRO_CARRYCHAIN) {
-      u32 n_bits = 4u;
-      for(u32 k = 0; k < n_in; k += 2) {
-        u32 fb = d[6 + k + 1];
-        if(fb < 64u && (fb + 1u) > n_bits) {
-          n_bits = fb + 1u;
+    const u32 *d = active ? program + offsets[mi] : nullptr;
+    u32 kind = active ? d[0] : expected_kind;
+    bool selected = active && (commit_phase ? kind != GEM_MACRO_CARRYCHAIN
+                                            : d[5] == target_level);
+    // This ballot is part of dispatch, not a diagnostic assertion: it creates
+    // the exact warp cohort for the current topological level.  Instances are
+    // host-sorted by (kind, level), so almost every active warp is either fully
+    // selected or fully idle, minimizing the one boundary warp per level.
+    unsigned resident_mask = __activemask();
+    unsigned selected_mask = __ballot_sync(resident_mask, selected);
+    selected = (selected_mask & (1u << (threadIdx.x & 31u))) != 0u;
+    u32 state_off = active ? d[1] : 0u;
+    u32 io_off = active ? d[2] : 0u;
+    u32 io_stride = active ? d[3] : 0u;
+    u32 input_fields = expected_kind == GEM_MACRO_DSP48E2 ? 5u
+                     : expected_kind == GEM_MACRO_CARRYCHAIN ? 3u : 1u;
+    for(u32 field = 0; field < 5u; ++field) {
+      shared_macro_fields[field * blockDim.x + threadIdx.x] =
+        selected && field < input_fields ? io[io_off + field * io_stride] : 0ull;
+    }
+    shared_macro_fields[5u * blockDim.x + threadIdx.x] =
+      selected && expected_kind != GEM_MACRO_CARRYCHAIN
+        ? macro_state[state_off] : 0ull;
+    __syncthreads();
+
+    if(selected) {
+      assert(kind == expected_kind);
+      unsigned cohort_mask = __activemask();
+      assert(__all_sync(cohort_mask, kind == expected_kind));
+      bool clock_active = macro_read_source(edge_state, d[4]);
+      u32 n_in = d[6];
+      const u32 *out_desc = d + 7 + n_in;
+      u32 n_out = *out_desc++;
+      gem_u64 value0 = 0, value1 = 0;
+      if(kind == GEM_MACRO_CARRYCHAIN) {
+        u32 n_bits = 4u;
+        for(u32 k = 0; k < n_in; k += 2) {
+          u32 fb = d[7 + k + 1];
+          if(fb < 64u && (fb + 1u) > n_bits) {
+            n_bits = fb + 1u;
+          }
         }
+        CarryChainIn in = {
+          shared_macro_fields[threadIdx.x],
+          shared_macro_fields[blockDim.x + threadIdx.x],
+          (gem_u32)(shared_macro_fields[2u * blockDim.x + threadIdx.x] & 1u),
+          n_bits};
+        CarryChainOut out = gem_eval_carrychain(in);
+        value0 = out.o; value1 = out.co;
+      } else if(kind == GEM_MACRO_DSP48E2) {
+        gem_u64 ctrl = shared_macro_fields[4u * blockDim.x + threadIdx.x];
+        Dsp48e2In in = {shared_macro_fields[threadIdx.x],
+                        shared_macro_fields[blockDim.x + threadIdx.x],
+                        shared_macro_fields[2u * blockDim.x + threadIdx.x],
+                        shared_macro_fields[3u * blockDim.x + threadIdx.x],
+                        (gem_u32)(ctrl & 3u), (gem_u32)((ctrl >> 2) & 1u)};
+        gem_u64 visible = shared_macro_fields[5u * blockDim.x + threadIdx.x];
+        if(commit_phase && clock_active) {
+          visible = gem_eval_dsp48e2_next_p(in, visible);
+          shared_macro_fields[5u * blockDim.x + threadIdx.x] = visible;
+          macro_state[state_off] = visible;
+        }
+        value0 = visible;
+      } else {
+        gem_u64 ctrl = shared_macro_fields[threadIdx.x];
+        gem_u64 visible = shared_macro_fields[5u * blockDim.x + threadIdx.x];
+        if(commit_phase && clock_active) {
+          visible = gem_eval_srlc32e_next(visible, ctrl & 1u, (ctrl >> 1) & 1u);
+          shared_macro_fields[5u * blockDim.x + threadIdx.x] = visible;
+          macro_state[state_off] = visible;
+        }
+        value0 = gem_eval_srlc32e_read(visible, (ctrl >> 2) & 31u);
       }
-      CarryChainIn in = {io[io_off], io[io_off + io_stride],
-                         (gem_u32)(io[io_off + 2u * io_stride] & 1u), n_bits};
-      CarryChainOut out = gem_eval_carrychain(in);
-      value0 = out.o; value1 = out.co;
-    } else if(kind == GEM_MACRO_DSP48E2) {
-      gem_u64 ctrl = io[io_off + 4u * io_stride];
-      Dsp48e2In in = {io[io_off], io[io_off + io_stride],
-                      io[io_off + 2u * io_stride], io[io_off + 3u * io_stride],
-                      (gem_u32)(ctrl & 3u), (gem_u32)((ctrl >> 2) & 1u)};
-      gem_u64 visible = macro_state[state_off];
-      if(commit && clock_active) {
-        visible = gem_eval_dsp48e2_next_p(in, visible);
-        macro_state[state_off] = visible;
+      for(u32 k = 0; k < n_out; k += 2) {
+        u32 out_bit = out_desc[k + 1];
+        u32 bit = out_bit < 64u ? ((value0 >> out_bit) & 1u)
+                                : ((value1 >> (out_bit - 64u)) & 1u);
+        macro_write_bit(state, out_desc[k], bit);
       }
-      value0 = visible;
-    } else {
-      gem_u64 ctrl = io[io_off];
-      gem_u64 visible = macro_state[state_off];
-      if(commit && clock_active) {
-        visible = gem_eval_srlc32e_next(visible, ctrl & 1u, (ctrl >> 1) & 1u);
-        macro_state[state_off] = visible;
-      }
-      value0 = gem_eval_srlc32e_read(visible, (ctrl >> 2) & 31u);
     }
-    for(u32 k = 0; k < n_out; k += 2) {
-      u32 out_bit = out_desc[k + 1];
-      u32 bit = out_bit < 64u ? ((value0 >> out_bit) & 1u)
-                              : ((value1 >> (out_bit - 64u)) & 1u);
-      macro_write_bit(state, out_desc[k], bit);
-    }
+    __syncthreads();
   }
 }
 
 __global__ void simulate_v1_noninteractive_simple_scan(
   usize num_blocks,
   usize num_major_stages,
-  usize num_macro_passes,
+  usize num_macro_levels,
   const usize *__restrict__ blocks_start,
   const u32 *__restrict__ blocks_data,
   u32 *__restrict__ sram_data,
@@ -483,56 +534,123 @@ __global__ void simulate_v1_noninteractive_simple_scan(
   __shared__ u32 shared_writeouts[256];
   __shared__ u32 shared_state[256];
   __shared__ u32 script_starts[32], script_sizes[32];
+  // Five input fields plus one state field per thread. CARRYCHAIN uses the
+  // input prefix; DSP48E2/SRLC32E also stage persistent state for evaluation.
+  __shared__ u64 shared_macro_fields[6 * 256];
   assert(num_major_stages <= 32);
   if(threadIdx.x < num_major_stages) {
     script_starts[threadIdx.x] = blocks_start[threadIdx.x * num_blocks + blockIdx.x];
     script_sizes[threadIdx.x] = blocks_start[threadIdx.x * num_blocks + blockIdx.x + 1] - script_starts[threadIdx.x];
   }
   __syncthreads();
-  assert(num_macro_passes >= 1);
   for(usize cycle_i = 0; cycle_i < num_cycles; ++cycle_i) {
-    for(usize macro_pass = 0; macro_pass < num_macro_passes; ++macro_pass) {
-      bool commit_macro_state = macro_pass == num_macro_passes / 2;
+    usize carry_first = 0;
+    usize dsp_first = carry_first + num_carrychain_macros;
+    usize srl_first = dsp_first + num_dsp_macros;
+
+    // Preserve the unmodified Boolean-only Boomerang path exactly when no
+    // heterogeneous nodes are present.
+    if(srl_first + num_srl_macros == 0u) {
       for(usize stage_i = 0; stage_i < num_major_stages; ++stage_i) {
         simulate_block_v1(
-          blocks_data + script_starts[stage_i],
-          script_sizes[stage_i],
+          blocks_data + script_starts[stage_i], script_sizes[stage_i],
           states_noninteractive + cycle_i * state_size,
           states_noninteractive + (cycle_i + 1) * state_size,
-          sram_data,
-          shared_metadata, shared_writeouts, shared_state
-          );
+          sram_data, shared_metadata, shared_writeouts, shared_state);
         cooperative_groups::this_grid().sync();
       }
-      usize carry_first = 0;
-      usize dsp_first = carry_first + num_carrychain_macros;
-      usize srl_first = dsp_first + num_dsp_macros;
-      gather_macro_range(carry_first, num_carrychain_macros,
-        GEM_MACRO_CARRYCHAIN, macro_program_offsets, macro_program_data,
-        states_noninteractive + (cycle_i + 1) * state_size, macro_io_data);
-      gather_macro_range(dsp_first, num_dsp_macros,
-        GEM_MACRO_DSP48E2, macro_program_offsets, macro_program_data,
-        states_noninteractive + (cycle_i + 1) * state_size, macro_io_data);
-      gather_macro_range(srl_first, num_srl_macros,
-        GEM_MACRO_SRLC32E, macro_program_offsets, macro_program_data,
-        states_noninteractive + (cycle_i + 1) * state_size, macro_io_data);
-      cooperative_groups::this_grid().sync();
-      evaluate_macro_range(carry_first, num_carrychain_macros,
-        GEM_MACRO_CARRYCHAIN, macro_program_offsets, macro_program_data,
-        states_noninteractive + cycle_i * state_size,
-        states_noninteractive + (cycle_i + 1) * state_size,
-        macro_state_data, macro_io_data, commit_macro_state);
-      evaluate_macro_range(dsp_first, num_dsp_macros,
-        GEM_MACRO_DSP48E2, macro_program_offsets, macro_program_data,
-        states_noninteractive + cycle_i * state_size,
-        states_noninteractive + (cycle_i + 1) * state_size,
-        macro_state_data, macro_io_data, commit_macro_state);
-      evaluate_macro_range(srl_first, num_srl_macros,
-        GEM_MACRO_SRLC32E, macro_program_offsets, macro_program_data,
-        states_noninteractive + cycle_i * state_size,
-        states_noninteractive + (cycle_i + 1) * state_size,
-        macro_state_data, macro_io_data, commit_macro_state);
-      cooperative_groups::this_grid().sync();
+      continue;
+    }
+
+    // VCD input frames initialize a fresh packed Boolean output row, so
+    // publish the old DSP PREG values before any AIG consumer runs.  The
+    // descriptor level UINT_MAX uniquely selects purely registered DSPs;
+    // no input gather is needed when state is not committed.
+    evaluate_macro_range(dsp_first, num_dsp_macros,
+      GEM_MACRO_DSP48E2, macro_program_offsets, macro_program_data,
+      states_noninteractive + cycle_i * state_size,
+      states_noninteractive + (cycle_i + 1) * state_size,
+      macro_state_data, macro_io_data, shared_macro_fields, 0xffffffffu, false);
+    cooperative_groups::this_grid().sync();
+
+    // Explicit heterogeneous schedule: settle every same-cycle macro level
+    // in dependency order, commit all sequential state from one snapshot, and
+    // repeat the level walk so new registered outputs become visible.
+    for(u32 edge_phase = 0; edge_phase < 2u; ++edge_phase) {
+      for(usize macro_level = 0; macro_level <= num_macro_levels; ++macro_level) {
+        for(usize stage_i = 0; stage_i < num_major_stages; ++stage_i) {
+          simulate_block_v1(
+            blocks_data + script_starts[stage_i],
+            script_sizes[stage_i],
+            states_noninteractive + cycle_i * state_size,
+            states_noninteractive + (cycle_i + 1) * state_size,
+            sram_data,
+            shared_metadata, shared_writeouts, shared_state
+            );
+          cooperative_groups::this_grid().sync();
+        }
+        // The final AIG walk propagates the last macro level to outputs and
+        // next-state inputs; there is no macro dispatch after it.
+        if(macro_level == num_macro_levels) break;
+
+        gather_macro_range(carry_first, num_carrychain_macros,
+          GEM_MACRO_CARRYCHAIN, macro_program_offsets, macro_program_data,
+          states_noninteractive + (cycle_i + 1) * state_size, macro_io_data,
+          (u32)macro_level, false);
+        gather_macro_range(dsp_first, num_dsp_macros,
+          GEM_MACRO_DSP48E2, macro_program_offsets, macro_program_data,
+          states_noninteractive + (cycle_i + 1) * state_size, macro_io_data,
+          (u32)macro_level, false);
+        gather_macro_range(srl_first, num_srl_macros,
+          GEM_MACRO_SRLC32E, macro_program_offsets, macro_program_data,
+          states_noninteractive + (cycle_i + 1) * state_size, macro_io_data,
+          (u32)macro_level, false);
+        cooperative_groups::this_grid().sync();
+        evaluate_macro_range(carry_first, num_carrychain_macros,
+          GEM_MACRO_CARRYCHAIN, macro_program_offsets, macro_program_data,
+          states_noninteractive + cycle_i * state_size,
+          states_noninteractive + (cycle_i + 1) * state_size,
+          macro_state_data, macro_io_data, shared_macro_fields,
+          (u32)macro_level, false);
+        evaluate_macro_range(dsp_first, num_dsp_macros,
+          GEM_MACRO_DSP48E2, macro_program_offsets, macro_program_data,
+          states_noninteractive + cycle_i * state_size,
+          states_noninteractive + (cycle_i + 1) * state_size,
+          macro_state_data, macro_io_data, shared_macro_fields,
+          (u32)macro_level, false);
+        evaluate_macro_range(srl_first, num_srl_macros,
+          GEM_MACRO_SRLC32E, macro_program_offsets, macro_program_data,
+          states_noninteractive + cycle_i * state_size,
+          states_noninteractive + (cycle_i + 1) * state_size,
+          macro_state_data, macro_io_data, shared_macro_fields,
+          (u32)macro_level, false);
+        cooperative_groups::this_grid().sync();
+      }
+
+      if(edge_phase == 0u) {
+        // Gather DSP and SRL inputs before either kind updates state.  This is
+        // the single global rising edge shared by both primitive families.
+        gather_macro_range(dsp_first, num_dsp_macros,
+          GEM_MACRO_DSP48E2, macro_program_offsets, macro_program_data,
+          states_noninteractive + (cycle_i + 1) * state_size, macro_io_data,
+          0u, true);
+        gather_macro_range(srl_first, num_srl_macros,
+          GEM_MACRO_SRLC32E, macro_program_offsets, macro_program_data,
+          states_noninteractive + (cycle_i + 1) * state_size, macro_io_data,
+          0u, true);
+        cooperative_groups::this_grid().sync();
+        evaluate_macro_range(dsp_first, num_dsp_macros,
+          GEM_MACRO_DSP48E2, macro_program_offsets, macro_program_data,
+          states_noninteractive + cycle_i * state_size,
+          states_noninteractive + (cycle_i + 1) * state_size,
+          macro_state_data, macro_io_data, shared_macro_fields, 0u, true);
+        evaluate_macro_range(srl_first, num_srl_macros,
+          GEM_MACRO_SRLC32E, macro_program_offsets, macro_program_data,
+          states_noninteractive + cycle_i * state_size,
+          states_noninteractive + (cycle_i + 1) * state_size,
+          macro_state_data, macro_io_data, shared_macro_fields, 0u, true);
+        cooperative_groups::this_grid().sync();
+      }
     }
   }
 }

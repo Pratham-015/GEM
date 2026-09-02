@@ -1,0 +1,311 @@
+recorded_utc: 2026-09-02T18:56:09.696578+00:00
+command: /usr/bin/python3 -c 'import verif.full_integration_test as t; t.phase_exact_macro_chain()'
+returncode: 0
+--- output ---
+  PHASE 5: Exact DSP -> CARRY4 -> SRLC32E -> DSP Chain
+  [PASS] Exact-chain production dependencies are installed
++ /usr/bin/python3 scripts/synthesize_macros.py --top exact_macro_chain --output /tmp/gem_exact_chain.gv --json /tmp/gem_exact_chain.json verif/rtl/test_designs/exact_macro_chain.sv
+PASS: Yosys 0.68 (git sha1 38e001a6f, Release, GNU /usr/bin/c++ 13.3.0); preserved/normalized macros {'CARRY4': 1, 'GEM_DSP48E2': 2, 'SRLC32E': 1}
+  [PASS] Exact chain preserves 2 DSP + 1 CARRY4 + 1 SRLC32E
++ iverilog -g2012 -DGOLDEN -s tb_exact_macro_chain -o /tmp/gem_exact_chain_ref.out verif/rtl/xilinx_macros_ref.v verif/rtl/test_designs/exact_macro_chain.sv verif/tb/tb_exact_macro_chain.sv
++ vvp /tmp/gem_exact_chain_ref.out
+VCD info: dumpfile /tmp/gem_exact_chain_golden.vcd opened for output.
+verif/tb/tb_exact_macro_chain.sv:31: $finish called at 1286000 (1ps)
++ cargo build --release --features cuda --bin cut_map_interactive --bin cuda_test
+warning: ulib@0.3.13: nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+warning: ulib@0.3.13: nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+warning: field `name` is never read
+   --> eda-infra-rs/ulib_zeroable_derive/src/datastructure.rs:144:9
+    |
+132 | pub struct Struct<'a> {
+    |            ------ field in this struct
+...
+144 |     pub name: &'a Ident,
+    |         ^^^^
+    |
+    = note: `Struct` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `ulib_zeroable_derive` (lib) generated 1 warning
+warning: gem@0.1.0: nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+warning: gem@0.1.0: nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+warning: hiding a lifetime that's elided elsewhere is confusing
+   --> eda-infra-rs/vcd-ng/src/lib.rs:394:17
+    |
+394 |     pub fn iter(&self) -> VecValueIter {
+    |                 ^^^^^     ^^^^^^^^^^^^ the same lifetime is hidden here
+    |                 |
+    |                 the lifetime is elided here
+    |
+    = help: the same lifetime is referred to in inconsistent ways, making the signature confusing
+    = note: `#[warn(mismatched_lifetime_syntaxes)]` on by default
+help: use `'_` for type paths
+    |
+394 |     pub fn iter(&self) -> VecValueIter<'_> {
+    |                                       ++++
+
+warning: hiding a lifetime that's elided elsewhere is confusing
+  --> eda-infra-rs/netlistdb/src/hier_name.rs:81:17
+   |
+81 |     pub fn iter(&self) -> HierNameRevIter {
+   |                 ^^^^^     ^^^^^^^^^^^^^^^ the same lifetime is hidden here
+   |                 |
+   |                 the lifetime is elided here
+   |
+   = help: the same lifetime is referred to in inconsistent ways, making the signature confusing
+   = note: `#[warn(mismatched_lifetime_syntaxes)]` on by default
+help: use `'_` for type paths
+   |
+81 |     pub fn iter(&self) -> HierNameRevIter<'_> {
+   |                                          ++++
+
+warning: hiding a lifetime that's elided elsewhere is confusing
+   --> eda-infra-rs/netlistdb/src/hier_name.rs:159:19
+    |
+159 |     fn ident_iter(&self) -> DynIter<&str>;
+    |                   ^^^^^     ^^^^^^^^^^^^^
+    |                   |         |       |
+    |                   |         |       the same lifetime is elided here
+    |                   |         the same lifetime is hidden here
+    |                   the lifetime is elided here
+    |
+    = help: the same lifetime is referred to in inconsistent ways, making the signature confusing
+help: use `'_` for type paths
+    |
+159 |     fn ident_iter(&self) -> DynIter<'_, &str>;
+    |                                     +++
+
+warning: hiding a lifetime that's elided elsewhere is confusing
+   --> eda-infra-rs/netlistdb/src/hier_name.rs:175:19
+    |
+175 |     fn ident_iter(&self) -> DynIter<&str> {
+    |                   ^^^^^     ^^^^^^^^^^^^^
+    |                   |         |       |
+    |                   |         |       the same lifetime is elided here
+    |                   |         the same lifetime is hidden here
+    |                   the lifetime is elided here
+    |
+    = help: the same lifetime is referred to in inconsistent ways, making the signature confusing
+help: use `'_` for type paths
+    |
+175 |     fn ident_iter(&self) -> DynIter<'_, &str> {
+    |                                     +++
+
+warning: `vcd-ng` (lib) generated 1 warning (run `cargo fix --lib -p vcd-ng` to apply 1 suggestion)
+warning: `netlistdb` (lib) generated 3 warnings (run `cargo fix --lib -p netlistdb` to apply 3 suggestions)
+warning: use of deprecated method `indexmap::IndexMap::<K, V, S>::remove`: `remove` disrupts the map order -- use `swap_remove` or `shift_remove` for explicit behavior.
+    --> src/aig.rs:1084:42
+     |
+1084 | ...   let b_inst = self.macros.remove(&b_id).unwrap();
+     |                                ^^^^^^
+     |
+     = note: `#[warn(deprecated)]` on by default
+
+warning: hiding a lifetime that's elided elsewhere is confusing
+    --> src/aig.rs:1020:31
+     |
+1020 | ...roup(&self, endpt_id: usize) -> EndpointGroup {
+     |         ^^^^^                      ^^^^^^^^^^^^^ the same lifetime is hidden here
+     |         |
+     |         the lifetime is elided here
+     |
+     = help: the same lifetime is referred to in inconsistent ways, making the signature confusing
+     = note: `#[warn(mismatched_lifetime_syntaxes)]` on by default
+help: use `'_` for type paths
+     |
+1020 |     pub fn get_endpoint_group(&self, endpt_id: usize) -> EndpointGroup<'_> {
+     |                                                                       ++++
+
+warning: `gem` (lib) generated 2 warnings (run `cargo fix --lib -p gem` to apply 1 suggestion)
+warning: hiding a lifetime that's elided elsewhere is confusing
+   --> src/bin/cuda_test.rs:132:13
+    |
+132 |     fn iter(&self) -> VCDHierRevIter {
+    |             ^^^^^     ^^^^^^^^^^^^^^ the same lifetime is hidden here
+    |             |
+    |             the lifetime is elided here
+    |
+    = help: the same lifetime is referred to in inconsistent ways, making the signature confusing
+    = note: `#[warn(mismatched_lifetime_syntaxes)]` on by default
+help: use `'_` for type paths
+    |
+132 |     fn iter(&self) -> VCDHierRevIter<'_> {
+    |                                     ++++
+
+warning: `gem` (bin "cuda_test") generated 1 warning (run `cargo fix --bin "cuda_test" -p gem` to apply 1 suggestion)
+    Finished `release` profile [optimized] target(s) in 0.07s
+warning: the following packages contain code that will be rejected by a future version of Rust: proc-macro-error2 v2.0.1
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
++ target/release/cut_map_interactive /tmp/gem_exact_chain.gv /tmp/gem_exact_chain.gemparts --top-module exact_macro_chain
+18:56:21 [INFO] Simulator args:
+SimulatorArgs {
+    netlist_verilog: "/tmp/gem_exact_chain.gv",
+    top_module: Some(
+        "exact_macro_chain",
+    ),
+    level_split: [],
+    parts_out: "/tmp/gem_exact_chain.gemparts",
+    max_stage_degrad: 0,
+}
+18:56:21 [INFO] inferred clock port clk (posedge)
+18:56:21 [INFO] Registered macro: CarryChain cell_id=47 inputs=10 outputs=8
+18:56:21 [INFO] Registered macro: DSP48E2 cell_id=48 inputs=123 outputs=48
+18:56:21 [INFO] Registered macro: DSP48E2 cell_id=49 inputs=123 outputs=48
+18:56:21 [INFO] Registered macro: SRLC32E cell_id=50 inputs=7 outputs=2
+netlist has 866 pins, 402 aig pins, 37 and gates
+18:56:21 [INFO] interactive partitioning stage 0-max
+18:56:21 [INFO] current: 111 endpoints, try 1 parts
+18:56:21 [DEBUG] cut_map_interactive: [src/bin/cut_map_interactive.rs:20] invoking partitioner (#parts 1)
+18:56:21 [INFO] interactive partition completed: 1 in total. merging started.
+18:56:21 [INFO] part 0: #stages 1
+18:56:21 [INFO] after merging: 1 parts.
++ target/release/cuda_test /tmp/gem_exact_chain.gv /tmp/gem_exact_chain.gemparts /tmp/gem_exact_chain_golden.vcd /tmp/gem_exact_chain_cuda_1b.vcd 1 --top-module exact_macro_chain --input-vcd-scope tb_exact_macro_chain/dut --check-with-cpu
+18:56:21 [INFO] Simulator args:
+SimulatorArgs {
+    netlist_verilog: "/tmp/gem_exact_chain.gv",
+    top_module: Some(
+        "exact_macro_chain",
+    ),
+    level_split: [],
+    gemparts: "/tmp/gem_exact_chain.gemparts",
+    input_vcd: "/tmp/gem_exact_chain_golden.vcd",
+    input_vcd_scope: Some(
+        "tb_exact_macro_chain/dut",
+    ),
+    output_vcd: "/tmp/gem_exact_chain_cuda_1b.vcd",
+    output_vcd_scope: None,
+    num_blocks: 1,
+    check_with_cpu: true,
+    max_cycles: None,
+}
+18:56:21 [INFO] inferred clock port clk (posedge)
+18:56:21 [INFO] Registered macro: CarryChain cell_id=47 inputs=10 outputs=8
+18:56:21 [INFO] Registered macro: DSP48E2 cell_id=48 inputs=123 outputs=48
+18:56:21 [INFO] Registered macro: DSP48E2 cell_id=49 inputs=123 outputs=48
+18:56:21 [INFO] Registered macro: SRLC32E cell_id=50 inputs=7 outputs=2
+18:56:21 [INFO] # of effective partitions in each stage: [1]
+18:56:21 [INFO] heterogeneous COMB macro schedule: 1 levels [[47, 50]]
+18:56:21 [DEBUG] gem::flatten: [src/flatten.rs:1059] major stage 0: max total boomerang depth (w/ cost) 4
+18:56:21 [INFO] Built script for 1 blocks, reg/io state size 159, sram size 0, script size 18176
+Script hash: 7550198097151531742
+18:56:21 [INFO] total number of cycles: 386
+18:56:21 [DEBUG] TimerStarting: [src/bin/cuda_test.rs:964] simulation
+18:56:22 [DEBUG] TimerFinished: [src/bin/cuda_test.rs:964] simulation, Elapsed=37.693529ms
+18:56:22 [INFO] running sanity test
+18:56:22 [INFO] sanity test passed!
+18:56:22 [INFO] write out vcd
++ /usr/bin/python3 verif/host/compare_macro_integration.py /tmp/gem_exact_chain_golden.vcd /tmp/gem_exact_chain_cuda_1b.vcd --signals p0:48,carry_o:4,carry_co:4,q:1,q31:1,p1:48,chain_probe:1
+checked=2709 mismatches=0
+PASS: integrated CPU RTL and GEM CUDA outputs match
++ target/release/cuda_test /tmp/gem_exact_chain.gv /tmp/gem_exact_chain.gemparts /tmp/gem_exact_chain_golden.vcd /tmp/gem_exact_chain_cuda_4b.vcd 4 --top-module exact_macro_chain --input-vcd-scope tb_exact_macro_chain/dut --check-with-cpu
+18:56:22 [INFO] Simulator args:
+SimulatorArgs {
+    netlist_verilog: "/tmp/gem_exact_chain.gv",
+    top_module: Some(
+        "exact_macro_chain",
+    ),
+    level_split: [],
+    gemparts: "/tmp/gem_exact_chain.gemparts",
+    input_vcd: "/tmp/gem_exact_chain_golden.vcd",
+    input_vcd_scope: Some(
+        "tb_exact_macro_chain/dut",
+    ),
+    output_vcd: "/tmp/gem_exact_chain_cuda_4b.vcd",
+    output_vcd_scope: None,
+    num_blocks: 4,
+    check_with_cpu: true,
+    max_cycles: None,
+}
+18:56:22 [INFO] inferred clock port clk (posedge)
+18:56:22 [INFO] Registered macro: CarryChain cell_id=47 inputs=10 outputs=8
+18:56:22 [INFO] Registered macro: DSP48E2 cell_id=48 inputs=123 outputs=48
+18:56:22 [INFO] Registered macro: DSP48E2 cell_id=49 inputs=123 outputs=48
+18:56:22 [INFO] Registered macro: SRLC32E cell_id=50 inputs=7 outputs=2
+18:56:22 [INFO] # of effective partitions in each stage: [1]
+18:56:22 [INFO] heterogeneous COMB macro schedule: 1 levels [[47, 50]]
+18:56:22 [DEBUG] gem::flatten: [src/flatten.rs:1059] major stage 0: max total boomerang depth (w/ cost) 4
+18:56:22 [INFO] Built script for 4 blocks, reg/io state size 159, sram size 0, script size 18944
+Script hash: 5923354612369701585
+18:56:22 [INFO] total number of cycles: 386
+18:56:22 [DEBUG] TimerStarting: [src/bin/cuda_test.rs:964] simulation
+18:56:22 [DEBUG] TimerFinished: [src/bin/cuda_test.rs:964] simulation, Elapsed=38.28767ms
+18:56:22 [INFO] running sanity test
+18:56:22 [INFO] sanity test passed!
+18:56:22 [INFO] write out vcd
++ /usr/bin/python3 verif/host/compare_macro_integration.py /tmp/gem_exact_chain_golden.vcd /tmp/gem_exact_chain_cuda_4b.vcd --signals p0:48,carry_o:4,carry_co:4,q:1,q31:1,p1:48,chain_probe:1
+checked=2709 mismatches=0
+PASS: integrated CPU RTL and GEM CUDA outputs match
++ target/release/cut_map_interactive /tmp/gem_exact_chain.gv /tmp/gem_exact_chain_split.gemparts --top-module exact_macro_chain --level-split 1
+18:56:22 [INFO] Simulator args:
+SimulatorArgs {
+    netlist_verilog: "/tmp/gem_exact_chain.gv",
+    top_module: Some(
+        "exact_macro_chain",
+    ),
+    level_split: [
+        1,
+    ],
+    parts_out: "/tmp/gem_exact_chain_split.gemparts",
+    max_stage_degrad: 0,
+}
+18:56:22 [INFO] inferred clock port clk (posedge)
+18:56:22 [INFO] Registered macro: CarryChain cell_id=47 inputs=10 outputs=8
+18:56:22 [INFO] Registered macro: DSP48E2 cell_id=48 inputs=123 outputs=48
+18:56:22 [INFO] Registered macro: DSP48E2 cell_id=49 inputs=123 outputs=48
+18:56:22 [INFO] Registered macro: SRLC32E cell_id=50 inputs=7 outputs=2
+netlist has 866 pins, 402 aig pins, 37 and gates
+18:56:22 [INFO] interactive partitioning stage 0-1
+18:56:22 [INFO] current: 371 endpoints, try 2 parts
+18:56:22 [DEBUG] cut_map_interactive: [src/bin/cut_map_interactive.rs:20] invoking partitioner (#parts 2)
+18:56:22 [INFO] interactive partition completed: 2 in total. merging started.
+18:56:22 [INFO] part 0: #stages 1
+18:56:22 [INFO] after merging: 1 parts.
+18:56:22 [INFO] interactive partitioning stage 1-max
+18:56:22 [INFO] current: 4 endpoints, try 1 parts
+18:56:22 [DEBUG] cut_map_interactive: [src/bin/cut_map_interactive.rs:20] invoking partitioner (#parts 1)
+18:56:22 [INFO] interactive partition completed: 1 in total. merging started.
+18:56:22 [INFO] part 0: #stages 1
+18:56:22 [INFO] after merging: 1 parts.
++ target/release/cuda_test /tmp/gem_exact_chain.gv /tmp/gem_exact_chain_split.gemparts /tmp/gem_exact_chain_golden.vcd /tmp/gem_exact_chain_cuda_split.vcd 4 --top-module exact_macro_chain --level-split 1 --input-vcd-scope tb_exact_macro_chain/dut --check-with-cpu
+18:56:22 [INFO] Simulator args:
+SimulatorArgs {
+    netlist_verilog: "/tmp/gem_exact_chain.gv",
+    top_module: Some(
+        "exact_macro_chain",
+    ),
+    level_split: [
+        1,
+    ],
+    gemparts: "/tmp/gem_exact_chain_split.gemparts",
+    input_vcd: "/tmp/gem_exact_chain_golden.vcd",
+    input_vcd_scope: Some(
+        "tb_exact_macro_chain/dut",
+    ),
+    output_vcd: "/tmp/gem_exact_chain_cuda_split.vcd",
+    output_vcd_scope: None,
+    num_blocks: 4,
+    check_with_cpu: true,
+    max_cycles: None,
+}
+18:56:22 [INFO] inferred clock port clk (posedge)
+18:56:22 [INFO] Registered macro: CarryChain cell_id=47 inputs=10 outputs=8
+18:56:22 [INFO] Registered macro: DSP48E2 cell_id=48 inputs=123 outputs=48
+18:56:22 [INFO] Registered macro: DSP48E2 cell_id=49 inputs=123 outputs=48
+18:56:22 [INFO] Registered macro: SRLC32E cell_id=50 inputs=7 outputs=2
+18:56:22 [INFO] # of effective partitions in each stage: [1, 1]
+18:56:22 [INFO] heterogeneous COMB macro schedule: 1 levels [[47, 50]]
+18:56:22 [DEBUG] gem::flatten: [src/flatten.rs:1059] major stage 0: max total boomerang depth (w/ cost) 4
+18:56:22 [DEBUG] gem::flatten: [src/flatten.rs:1059] major stage 1: max total boomerang depth (w/ cost) 4
+18:56:22 [INFO] Built script for 4 blocks, reg/io state size 271, sram size 0, script size 35840
+Script hash: 14359518578907957255
+18:56:22 [INFO] total number of cycles: 386
+18:56:23 [DEBUG] TimerStarting: [src/bin/cuda_test.rs:964] simulation
+18:56:23 [DEBUG] TimerFinished: [src/bin/cuda_test.rs:964] simulation, Elapsed=44.054501ms
+18:56:23 [INFO] running sanity test
+18:56:23 [INFO] sanity test passed!
+18:56:23 [INFO] write out vcd
++ /usr/bin/python3 verif/host/compare_macro_integration.py /tmp/gem_exact_chain_golden.vcd /tmp/gem_exact_chain_cuda_split.vcd --signals p0:48,carry_o:4,carry_co:4,q:1,q31:1,p1:48,chain_probe:1
+checked=2709 mismatches=0
+PASS: integrated CPU RTL and GEM CUDA outputs match
+  [PASS] StagedAIG level-split path matches independent RTL
+  [PASS] Exact cross-macro dependency chain matches independent RTL on 1/4 blocks

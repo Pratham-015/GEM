@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 """
-test2/check_chained_carry.py
+test2/chained_carry_check.py
 Verification script for test2/chained_carry_64b.sv (64-bit chained CARRY4 adder).
 
 1. Checks Yosys netlist (chained_carry_gatelevel.gv) to verify all 16 CARRY4 macros
    are preserved intact alongside the input conditioning AIG gates.
 2. Runs cycle-accurate mathematical verification comparing 16-slice ripple carry
    evaluation against the 64-bit fused-addition CUDA formulation.
+
+Rust counterpart: tests/test2_chained_carry_test.rs
+  Loads test2/chained_carry_gatelevel.gv and verifies the full NetlistDB -> AIG
+  carry-chain fusion (16 CARRY4s -> 2 bounded segments) via `cargo test`.
 """
 
 import os

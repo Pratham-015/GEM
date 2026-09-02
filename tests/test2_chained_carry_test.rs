@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // Test verifying 64-bit chained CARRY4 macros (16 cascaded blocks).
+// Python counterpart: test2/chained_carry_check.py
+//   Runs Yosys synthesis (test2/chained_carry_synth.ys) to produce the .gv
+//   file loaded here, and independently validates the ripple vs. fused math.
 
 use gem::aig::AIG;
 use gem::aigpdk::AIGPDKLeafPins;

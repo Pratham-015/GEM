@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Compare PS-faithful RTL and GEM VCD outputs at GEM sample timestamps."""
+import argparse
 import re
 import sys
 
-TARGETS = {"sum": 64, "carry": 64, "p": 48, "q": 1, "q31": 1, "glue": 1}
+DEFAULT_TARGETS = {"sum": 64, "carry": 64, "p": 48, "q": 1, "q31": 1, "glue": 1}
+TARGETS = DEFAULT_TARGETS
 
 
 def parse(path):
@@ -85,7 +87,24 @@ def sample(tl, t):
 
 
 def main():
-    golden, gem = timeline(sys.argv[1]), timeline(sys.argv[2])
+    parser = argparse.ArgumentParser()
+    parser.add_argument("golden")
+    parser.add_argument("gem")
+    parser.add_argument(
+        "--signals",
+        help="comma-separated output names and widths, e.g. p0:48,o:4,q:1",
+    )
+    args = parser.parse_args()
+    global TARGETS
+    if args.signals:
+        TARGETS = {}
+        for item in args.signals.split(","):
+            name, width = item.rsplit(":", 1)
+            TARGETS[name] = int(width)
+        if not TARGETS or any(width <= 0 for width in TARGETS.values()):
+            parser.error("--signals must contain positive name:width entries")
+
+    golden, gem = timeline(args.golden), timeline(args.gem)
     mismatches = []
     checked = 0
     all_timestamps = sorted(set(t for t, _ in golden) | set(t for t, _ in gem))

@@ -51,8 +51,8 @@ module mixed_circuit (
         .S(s_wire)
     );
 
-    // 3. DSP48E2 Macro Instantiation
-    DSP48E2 u_dsp (
+    // 3. DSP48E2 Macro Instantiation (GEM simplified subset)
+    GEM_DSP48E2 u_dsp (
         .P(dsp_p),
         .CLK(clk),
         .USE_PRE(dsp_use_pre),

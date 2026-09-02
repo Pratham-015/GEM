@@ -37,6 +37,22 @@ module DSP48E2(
     end
 endmodule
 
+module GEM_DSP48E2(
+    output [47:0] P,
+    input         CLK,
+    input         USE_PRE,
+    input  [26:0] A,
+    input  [17:0] B,
+    input  [47:0] C,
+    input  [26:0] D,
+    input  [1:0]  STATE
+);
+    DSP48E2 u_impl (
+        .P(P), .CLK(CLK), .USE_PRE(USE_PRE),
+        .A(A), .B(B), .C(C), .D(D), .STATE(STATE)
+    );
+endmodule
+
 module SRLC32E(
     output Q,
     output Q31,

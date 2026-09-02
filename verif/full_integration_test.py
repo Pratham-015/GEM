@@ -8,8 +8,11 @@ Covers:
   [Phase 2] Deliverable A: Yosys 0.68 frontend & strict invalid DSP parameter rejection
   [Phase 3] Deliverable C: Cycle-accurate CUDA models vs Python golden vs Silicon UNISIM
   [Phase 4] Production End-to-End: RTL → Yosys → GEM Boomerang Partitioner → CUDA GPU Simulation → VCD Diff
-  [Phase 5] Full workspace Rust unit and regression test suite
-  [Phase 6] Property-based randomized heterogeneous netlist verification (50 seeds, 128 cycles)
+  [Phase 5] Exact DSP -> CARRY4 -> SRLC32E -> DSP production dependency chain
+  [Phase 6] Combinational VCD event/EOF handling
+  [Phase 7] Full workspace Rust unit and regression test suite
+  [Phase 8] Seeded randomized RTL topologies through production CUDA
+  [Phase 9] Nsight Compute counters, or an explicit permission blocker
 """
 
 import os
@@ -17,7 +20,10 @@ import sys
 import json
 import shutil
 import random
+import re
 import subprocess
+import tempfile
+import pathlib
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 GEM_ROOT = os.path.abspath(os.path.join(HERE, ".."))
@@ -26,7 +32,6 @@ sys.path.insert(0, os.path.join(HERE, "golden"))
 from carry4 import CARRY4, eval_carry_chain_ripple, eval_carry_chain_fused
 from dsp48e2 import DSP48E2
 from srlc32e import SRLC32E
-from bitops import mask, to_signed
 
 
 def banner(msg):
@@ -83,6 +88,15 @@ def phase_frontend():
         check("SystemVerilog-2012 frontend synthesis", False)
         return
 
+    with tempfile.TemporaryDirectory(prefix="gem frontend space ") as spaced_dir:
+        spaced_source = pathlib.Path(spaced_dir) / "valid design.sv"
+        shutil.copyfile("verif/rtl/test_designs/sv2012_frontend.sv", spaced_source)
+        spaced = synth_check(str(spaced_source), "sv2012_frontend", "gem_sv2012_spaced")
+        if spaced.returncode != 0:
+            print(spaced.stdout)
+            check("SystemVerilog source path containing whitespace", False)
+            return
+
     bad = synth_check("verif/rtl/test_designs/invalid_dsp_config.sv", "invalid_dsp_config", "gem_invalid_dsp")
     if bad.returncode == 0 or "unsupported DSP48E2 configuration" not in bad.stdout:
         print("FAIL: invalid AREG=1 DSP configuration was not rejected")
@@ -91,6 +105,7 @@ def phase_frontend():
         return
 
     print("  PASS: SystemVerilog-2012 frontend verified")
+    print("  PASS: quoted source paths containing whitespace verified")
     print("  PASS: invalid DSP48E2 pipeline configuration rejected")
     check("Required Yosys frontend and configuration rejection pass", True)
 
@@ -170,8 +185,8 @@ def phase_macro_models():
 def phase_production_integration():
     banner("PHASE 4: Production RTL -> Yosys -> Boomerang/CUDA Differential")
     if shutil.which("yosys") is None:
-        print("SKIPPED: Yosys 0.68 is not available in PATH on this system")
-        check("Production heterogeneous simulator matches independent RTL", True)
+        print("MISSING: Yosys 0.68 is not available in PATH on this system")
+        check("Production heterogeneous simulator matches independent RTL", False)
         return
 
     def run_step(cmd):
@@ -205,6 +220,17 @@ def phase_production_integration():
     run_step(["vvp", "/tmp/gem_integrated_ref.out"])
     run_step(["cargo", "build", "--release", "--features", "cuda",
               "--bin", "cut_map_interactive", "--bin", "cuda_test"])
+    resources = subprocess.run(
+        ["cuobjdump", "--dump-resource-usage", "target/release/cuda_test"],
+        cwd=GEM_ROOT, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        check=True,
+    ).stdout
+    kernel_resource = re.search(
+        r"Function _Z38simulate_v1_noninteractive_simple_scan[^\n]*:\s*\n"
+        r"[^\n]*SHARED:(\d+)", resources,
+    )
+    check("Production kernel contains >=12 KiB dedicated macro input/state shared-memory tile",
+          kernel_resource is not None and int(kernel_resource.group(1)) >= 6 * 256 * 8)
     run_step(["target/release/cut_map_interactive", "/tmp/gem_integrated_gatelevel.gv",
               "/tmp/gem_integrated.gemparts", "--top-module", "integrated_macro_top"])
 
@@ -220,13 +246,69 @@ def phase_production_integration():
     check("Production heterogeneous simulator matches independent RTL", True)
 
 
+def phase_exact_macro_chain():
+    banner("PHASE 5: Exact DSP -> CARRY4 -> SRLC32E -> DSP Chain")
+    required_tools = ("yosys", "iverilog", "nvcc", "nvidia-smi")
+    missing = [tool for tool in required_tools if shutil.which(tool) is None]
+    check("Exact-chain production dependencies are installed", not missing)
+
+    def run_step(cmd):
+        print("+", " ".join(cmd), flush=True)
+        subprocess.run(cmd, cwd=GEM_ROOT, check=True)
+
+    run_step([sys.executable, "scripts/synthesize_macros.py", "--top", "exact_macro_chain",
+              "--output", "/tmp/gem_exact_chain.gv", "--json", "/tmp/gem_exact_chain.json",
+              "verif/rtl/test_designs/exact_macro_chain.sv"])
+    with open("/tmp/gem_exact_chain.json", encoding="utf-8") as stream:
+        cells = json.load(stream)["modules"]["exact_macro_chain"]["cells"].values()
+    counts = {kind: sum(cell["type"] == kind for cell in cells)
+              for kind in ("CARRY4", "GEM_DSP48E2", "SRLC32E")}
+    check("Exact chain preserves 2 DSP + 1 CARRY4 + 1 SRLC32E",
+          counts == {"CARRY4": 1, "GEM_DSP48E2": 2, "SRLC32E": 1})
+    run_step(["iverilog", "-g2012", "-DGOLDEN", "-s", "tb_exact_macro_chain",
+              "-o", "/tmp/gem_exact_chain_ref.out", "verif/rtl/xilinx_macros_ref.v",
+              "verif/rtl/test_designs/exact_macro_chain.sv",
+              "verif/tb/tb_exact_macro_chain.sv"])
+    run_step(["vvp", "/tmp/gem_exact_chain_ref.out"])
+    run_step(["cargo", "build", "--release", "--features", "cuda",
+              "--bin", "cut_map_interactive", "--bin", "cuda_test"])
+    run_step(["target/release/cut_map_interactive", "/tmp/gem_exact_chain.gv",
+              "/tmp/gem_exact_chain.gemparts", "--top-module", "exact_macro_chain"])
+    signals = "p0:48,carry_o:4,carry_co:4,q:1,q31:1,p1:48,chain_probe:1"
+    for blocks in (1, 4):
+        output = f"/tmp/gem_exact_chain_cuda_{blocks}b.vcd"
+        run_step(["target/release/cuda_test", "/tmp/gem_exact_chain.gv",
+                  "/tmp/gem_exact_chain.gemparts", "/tmp/gem_exact_chain_golden.vcd",
+                  output, str(blocks), "--top-module", "exact_macro_chain",
+                  "--input-vcd-scope", "tb_exact_macro_chain/dut", "--check-with-cpu"])
+        run_step([sys.executable, "verif/host/compare_macro_integration.py",
+                  "/tmp/gem_exact_chain_golden.vcd", output, "--signals", signals])
+
+    # Exercise the production StagedAIG patch path rather than only the
+    # unsplit full-AIG path.  Both partitioning and simulation must receive the
+    # identical non-empty split list.
+    run_step(["target/release/cut_map_interactive", "/tmp/gem_exact_chain.gv",
+              "/tmp/gem_exact_chain_split.gemparts", "--top-module", "exact_macro_chain",
+              "--level-split", "1"])
+    split_output = "/tmp/gem_exact_chain_cuda_split.vcd"
+    run_step(["target/release/cuda_test", "/tmp/gem_exact_chain.gv",
+              "/tmp/gem_exact_chain_split.gemparts", "/tmp/gem_exact_chain_golden.vcd",
+              split_output, "4", "--top-module", "exact_macro_chain",
+              "--level-split", "1", "--input-vcd-scope", "tb_exact_macro_chain/dut",
+              "--check-with-cpu"])
+    run_step([sys.executable, "verif/host/compare_macro_integration.py",
+              "/tmp/gem_exact_chain_golden.vcd", split_output, "--signals", signals])
+    check("StagedAIG level-split path matches independent RTL", True)
+    check("Exact cross-macro dependency chain matches independent RTL on 1/4 blocks", True)
+
+
 def phase_production_b_events():
-    banner("PHASE 5: Combinational VCD Events & EOF Flushing")
+    banner("PHASE 6: Combinational VCD Events & EOF Flushing")
     required = ("yosys", "nvcc", "nvidia-smi")
     missing = [tool for tool in required if shutil.which(tool) is None]
     if missing:
-        print("SKIPPED: production CUDA dependencies unavailable:", ", ".join(missing))
-        check("Production combinational events and final EOF vector are simulated", True)
+        print("MISSING: production CUDA dependencies:", ", ".join(missing))
+        check("Production combinational events and final EOF vector are simulated", False)
         return
 
     import tempfile
@@ -307,9 +389,9 @@ b1111 !
         check("Production combinational events and final EOF vector are simulated", True)
 
 
-# PHASE 6: Full Workspace Regression (all targets)
+# PHASE 7: Full Workspace Regression (all targets)
 def phase_cargo():
-    banner("PHASE 6: Full Workspace Regression (all targets)")
+    banner("PHASE 7: Full Workspace Regression (all targets)")
     result = subprocess.run(
         ["cargo", "test", "--all-targets"],
         cwd=GEM_ROOT, capture_output=True, text=True, timeout=600
@@ -320,57 +402,31 @@ def phase_cargo():
     check("cargo test suite passed (exit 0)", result.returncode == 0)
 
 
-# PHASE 7: Property-Based Randomized Heterogeneous Verification
-def phase_random_hetero(num_seeds=50, num_cycles=128):
-    banner("PHASE 7: Property-Based Randomized Heterogeneous Verification")
-    print(f"  Running Property-Based Heterogeneous Verification ({num_seeds} randomized topologies, {num_cycles} cycles each)...")
+def phase_random_hetero(num_seeds=4, num_cycles=48):
+    banner("PHASE 8: Randomized Production RTL/DAG/CUDA Differential")
+    result = subprocess.run(
+        [sys.executable, "verif/host/randomized_production_dag.py",
+         "--seeds", str(num_seeds), "--cycles", str(num_cycles)],
+        cwd=GEM_ROOT, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        timeout=900,
+    )
+    print(result.stdout)
+    check("Randomized generated RTL topologies executed on production CUDA",
+          result.returncode == 0 and result.stdout.count("PASS seed=") == num_seeds)
 
-    for s in range(num_seeds):
-        seed = 1000 + s * 37
-        rng = random.Random(seed)
-        num_carries = rng.randint(1, 15)
-        num_dsps = rng.randint(1, 4)
-        num_srls = rng.randint(1, 4)
 
-        dsps = [DSP48E2() for _ in range(num_dsps)]
-        srls = [SRLC32E() for _ in range(num_srls)]
-        carry_width = num_carries * 4
-
-        for cycle in range(num_cycles):
-            s_val = rng.getrandbits(carry_width)
-            di_val = rng.getrandbits(carry_width)
-            cin = rng.getrandbits(1)
-
-            sum_ripple, co_ripple = eval_carry_chain_ripple(s_val, di_val, cin, carry_width)
-            sum_fused, co_fused = eval_carry_chain_fused(s_val, di_val, cin, carry_width)
-            assert sum_ripple == sum_fused, f"CarryChain sum mismatch at seed {seed}, cycle {cycle}"
-            assert co_ripple == co_fused, f"CarryChain CO mismatch at seed {seed}, cycle {cycle}"
-
-            for dsp_inst in dsps:
-                a_val = rng.getrandbits(27)
-                b_val = rng.getrandbits(18)
-                c_val = rng.getrandbits(48)
-                d_val = rng.getrandbits(27)
-                st = rng.choice([0, 1, 2])
-                up = rng.choice([0, 1])
-
-                p_next = dsp_inst.eval_comb(a_val, d_val, b_val, c_val, st, up)
-                dsp_inst.tick(p_next)
-                p_out = dsp_inst.read_P()
-                assert p_out == mask(p_out, 48)
-
-            for srl_inst in srls:
-                d_bit = rng.getrandbits(1)
-                ce_bit = rng.getrandbits(1)
-                addr = rng.getrandbits(5)
-
-                q, q31 = srl_inst.eval_comb(addr)
-                ns = srl_inst.eval_next_state(d_bit, ce_bit)
-                srl_inst.tick(ns)
-                assert q in (0, 1) and q31 in (0, 1)
-
-    print(f"  [PASS] All {num_seeds} randomized heterogeneous topologies verified bit-exact against golden models.\n")
-    check(f"{num_seeds} randomized heterogeneous topologies verified bit-exact against golden models", True)
+def phase_nsight():
+    banner("PHASE 9: Nsight Compute Production-Kernel Counters")
+    result = subprocess.run(
+        [sys.executable, "benchmark/profile_boomerang_ncu.py", "--skip-prepare"],
+        cwd=GEM_ROOT, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        timeout=300,
+    )
+    print(result.stdout)
+    if result.returncode == 2 and "ERR_NVGPUCTRPERM" in result.stdout:
+        print("  [BLOCKED] Nsight counters require NVIDIA administrator permission; no metrics claimed")
+        return
+    check("Nsight occupancy/divergence/coalescing counters captured", result.returncode == 0)
 
 
 # MAIN
@@ -387,21 +443,26 @@ def main():
     print()
     phase_production_integration()
     print()
+    phase_exact_macro_chain()
+    print()
     phase_production_b_events()
     print()
     phase_cargo()
     print()
     phase_random_hetero()
+    print()
+    phase_nsight()
 
     print()
     banner("FINAL VERDICT")
     print()
-    print("  ✅ Deliverable A: Macro preservation & strict techmap validation")
-    print("  ✅ Deliverable B: Host parser + AIG DAG + 64-bit GPU memory layout")
-    print("  ✅ Deliverable C: Cycle-accurate CUDA models — bit-exact vs silicon")
-    print("  ✅ Deliverable D: Production RTL/Yosys/GEM/Boomerang/CUDA pipeline verified")
+    print("  ✅ Macro preservation & strict techmap validation")
+    print("  ✅ Host parser + AIG DAG + 64-bit GPU memory layout")
+    print("  ✅ Cycle-accurate CUDA macro models — bit-exact vs references")
+    print("  ✅ Production RTL/Yosys/GEM/Boomerang/CUDA pipeline verified")
     print("  ✅ All workspace cargo unit & integration tests passing")
-    print("  ✅ Property-based randomized heterogeneous verification passing")
+    print("  ✅ Randomized generated RTL/DAG production CUDA differential passing")
+    print("  ⚠️ Nsight counters are verified only when Phase 9 reports PASS")
     print()
     print("  [PASS] FULL SYSTEM INTEGRATION AND REGRESSION VERIFIED")
     print()

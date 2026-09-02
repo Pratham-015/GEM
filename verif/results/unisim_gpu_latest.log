@@ -1,0 +1,32 @@
+recorded_utc: 2026-09-02T18:56:09.696578+00:00
+command: /usr/bin/python3 verif/host/diff_harness.py
+returncode: 0
+--- output ---
+Reference simulator : Icarus Verilog version 12.0 (stable) ()
+Reference model     : verif/rtl/xilinx_macros_ref.v (spec-literal)
+Real UNISIM         : /home/pratham_sharma/Vivado/2026.1/data/verilog/src/unisims (CARRY4, DSP48E2, SRLC32E)
+CUDA macros         : /usr/local/cuda/bin/nvcc (csrc/gem_macros.cuh, executed on GPU)
+
+  CARRY4 slice             PASS   3024 vectors bit-exact
+  CARRY4 chain x15 (60b)   PASS   2009 vectors bit-exact
+    fused-add (CUDA form)  PASS   2009 vectors bit-exact
+  CARRY4 slice (real UNISIM) PASS   3024 vectors bit-exact
+  CARRY4 chain (real UNISIM) PASS   2009 vectors bit-exact
+  DSP48E2 (PREG=1)         PASS   2336 vectors bit-exact
+  DSP48E2 (real UNISIM)    PASS   2336 vectors bit-exact
+  SRLC32E                  PASS   2100 vectors bit-exact
+  SRLC32E (real UNISIM)    PASS   2100 vectors bit-exact
+  CUDA compile target: sm_89
+GPU device : NVIDIA GeForce RTX 4050 Laptop GPU (sm_89)
+CARRYCHAIN : 2009 vectors executed on GPU (256 threads/block, 8 blocks)
+DSP48E2    : 2336 vectors executed on GPU (sequential P register)
+SRLC32E    : 2100 vectors executed on GPU (sequential SRL register)
+  CARRYCHAIN (CUDA, GPU)   PASS   2009 vectors bit-exact
+  DSP48E2 (CUDA, GPU)      PASS   2336 vectors bit-exact
+  SRLC32E (CUDA, GPU)      PASS   2100 vectors bit-exact
+
+--- summary ---
+CARRY4     PASS
+DSP48E2    PASS
+SRLC32E    PASS
+gem_macros.cuh (GPU) PASS

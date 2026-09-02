@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 """
-test2/check_macropreserve.py
+test2/heterogeneous_integration_check.py
 Deliverable A Verification for test2/mixed_circuit.sv.
 Verifies that Yosys preserves CARRY4, DSP48E2, SRLC32E, DFFs, and maps AIG glue logic.
+
+Rust counterpart: tests/test2_heterogeneous_integration_test.rs
+  Loads test2/heterogeneous_integration_gatelevel.gv and exercises the full
+  NetlistDB -> AIG -> MacroStorageLayout host-side pipeline via `cargo test`.
 """
 
 import os
@@ -28,10 +32,10 @@ def check(label, ok):
 def main():
     banner("Deliverable A — Yosys Macro Preservation (test2/mixed_circuit.sv)")
 
-    netlist = os.path.join(HERE, "macropreserve_gatelevel.gv")
+    netlist = os.path.join(HERE, "heterogeneous_integration_gatelevel.gv")
     if not os.path.exists(netlist):
         print("  Netlist not found, synthesizing...")
-        ys = os.path.join(HERE, "macropreserve_synth.ys")
+        ys = os.path.join(HERE, "heterogeneous_integration_synth.ys")
         subprocess.run(
             ["yosys", ys],
             cwd=GEM_ROOT, capture_output=True, check=True

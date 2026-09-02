@@ -4,7 +4,7 @@
 read_verilog -lib aigpdk/aigpdk_macros_bb.v
 
 # 2. Read the test circuit
-read_verilog test2/mixed_circuit.sv
+read_verilog -sv test2/mixed_circuit.sv
 
 # 3. Check hierarchy and set top module
 hierarchy -check -top mixed_circuit
@@ -33,7 +33,7 @@ opt_clean -purge
 
 # Write out structural gate-level netlist in AIG format
 # 12,13. Writes AIG to .gv file
-write_verilog -noexpr -nodec test2/macropreserve_gatelevel.gv
+write_verilog -noexpr -nodec test2/heterogeneous_integration_gatelevel.gv
 
 # 14. Printing statistics
 # stat

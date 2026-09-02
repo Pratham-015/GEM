@@ -1,0 +1,35 @@
+{
+  "recorded_utc": "2026-09-02T18:56:09.696578+00:00",
+  "status": "PASS",
+  "versions": {
+    "yosys": {
+      "returncode": 0,
+      "output": "Yosys 0.68 (git sha1 38e001a6f, Release, GNU /usr/bin/c++ 13.3.0)"
+    },
+    "nvcc": {
+      "returncode": 0,
+      "output": "nvcc: NVIDIA (R) Cuda compiler driver\nCopyright (c) 2005-2025 NVIDIA Corporation\nBuilt on Tue_May_27_02:21:03_PDT_2025\nCuda compilation tools, release 12.9, V12.9.86\nBuild cuda_12.9.r12.9/compiler.36037853_0"
+    },
+    "gpu": {
+      "returncode": 0,
+      "output": "NVIDIA GeForce RTX 4050 Laptop GPU, 8.9, 596.49"
+    }
+  },
+  "source_sha256": {
+    "scripts/synthesize_macros.py": "e2538f27317ddaa26824859892449f237faf7877576c97d6e91657e73ae98596",
+    "src/aig.rs": "ac37c2a19281377314217aa5f664b2245d40bca96af93a64090ffcc78ab28001",
+    "src/flatten.rs": "37c696657ba864f89409ce1b67d5d755484a70cce03e4afadb67894bb705e218",
+    "src/macro_layout.rs": "482b49eeb0a462fd62c6947963ec8a18442d132abd80870c325569cf8f628c68",
+    "csrc/kernel_v1_impl.cuh": "0b1358304d86a3e0b6f1e95e1c38303727e897fced9b2c04420ce7818f9162ae",
+    "csrc/gem_macros.cuh": "dc3068629b94f62aace20765d4ac6bfdc28aafca4770d560d50945e0a519c62c",
+    "verif/full_integration_test.py": "2e43c14bd30608f4b284a5bfbee6d682c51283e4a660c13eb083c2957ebb9b05",
+    "verif/host/diff_harness.py": "8225373751dfe64e5a99c8d59276dd7981affb3f6435ce085521e1da5cdd746d",
+    "verif/host/randomized_production_dag.py": "115c6963a937d58b97b317176be4f9404026a7c87d419488a5bf4881c5709ef0"
+  },
+  "logs": {
+    "unisim_gpu_latest.log": "4a2b5d95cf7091adf542b937bafd351b78de15057e425fd2b36786d048bd731a",
+    "randomized_production_cuda_latest.log": "42d12f399c572b248ffc515be9b1fc77950ec00f55a6b4391dfbabb307aadaf5",
+    "exact_staged_production_cuda_latest.log": "8cb8fb288e6bf9e10b381785293a39e3bda072c710c64f166979c83d6744eed3",
+    "cuda_kernel_binary_latest.log": "aca9eff4ba6a87e40c929db1d55b5903b66cd37a31aa86aa33bd17e60d2cf644"
+  }
+}
