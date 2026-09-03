@@ -12,7 +12,7 @@ Timing uses a host monotonic clock around the production launch and a mandatory 
 
 ## Environment
 
-- Commit: `8c48130c29a46b486bda34432881711b84b0886e`
+- Commit: `8c48130c2`
 - Dirty during run: `False`
 - GPU: `NVIDIA GeForce RTX 4050 Laptop GPU, 8.9, 596.49, 6141 MiB`
 - CUDA/NVCC: `Build cuda_12.9.r12.9/compiler.36037853_0`
@@ -89,17 +89,17 @@ Cycles/second falls as heterogeneous graph work per simulated cycle grows; these
 
 | Blocks | Median cycles/s |
 |---:|---:|
-| 1 | 5,284 |
-| 4 | 10,867 |
-| 8 | 13,175 |
-| 9 | 18,123 |
-| 12 | 16,805 |
-| 16 | 16,641 |
-| 20 | 16,645 |
-| 28 | 11,529 |
-| 40 | 11,541 |
+| 1 | 5,226 |
+| 4 | 10,737 |
+| 8 | 13,009 |
+| 9 | 16,806 |
+| 12 | 16,754 |
+| 16 | 16,707 |
+| 20 | 16,684 |
+| 28 | 11,393 |
+| 40 | 11,398 |
 
-The 9-partition heterogeneous stress graph scales from 5,284 cycles/s at one block to 18,123 cycles/s at 9 blocks (**3.43x**). This measures useful multi-partition execution; larger grids with idle blocks are not counted as an occupancy improvement.
+The 9-partition heterogeneous stress graph scales from 5,226 cycles/s at one block to 16,806 cycles/s at 9 blocks (**3.22x**). This measures useful multi-partition execution; larger grids with idle blocks are not counted as an occupancy improvement.
 
 ## Unmodified upstream comparison
 
@@ -144,7 +144,7 @@ The result is a measured regression, not a claimed gain: macro dispatch and coop
 
 All rows profile `simulate_v1_noninteractive_simple_scan`, the production simulator kernel. Raw CSV and parsed JSON are stored beside this report.
 
-Profiled commit(s): `8c48130c29a46b486bda34432881711b84b0886e`.
+Profiled commit(s): `8c48130c2`.
 
 Observed DRAM utilization rounds to 0.00–0.01% of peak while measured bandwidth is 1.90–15.34 MB/s, so these runs are not DRAM-bandwidth-bound. Achieved occupancy is 16.65–16.67% versus 33.33–33.33% theoretical. The launches use 124 registers/thread and 16,640 shared bytes/block; registers limit residency to 2 blocks/SM.
 
@@ -171,14 +171,14 @@ The modified kernel is 1.010x as fast by profiled kernel duration on this macro-
 
 | Blocks | Median cycles/s |
 |---:|---:|
-| 1 | 3,552 |
-| 2 | 3,557 |
-| 4 | 3,556 |
-| 8 | 3,553 |
-| 16 | 3,556 |
-| 20 | 3,553 |
-| 32 | 2,581 |
-| 40 | 2,582 |
+| 1 | 3,564 |
+| 2 | 3,554 |
+| 4 | 3,516 |
+| 8 | 3,539 |
+| 16 | 3,508 |
+| 20 | 3,531 |
+| 32 | 2,593 |
+| 40 | 2,572 |
 
 Throughput is flat from 1–20 blocks and drops at 32–40 blocks. Increasing cooperative grid size therefore does not expose additional useful parallel work for this single-partition mixed graph; scheduling/coordination, rather than DRAM bandwidth, is the observed scaling limit. This sweep varies grid size; it is not a substitute for the measured Nsight occupancy counters above.
 

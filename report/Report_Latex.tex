@@ -102,8 +102,8 @@
   };
   \node[anchor=south west,text=white,align=left,text width=145mm] at ([xshift=34mm,yshift=32mm]current page.south west) {
     \textbf{Repository:} \url{https://github.com/Pratham-015/GEM}\\[1.5mm]
-    \textbf{Measured revision:} \code{23fc43fac59f2ba6e349132e632cbcb062a1f39b}\\[1.5mm]
-    \textbf{Report date:} 2 September 2026
+    \textbf{Measured revision:} \code{8c48130}\\[1.5mm]
+    \textbf{Report date:} 3 September 2026
   };
 \end{tikzpicture}
 \clearpage
@@ -146,11 +146,12 @@ matched independent RTL with zero reported mismatches.
 
 Production throughput was measured with 12 warm-ups and seven retained launches.
 The only identical-workload comparison supported by both official upstream and
-the modified simulator is Boolean-only: 59,232 versus 59,322 simulated cycles/s,
-or 1.0015$\times$ (+0.153\%).  A separate 9-partition heterogeneous stress design
-scaled from 5,273 cycles/s at one block to 16,677 cycles/s at 12 blocks
-(3.163$\times$).  No valid heterogeneous upstream speedup is claimed: the
-historical shredded-netlist comparison failed its RTL correctness gate.
+the modified simulator is Boolean-only: 59,060 versus 59,304 simulated cycles/s,
+or 1.0041$\times$ (+0.413\%).  A separate 9-partition heterogeneous stress design
+scaled from 5,226 cycles/s at one block to 16,806 cycles/s at nine blocks
+(3.216$\times$).  A correctness-gated representation diagnostic found that a
+preserved 15-CARRY4 chain runs at only 0.117$\times$ the shredded upstream form;
+this measured regression is reported rather than presented as acceleration.
 
 \subsection{Problem and Contribution}
 
@@ -172,11 +173,10 @@ than adding an isolated macro microbenchmark.  Its concrete contributions are:
 \end{enumerate}
 
 \begin{warningbox}
-\textbf{Evidence boundary.}  Results in this report were regenerated from commit
-\code{23fc43f} while the working tree contained the scheduler/benchmark changes
-listed by Git as uncommitted.  Every table therefore records the revision and
-dirty-tree status.  The repository should be committed and the benchmark command
-rerun before final archival publication.
+\textbf{Evidence boundary.}  The primary throughput results were regenerated
+from commit \code{8c48130} with clean-tree enforcement enabled.  The benchmark
+JSON records the full source, netlist, partition, executable, reference-model,
+and waveform hashes needed to audit the run.
 \end{warningbox}
 
 % =========================================================
@@ -566,15 +566,15 @@ as cycles/median CPS, while CV is sample standard deviation divided by mean CPS.
 \toprule
 Workload & Cycles & Blocks & AIG & Macros D/C/S & Runtime (ms) & Median CPS \\
 \midrule
-Boolean heavy & 2,000 & 4 & 507 & 0/0/0 & 25.445 & 78,600 \\
-DSP heavy & 2,000 & 4 & 4,464 & 32/0/0 & 95.050 & 21,041 \\
-Carry heavy & 1,000 & 4 & 2,880 & 0/128/0 & 636.486 & 1,571 \\
-SRL heavy & 2,000 & 4 & 576 & 0/0/128 & 46.847 & 42,692 \\
-Heterogeneous small & 1,000 & 4 & 1,120 & 4/8/8 & 129.535 & 7,720 \\
-Heterogeneous mixed & 1,000 & 4 & 3,520 & 16/32/32 & 281.028 & 3,558 \\
-Deep dependency & 200 & 4 & 1,981 & 0/64/0 & 428.885 & 466 \\
-Heterogeneous large & 200 & 4 & 8,704 & 32/128/128 & 190.018 & 1,053 \\
-Occupancy stress & 1,000 & 16 & 82,385 & 1/1/1 & 60.004 & 16,666 \\
+Boolean heavy & 2,000 & 4 & 507 & 0/0/0 & 25.485 & 78,478 \\
+DSP heavy & 2,000 & 4 & 4,464 & 32/0/0 & 94.995 & 21,054 \\
+Carry heavy & 1,000 & 4 & 2,880 & 0/128/0 & 643.902 & 1,553 \\
+SRL heavy & 2,000 & 4 & 576 & 0/0/128 & 47.429 & 42,168 \\
+Heterogeneous small & 1,000 & 4 & 1,120 & 4/8/8 & 131.108 & 7,627 \\
+Heterogeneous mixed & 1,000 & 4 & 3,520 & 16/32/32 & 277.606 & 3,602 \\
+Deep dependency & 200 & 4 & 1,981 & 0/64/0 & 431.985 & 463 \\
+Heterogeneous large & 200 & 4 & 8,704 & 32/128/128 & 190.577 & 1,049 \\
+Occupancy stress & 1,000 & 16 & 82,385 & 1/1/1 & 59.577 & 16,785 \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -583,13 +583,13 @@ The data show workload cost, not a cross-workload speedup.  Carry-heavy and deep
 dependency cases are slow because every combinational macro level forces another
 complete Boolean settling pass and grid barriers.  SRL-heavy is much faster than
 carry-heavy despite equal macro count because independent SRLs share a shallow
-level.  Mixed scaling drops from 7,720 CPS (small) through 3,558 CPS (medium) to
-1,053 CPS (large) as AIG and macro work increase.  These values demonstrate
+level.  Mixed scaling drops from 7,627 CPS (small) through 3,602 CPS (medium) to
+1,049 CPS (large) as AIG and macro work increase.  These values demonstrate
 functional scaling but do not isolate the benefit of preserving a macro.
 
-All seven-sample coefficients of variation were below 0.43\%; mixed and large
-were 0.015\% and 0.030\%, respectively.  This repeatability does not remove
-systematic issues such as laptop power state or the dirty-tree provenance.
+All seven-sample coefficients of variation were below 0.90\%; mixed and large
+were 0.176\% and 0.048\%, respectively.  This repeatability does not remove
+systematic issues such as laptop power state.
 
 \subsection{Equivalent Upstream Comparison}
 
@@ -600,24 +600,25 @@ systematic issues such as laptop power state or the dirty-tree provenance.
 \toprule
 Implementation & Cycles & Mean runtime (ms) & Median CPS & CPS CV \\
 \midrule
-Official upstream \code{9e913f9} & 2,000 & 33.779 & 59,231.5 & 0.361\% \\
-Modified Big-GEM \code{23fc43f} & 2,000 & 33.712 & 59,322.3 & 0.132\% \\
+Official upstream \code{9e913f9} & 2,000 & 33.856 & 59,059.6 & 0.318\% \\
+Modified Big-GEM \code{8c48130} & 2,000 & 33.776 & 59,303.7 & 0.292\% \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
 Measured and calculated values are separated as follows:
 \[
- \mathrm{speedup}=\frac{59{,}322.260}{59{,}231.513}=1.001532\times,
+ \mathrm{speedup}=\frac{59{,}303.689}{59{,}059.578}=1.004133\times,
  \qquad
- \mathrm{gain}=0.1532\%.
+ \mathrm{gain}=0.4133\%.
 \]
 This is parity within a small fraction of one percent, not evidence of a macro
 speedup.  It does show that the Boolean-only fast path preserves upstream
-throughput on this workload.  The benchmark runner attempted a same-RTL
-shredded-upstream versus preserved-modified experiment, but at least one
-representation failed the independent RTL differential.  Its performance number
-was therefore suppressed.  No heterogeneous baseline speedup is reported.
+throughput on this workload.  A same-RTL 15-CARRY4 diagnostic passed four
+independent correctness gates but measured 77,929 CPS for shredded upstream and
+9,085 CPS for preserved Big-GEM: 0.1166$\times$, or an 88.3\% regression.
+This combines representation and implementation effects and is not an
+implementation-only speedup.
 
 \subsection{Useful Multi-Partition Scaling}
 
@@ -628,15 +629,15 @@ was therefore suppressed.  No heterogeneous baseline speedup is reported.
 \toprule
 Blocks & 1 & 4 & 8 & 9 & 12 & 16 & 20 & 28/40 \\
 \midrule
-CPS & 5,273 & 10,776 & 13,056 & 16,670 & 16,677 & 16,665 & 16,661 & 11,452/11,451 \\
+CPS & 5,226 & 10,737 & 13,009 & 16,806 & 16,754 & 16,707 & 16,684 & 11,393/11,398 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The best retained median occurs at 12 blocks:
+The best retained median occurs at nine blocks:
 \[
- \frac{16{,}676.956}{5{,}272.581}=3.16296\times
- \quad\text{or}\quad 216.30\%\ \text{gain over one block}.
+ \frac{16{,}805.678}{5{,}225.969}=3.21504\times
+ \quad\text{or}\quad 221.50\%\ \text{gain over one block}.
 \]
 Only nine blocks have useful partition work.  Additional cooperative blocks are
 idle but still participate in grid synchronization; performance is flat through
@@ -655,10 +656,10 @@ oversizing the cooperative grid is harmful.
 \toprule
 Workload & Grid & Ach./theor. occ. & Divergent targets & Predicated lanes & DRAM MB/s & LD/ST sectors \\
 \midrule
-Exact chain & 1 & 16.67/33.33\% & 3.764\% & 70.09\% & 6.52 & 6.63/2.89 \\
-Mixed & 4 & 16.67/33.33\% & 1.212\% & 75.16\% & 1.95 & 7.36/3.73 \\
-Large & 4 & 16.67/33.33\% & 1.078\% & 75.59\% & 2.73 & 7.52/3.70 \\
-Occupancy stress & 16 & 16.71/33.33\% & 1.306\% & 83.22\% & 15.19 & 9.72/4.06 \\
+Exact chain & 1 & 16.65/33.33\% & 3.764\% & 70.09\% & 5.58 & 6.63/2.89 \\
+Mixed & 4 & 16.67/33.33\% & 1.212\% & 75.16\% & 1.90 & 7.36/3.73 \\
+Large & 4 & 16.67/33.33\% & 1.078\% & 75.59\% & 2.77 & 7.52/3.70 \\
+Occupancy stress & 16 & 16.67/33.33\% & 1.306\% & 83.23\% & 15.34 & 9.72/4.06 \\
 \bottomrule
 \end{tabular}}
 \end{table}
@@ -686,10 +687,10 @@ instruction-level coalescing attribution remains future profiling work.
 \caption{Controlled comparison against unmodified GEM.}
 \begin{tabularx}{0.78\textwidth}{Y r r}
 \toprule
-Pool / implementation & CPS & Speedup \\
+Implementation & CPS & Speedup \\
 \midrule
-Official upstream, identical Boolean workload & 59,231.5 & 1.000$\times$ \\
-Our submission, identical Boolean workload & 59,322.3 & 1.0015$\times$ \\
+Official upstream, identical Boolean workload & 59,059.6 & 1.000$\times$ \\
+Our submission, identical Boolean workload & 59,303.7 & 1.0041$\times$ \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -706,7 +707,7 @@ Our submission, identical Boolean workload & 59,322.3 & 1.0015$\times$ \\
 Item & Recorded value \\
 \midrule
 Repository & \url{https://github.com/Pratham-015/GEM} \\
-Git revision & \code{23fc43fac59f2ba6e349132e632cbcb062a1f39b}; dirty working tree \\
+Measured Git revision & \code{8c48130}; clean working tree at benchmark start \\
 GPU / compute capability & NVIDIA GeForce RTX 4050 Laptop GPU / 8.9 \\
 Driver / VRAM & 596.49 / 6,141 MiB \\
 CUDA compiler & CUDA 12.9, NVCC 12.9.86 \\
@@ -722,8 +723,12 @@ CUDA launch & 256 threads/block; cooperative production kernel \\
 
 \begin{verbatim}
 python3 verif/full_integration_test.py
-python3 benchmark/run_benchmarks.py --repetitions 7
+python3 benchmark/run_benchmarks.py --repetitions 7 --require-clean
 python3 benchmark/profile_boomerang_ncu.py
+python3 benchmark/profile_boomerang_ncu.py \
+  --workload boolean_heavy --skip-prepare
+python3 benchmark/profile_boomerang_ncu.py \
+  --workload upstream_boolean --skip-prepare
 python3 benchmark/profile_boomerang_ncu.py \
   --workload mixed_heterogeneous --skip-prepare
 python3 benchmark/profile_boomerang_ncu.py \
@@ -731,7 +736,7 @@ python3 benchmark/profile_boomerang_ncu.py \
 python3 benchmark/profile_boomerang_ncu.py \
   --workload occupancy_stress --blocks 16 --skip-prepare
 python3 benchmark/profile_block_sweep.py \
-  --workload occupancy_stress --repetitions 7
+  --workload occupancy_stress --repetitions 5 --warmup-runs 8
 \end{verbatim}
 
 Machine-readable results are in \path{benchmark/results/latest.json},
@@ -749,8 +754,7 @@ Machine-readable results are in \path{benchmark/results/latest.json},
 \toprule
 Limitation & Consequence / mitigation & Status \\
 \midrule
-No valid heterogeneous upstream differential & Native-preservation speedup cannot be claimed; repair the shredded golden flow and rerun equivalent RTL. & Open \\
-Dirty-tree measurements & Commit hash alone cannot reconstruct every measured byte; commit changes and rerun archival evidence. & Open \\
+Macro-preserved CARRY4 regression & The correctness-gated diagnostic runs at 0.1166$\times$ shredded upstream; macro dispatch and barriers dominate this graph. & Measured \\
 Two full Boolean walks per macro phase & Deep combinational macro levels incur repeated AIG work and grid barriers. & Measured \\
 Macro exchange uses global bit slots & Correct across blocks, but direct word-level macro forwarding is not implemented for non-fused edges. & Architectural limit \\
 124 registers/thread & Theoretical occupancy is 33.33\%; small grids achieve about 16.67\%. & Measured \\
@@ -799,12 +803,13 @@ RTL references, exact required-chain simulation, randomized production DAGs, and
 a wide multi-partition simulation all pass.
 
 Performance evidence is more limited.  The extension preserves Boolean-only
-throughput within 0.153\% of upstream and exposes a 3.163$\times$ useful scaling
+throughput within 0.413\% of upstream and exposes a 3.215$\times$ useful scaling
 gain on a 9-partition stress graph.  Nsight demonstrates low branch-target
 divergence but low absolute bandwidth and occupancy constrained by workload size
-and register use.  Because the heterogeneous shredded baseline failed correctness,
-the submission does not yet demonstrate a valid native-macro speedup over upstream
-GEM.  This is the most important performance-evidence gap before judging.
+and register use.  The correctness-gated 15-CARRY4 representation diagnostic
+measures an 88.3\% slowdown, so the submission does not demonstrate native-macro
+acceleration on that graph.  This is the most important performance risk before
+judging.
 
 % =========================================================
 \section{References and Project Sources}

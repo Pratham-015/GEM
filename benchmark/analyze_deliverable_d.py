@@ -43,7 +43,7 @@ def main():
              f"Every production row uses 12 untimed warm-up launches followed by {repetitions} measured launches in one initialized process; mutable SRAM, DSP, SRL, and input state is reset outside each timed interval.", "",
              "Timing uses a host monotonic clock around the production launch and a mandatory post-launch device synchronization. It therefore includes kernel-launch latency but excludes setup and transfers. CUDA-event timing is not implemented.", "",
              "## Environment", "",
-             f"- Commit: `{env['commit']}`", f"- Dirty during run: `{env['dirty']}`",
+             f"- Commit: `{env['commit'][:9]}`", f"- Dirty during run: `{env['dirty']}`",
              f"- GPU: `{env['gpu']}`", f"- CUDA/NVCC: `{env['cuda'].splitlines()[-1]}`",
              f"- Nsight Compute: `{env['ncu'].splitlines()[-1]}`",
              f"- Yosys: `{env['yosys']}`", f"- Rust: `{env['rust']}`",
@@ -175,7 +175,7 @@ def main():
         profile_commits = sorted({p.get("environment", {}).get("commit", "UNRECORDED")
                                   for p in profiles})
         lines += ["", "All rows profile `simulate_v1_noninteractive_simple_scan`, the production simulator kernel. Raw CSV and parsed JSON are stored beside this report.", "",
-                  f"Profiled commit(s): `{', '.join(profile_commits)}`.", "",
+                  f"Profiled commit(s): `{', '.join(commit[:9] for commit in profile_commits)}`.", "",
                   f"Observed DRAM utilization rounds to {min(dram_util):.2f}–{max(dram_util):.2f}% of peak while measured bandwidth is {min(bandwidths):.2f}–{max(bandwidths):.2f} MB/s, so these runs are not DRAM-bandwidth-bound. Achieved occupancy is {min(occupancies):.2f}–{max(occupancies):.2f}% versus {min(theoretical):.2f}–{max(theoretical):.2f}% theoretical. The launches use {registers[0]:.0f} registers/thread and {shared_bytes[0]:,.0f} shared bytes/block; registers limit residency to {register_limits[0]:.0f} blocks/SM.", "",
                   f"Branch-target divergence spans {min(p['summary']['derived_divergent_branch_targets_percent'] for p in profiles):.2f}–{max(p['summary']['derived_divergent_branch_targets_percent'] for p in profiles):.2f}%. Predicated lane utilization spans {min(p['summary']['predicated_thread_utilization_percent'] for p in profiles):.2f}–{max(p['summary']['predicated_thread_utilization_percent'] for p in profiles):.2f}%, so low branch divergence does not mean all lanes do useful work.", "",
                   "Sector/request values are measured transaction density, but mixed access widths prevent converting them into a defensible coalescing-efficiency percentage without instruction-level access classification."]
