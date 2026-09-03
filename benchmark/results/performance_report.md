@@ -12,8 +12,8 @@ Timing uses a host monotonic clock around the production launch and a mandatory 
 
 ## Environment
 
-- Commit: `619f7d4aed0d23ae969ea81d6818c5f2a3c69f23`
-- Dirty during run: `True`
+- Commit: `8c48130c29a46b486bda34432881711b84b0886e`
+- Dirty during run: `False`
 - GPU: `NVIDIA GeForce RTX 4050 Laptop GPU, 8.9, 596.49, 6141 MiB`
 - CUDA/NVCC: `Build cuda_12.9.r12.9/compiler.36037853_0`
 - Nsight Compute: `Version 2025.2.1.0 (build 35987062) (public-release)`
@@ -22,7 +22,7 @@ Timing uses a host monotonic clock around the production launch and a mandatory 
 - Build: `cargo build --release --features cuda`
 - CUDA blocks: `4`
 
-- Production CUDA compile command: `LC_ALL="C" "nvcc" "-Xcompiler" "-O3" "-Xcompiler" "-ffunction-sections" "-Xcompiler" "-fdata-sections" "-Xcompiler" "-fPIC" "-m64" "-I" "/home/pratham_sharma/gem/target/debug/build/gem-8c79d60a263ba35d/out/ucc_csrc_includes" "-Xcompiler" "-Wall" "-Xcompiler" "-Wextra" "-Xcompiler" "-Wall" "-std=c++14" "-gencode" "arch=compute_80,code=sm_80" "-gencode" "arch=compute_70,code=sm_70" "-arch=compute_50" "-code=sm_50,compute_50" "-lineinfo" "-maxrregcount=128" "-DCARGO_PKG_NAME=gem" "-DCARGO_PKG_VERSION=0.1.0" "-DCARGO_PKG_VERSION_MAJOR=0" "-DCARGO_PKG_VERSION_MINOR=1" "-DCARGO_PKG_VERSION_PATCH=0" "-DUCC_VERSION=0.2.6" "csrc/kernel_v1.cu"`
+- Production CUDA compile command: `LC_ALL="C" "nvcc" "-Xcompiler" "-O3" "-Xcompiler" "-ffunction-sections" "-Xcompiler" "-fdata-sections" "-Xcompiler" "-fPIC" "-m64" "-I" "/home/pratham_sharma/gem/target/release/build/gem-3c058311bbecb430/out/ucc_csrc_includes" "-Xcompiler" "-Wall" "-Xcompiler" "-Wextra" "-Xcompiler" "-Wall" "-std=c++14" "-gencode" "arch=compute_80,code=sm_80" "-gencode" "arch=compute_70,code=sm_70" "-arch=compute_50" "-code=sm_50,compute_50" "-lineinfo" "-maxrregcount=128" "-DCARGO_PKG_NAME=gem" "-DCARGO_PKG_VERSION=0.1.0" "-DCARGO_PKG_VERSION_MAJOR=0" "-DCARGO_PKG_VERSION_MINOR=1" "-DCARGO_PKG_VERSION_PATCH=0" "-DUCC_VERSION=0.2.6" "csrc/kernel_v1.cu"`
 
 ## Correctness gate
 
@@ -49,15 +49,15 @@ Every timed workload is separately checked against the independent Python event 
 
 | Workload | Blocks | Cycles | AIG gates | DSP | CARRY4 | SRLC32E | Median cycles/s | Mean | Min | Max | Stddev |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| boolean_heavy | 4 | 2000 | 507 | 0 | 0 | 0 | 82,113 | 81,227 | 78,877 | 82,217 | 1,529 |
-| dsp_heavy | 4 | 2000 | 4464 | 32 | 0 | 0 | 21,933 | 21,933 | 21,919 | 21,951 | 11 |
-| carry_heavy | 4 | 1000 | 2880 | 0 | 128 | 0 | 1,583 | 1,583 | 1,582 | 1,585 | 1 |
-| srl_heavy | 4 | 2000 | 576 | 0 | 0 | 128 | 43,057 | 43,097 | 42,936 | 43,306 | 160 |
-| scaling_small | 4 | 1000 | 1120 | 4 | 8 | 8 | 7,748 | 7,749 | 7,746 | 7,754 | 3 |
-| mixed_heterogeneous | 4 | 1000 | 3520 | 16 | 32 | 32 | 3,689 | 3,683 | 3,647 | 3,690 | 16 |
-| deep_dependency | 4 | 200 | 1981 | 0 | 64 | 0 | 472 | 472 | 472 | 472 | 0 |
-| large_scale | 4 | 200 | 8704 | 32 | 128 | 128 | 1,064 | 1,064 | 1,064 | 1,065 | 0 |
-| occupancy_stress | 16 | 1000 | 82385 | 1 | 1 | 1 | 16,725 | 16,717 | 16,669 | 16,739 | 23 |
+| boolean_heavy | 4 | 2000 | 507 | 0 | 0 | 0 | 78,478 | 78,471 | 78,380 | 78,561 | 66 |
+| dsp_heavy | 4 | 2000 | 4464 | 32 | 0 | 0 | 21,054 | 21,033 | 20,978 | 21,060 | 38 |
+| carry_heavy | 4 | 1000 | 2880 | 0 | 128 | 0 | 1,553 | 1,557 | 1,552 | 1,564 | 6 |
+| srl_heavy | 4 | 2000 | 576 | 0 | 0 | 128 | 42,168 | 42,261 | 42,108 | 42,462 | 160 |
+| scaling_small | 4 | 1000 | 1120 | 4 | 8 | 8 | 7,627 | 7,626 | 7,616 | 7,630 | 5 |
+| mixed_heterogeneous | 4 | 1000 | 3520 | 16 | 32 | 32 | 3,602 | 3,600 | 3,593 | 3,609 | 6 |
+| deep_dependency | 4 | 200 | 1981 | 0 | 64 | 0 | 463 | 463 | 463 | 463 | 0 |
+| large_scale | 4 | 200 | 8704 | 32 | 128 | 128 | 1,049 | 1,049 | 1,048 | 1,050 | 1 |
+| occupancy_stress | 16 | 1000 | 82385 | 1 | 1 | 1 | 16,785 | 16,674 | 16,502 | 16,802 | 149 |
 
 These are production GEM measurements, not isolated macro microkernels.
 
@@ -65,23 +65,23 @@ These are production GEM measurements, not isolated macro microkernels.
 
 | Workload | Synthesis (s) | Partition (s) |
 |---|---:|---:|
-| boolean_heavy | 2.615 | 0.078 |
-| dsp_heavy | 4.650 | 0.636 |
-| carry_heavy | 2.284 | 0.247 |
-| srl_heavy | 0.202 | 0.066 |
-| scaling_small | 0.542 | 0.079 |
-| mixed_heterogeneous | 3.150 | 0.431 |
-| deep_dependency | 0.625 | 0.177 |
-| large_scale | 12.408 | 2.531 |
-| occupancy_stress | 35.890 | 3.994 |
+| boolean_heavy | 3.584 | 0.138 |
+| dsp_heavy | 6.054 | 0.863 |
+| carry_heavy | 3.014 | 0.365 |
+| srl_heavy | 0.306 | 0.150 |
+| scaling_small | 0.754 | 0.164 |
+| mixed_heterogeneous | 4.961 | 0.704 |
+| deep_dependency | 1.010 | 0.282 |
+| large_scale | 17.975 | 3.600 |
+| occupancy_stress | 51.763 | 5.039 |
 
 ## Heterogeneous scaling
 
 | Scale | Actual cells | AIG gates | Macros | Median cycles/s | Mean elapsed/cycle (us) |
 |---|---:|---:|---:|---:|---:|
-| small | 1219 | 1120 | 20 | 7,748 | 129.06 |
-| medium | 3770 | 3520 | 80 | 3,689 | 271.10 |
-| large | 9340 | 8704 | 288 | 1,064 | 939.42 |
+| small | 1219 | 1120 | 20 | 7,627 | 131.11 |
+| medium | 3770 | 3520 | 80 | 3,602 | 277.61 |
+| large | 9340 | 8704 | 288 | 1,049 | 952.89 |
 
 Cycles/second falls as heterogeneous graph work per simulated cycle grows; these points test scaling, not a same-workload implementation speedup.
 
@@ -107,11 +107,11 @@ Both binaries execute the same macro-free gate-level netlist, zero input frames,
 
 | Workload | Cycles | Upstream GEM CPS | Big-GEM CPS | Speedup |
 |---|---:|---:|---:|---:|
-| boolean_heavy (static zero input) | 2000 | 57,973 | 57,956 | 1.000x |
+| boolean_heavy (static zero input) | 2000 | 59,060 | 59,304 | 1.004x |
 
-Upstream `9e913f9b5`: mean 58,807 CPS, standard deviation 1,089. Big-GEM `619f7d4ae`: mean 58,845 CPS, standard deviation 1,181.
+Upstream `9e913f9b5`: mean 59,074 CPS, standard deviation 188. Big-GEM `8c48130c2`: mean 59,214 CPS, standard deviation 173.
 
-Modified/upstream median ratio: **1.000x** (-0.0%).
+Modified/upstream median ratio: **1.004x** (+0.4%).
 
 ## Macro-preserved versus shredded experiment
 
@@ -126,10 +126,10 @@ Random changing-vector semantics are checked as RTL versus Icarus-simulated shre
 
 | Representation | Median cycles/s | Mean | Stddev |
 |---|---:|---:|---:|
-| Shredded, official upstream | 77,365 | 77,731 | 907 |
-| Macro-preserved, modified | 8,949 | 8,917 | 154 |
+| Shredded, official upstream | 77,929 | 70,275 | 10,209 |
+| Macro-preserved, modified | 9,085 | 9,063 | 108 |
 
-Representation-plus-implementation ratio: **0.116x** (-88.4%). This is not an implementation-only speedup.
+Representation-plus-implementation ratio: **0.117x** (-88.3%). This is not an implementation-only speedup.
 
 The result is a measured regression, not a claimed gain: macro dispatch and cooperative barriers cost more than the removed AIG work for this graph.
 
@@ -137,24 +137,24 @@ The result is a measured regression, not a claimed gain: macro dispatch and coop
 
 | Workload | Occupancy | Theoretical | Divergent targets | Uniform targets | Predicated threads | DRAM peak | DRAM MB/s | Load/store sectors/request |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| exact-chain | 16.67% | 33.33% | 3.76% | 96.24% | 70.09% | 0.00% | 6.69 | 6.63 / 2.89 |
-| mixed_heterogeneous | 16.67% | 33.33% | 1.21% | 98.79% | 75.15% | 0.00% | 2.08 | 7.35 / 3.73 |
-| large_scale | 16.67% | 33.33% | 1.08% | 98.92% | 75.58% | 0.00% | 3.03 | 7.52 / 3.70 |
-| occupancy_stress | 16.63% | 33.33% | 1.31% | 98.69% | 83.22% | 0.01% | 14.21 | 9.72 / 4.06 |
+| exact-chain | 16.65% | 33.33% | 3.76% | 96.24% | 70.09% | 0.00% | 5.58 | 6.63 / 2.89 |
+| mixed_heterogeneous | 16.67% | 33.33% | 1.21% | 98.79% | 75.16% | 0.00% | 1.90 | 7.36 / 3.73 |
+| large_scale | 16.67% | 33.33% | 1.08% | 98.92% | 75.59% | 0.00% | 2.77 | 7.52 / 3.70 |
+| occupancy_stress | 16.67% | 33.33% | 1.31% | 98.69% | 83.23% | 0.01% | 15.34 | 9.72 / 4.06 |
 
 All rows profile `simulate_v1_noninteractive_simple_scan`, the production simulator kernel. Raw CSV and parsed JSON are stored beside this report.
 
-Profiled commit(s): `619f7d4aed0d23ae969ea81d6818c5f2a3c69f23`.
+Profiled commit(s): `8c48130c29a46b486bda34432881711b84b0886e`.
 
-Observed DRAM utilization rounds to 0.00–0.01% of peak while measured bandwidth is 2.08–14.21 MB/s, so these runs are not DRAM-bandwidth-bound. Achieved occupancy is 16.63–16.67% versus 33.33–33.33% theoretical. The launches use 124 registers/thread and 16,640 shared bytes/block; registers limit residency to 2 blocks/SM.
+Observed DRAM utilization rounds to 0.00–0.01% of peak while measured bandwidth is 1.90–15.34 MB/s, so these runs are not DRAM-bandwidth-bound. Achieved occupancy is 16.65–16.67% versus 33.33–33.33% theoretical. The launches use 124 registers/thread and 16,640 shared bytes/block; registers limit residency to 2 blocks/SM.
 
-Branch-target divergence spans 1.08–3.76%. Predicated lane utilization spans 70.09–83.22%, so low branch divergence does not mean all lanes do useful work.
+Branch-target divergence spans 1.08–3.76%. Predicated lane utilization spans 70.09–83.23%, so low branch divergence does not mean all lanes do useful work.
 
 Sector/request values are measured transaction density, but mixed access widths prevent converting them into a defensible coalescing-efficiency percentage without instruction-level access classification.
 
 ### Controlled occupancy saturation
 
-On the same occupancy-stress graph, increasing the grid from 16 to 40 blocks raises achieved occupancy from 16.63% to 33.30% (the 33.33% register-limited ceiling). Kernel duration simultaneously grows by 1.45x, because only nine partitions perform useful work. This control proves the low 16-block occupancy is grid undersubscription; it does not claim that padding with idle blocks improves throughput.
+On the same occupancy-stress graph, increasing the grid from 16 to 40 blocks raises achieved occupancy from 16.67% to 33.29% (the 33.33% register-limited ceiling). Kernel duration simultaneously grows by 1.45x, because only nine partitions perform useful work. This control proves the low 16-block occupancy is grid undersubscription; it does not claim that padding with idle blocks improves throughput.
 
 ### Identical-Boolean baseline profile
 
@@ -162,8 +162,8 @@ Both profiles use the same Boolean netlist, zero inputs, 2,000 cycles, four bloc
 
 | Implementation | Kernel ms | Occupancy | Divergent targets | Predicated threads | DRAM MB/s | Registers/thread | Shared bytes/block |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Official upstream `9e913f9b5` | 41.801 | 16.66% | 1.94% | 88.55% | 17.35 | 90 | 4352 |
-| Modified `619f7d4ae` | 41.404 | 16.66% | 1.89% | 88.60% | 14.20 | 124 | 16640 |
+| Official upstream `9e913f9b5` | 41.848 | 16.78% | 1.94% | 88.53% | 11.82 | 90 | 4352 |
+| Modified `8c48130c2` | 41.430 | 16.67% | 1.89% | 88.61% | 13.55 | 124 | 16640 |
 
 The modified kernel is 1.010x as fast by profiled kernel duration on this macro-free control. It consumes 124 registers/thread and 16,640 shared bytes/block versus 90 and 4,352 upstream; the four-block grid is too small to expose the resulting residency difference in achieved occupancy.
 
