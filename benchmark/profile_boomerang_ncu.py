@@ -18,6 +18,8 @@ import sys
 import time
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+UPSTREAM_COMMIT = "9e913f9b5efc8b12027bfb374be8b1a0028df00a"
+UPSTREAM_ROOT = pathlib.Path("/tmp/gem-deliverable-d-upstream")
 CANDIDATE_METRICS = [
     "sm__warps_active.avg.pct_of_peak_sustained_active",
     "sm__sass_average_branch_targets_threads_uniform.pct",
@@ -112,7 +114,8 @@ def parse_raw_csv(output):
 
 def run(cmd, **kwargs):
     print("+", " ".join(map(str, cmd)), flush=True)
-    return subprocess.run([str(x) for x in cmd], cwd=ROOT, **kwargs)
+    cwd = kwargs.pop("cwd", ROOT)
+    return subprocess.run([str(x) for x in cmd], cwd=cwd, **kwargs)
 
 
 def numeric_values(values):
@@ -163,10 +166,27 @@ def prepare_generated(name):
     return item, gv, parts
 
 
+def ensure_upstream():
+    if not UPSTREAM_ROOT.exists():
+        run(["git", "worktree", "add", "--detach", UPSTREAM_ROOT,
+             UPSTREAM_COMMIT], check=True)
+    head = subprocess.check_output(
+        ["git", "rev-parse", "HEAD"], cwd=UPSTREAM_ROOT, text=True).strip()
+    if head != UPSTREAM_COMMIT:
+        raise SystemExit(f"refusing non-upstream worktree {UPSTREAM_ROOT}: {head}")
+    run(["git", "submodule", "update", "--init", "--recursive"],
+        cwd=UPSTREAM_ROOT, check=True)
+    run(["cargo", "build", "--release", "--features", "cuda", "--bin",
+         "cut_map_interactive", "--bin", "cuda_dummy_test"],
+        cwd=UPSTREAM_ROOT, check=True)
+    return UPSTREAM_ROOT
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--skip-prepare", action="store_true")
-    ap.add_argument("--workload", choices=["exact-chain", "mixed_heterogeneous", "large_scale",
+    ap.add_argument("--workload", choices=["exact-chain", "boolean_heavy", "upstream_boolean",
+                                            "mixed_heterogeneous", "large_scale",
                                             "occupancy_stress"],
                     default="exact-chain")
     ap.add_argument("--blocks", type=int,
@@ -200,6 +220,22 @@ def main():
                        "/tmp/gem_exact_chain.gemparts", "/tmp/gem_exact_chain_golden.vcd",
                        "/tmp/gem_exact_chain_ncu.vcd", "1", "--top-module", "exact_macro_chain",
                        "--input-vcd-scope", "tb_exact_macro_chain/dut"]
+    elif args.workload == "upstream_boolean":
+        upstream = ensure_upstream()
+        gv = ROOT / "benchmark/generated/artifacts/boolean_heavy.gv"
+        parts = ROOT / "benchmark/generated/artifacts/boolean_heavy.upstream.gemparts"
+        if not args.skip_prepare:
+            item, gv, _ = prepare_generated("boolean_heavy")
+            run([upstream / "target/release/cut_map_interactive", gv, parts,
+                 "--top-module", item["top"]], cwd=upstream, check=True)
+        else:
+            manifest = json.loads((ROOT / "benchmark/generated/workloads/manifest.json").read_text())
+            item = next(item for item in manifest if item["name"] == "boolean_heavy")
+            require_files([upstream / "target/release/cuda_dummy_test", gv, parts],
+                          "Run the full Deliverable-D benchmark first.")
+        blocks = args.blocks if args.blocks is not None else 4
+        application = [upstream / "target/release/cuda_dummy_test", gv, parts,
+                       str(blocks), str(item["cycles"]), "--top-module", item["top"]]
     else:
         if args.skip_prepare:
             manifest = json.loads((ROOT / "benchmark/generated/workloads/manifest.json").read_text())
@@ -214,9 +250,11 @@ def main():
             item, gv, parts = prepare_generated(args.workload)
         blocks = args.blocks if args.blocks is not None else (
             16 if args.workload == "occupancy_stress" else 4)
+        profile_seed = 0 if args.workload == "boolean_heavy" else item["seed"]
+        profile_warmups = 1 if args.workload == "boolean_heavy" else 0
         application = ["target/release/cuda_dummy_test", gv, parts, str(blocks), str(item["cycles"]),
-                       "--top-module", item["top"], "--warmup-runs", "0",
-                       "--repetitions", "1", "--seed", str(item["seed"])]
+                       "--top-module", item["top"], "--warmup-runs", str(profile_warmups),
+                       "--repetitions", "1", "--seed", str(profile_seed)]
     metrics, query_output = supported_metrics()
     if not metrics:
         if "ERR_NVGPUCTRPERM" in query_output:
@@ -304,23 +342,33 @@ def main():
     metadata["summary"] = summary
     metadata["workload"] = args.workload
     metadata["profiled_kernel"] = kernel_names[0]
+    profiled_commit = (UPSTREAM_COMMIT if args.workload == "upstream_boolean" else
+                       subprocess.check_output(
+                           ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip())
+    profiled_tree = UPSTREAM_ROOT if args.workload == "upstream_boolean" else ROOT
     metadata["environment"] = {
         "timestamp_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        "commit": subprocess.check_output(
-            ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
+        "commit": profiled_commit,
         "dirty": bool(subprocess.check_output(
-            ["git", "status", "--porcelain"], cwd=ROOT, text=True).strip()),
+            ["git", "status", "--porcelain"], cwd=profiled_tree, text=True).strip()),
         "ncu": subprocess.check_output(["ncu", "--version"], text=True).strip(),
         "gpu": subprocess.check_output(
             ["nvidia-smi", "--query-gpu=name,driver_version,compute_cap",
              "--format=csv,noheader"], text=True).strip(),
     }
+    executable = pathlib.Path(application[0])
+    if not executable.is_absolute():
+        executable = ROOT / executable
+    kernel_source = ((UPSTREAM_ROOT if args.workload == "upstream_boolean" else ROOT)
+                     / "csrc/kernel_v1_impl.cuh")
     metadata["sha256"] = {
         "raw_csv": sha256_file(output_path),
-        "kernel_source": sha256_file(ROOT / "csrc/kernel_v1_impl.cuh"),
-        "macro_source": sha256_file(ROOT / "csrc/gem_macros.cuh"),
-        "executable": sha256_file(ROOT / application[0]),
+        "kernel_source": sha256_file(kernel_source),
+        "executable": sha256_file(executable),
     }
+    macro_source = ROOT / "csrc/gem_macros.cuh"
+    if args.workload != "upstream_boolean" and macro_source.exists():
+        metadata["sha256"]["macro_source"] = sha256_file(macro_source)
     metadata_path = ROOT / f"benchmark/nsight_{stem}.json"
     metadata_path.write_text(json.dumps(metadata, indent=2) + "\n")
     status.write_text(

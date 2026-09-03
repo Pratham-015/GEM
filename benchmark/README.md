@@ -60,14 +60,21 @@ This limitation is recorded rather than hidden or corrected after measurement.
 
 ```shell
 python3 benchmark/profile_boomerang_ncu.py
+python3 benchmark/profile_boomerang_ncu.py --workload boolean_heavy
+python3 benchmark/profile_boomerang_ncu.py --workload upstream_boolean
 python3 benchmark/profile_boomerang_ncu.py --workload mixed_heterogeneous
 python3 benchmark/profile_boomerang_ncu.py --workload large_scale
-python3 benchmark/profile_block_sweep.py
+python3 benchmark/profile_boomerang_ncu.py --workload occupancy_stress
+python3 benchmark/profile_boomerang_ncu.py --workload occupancy_stress --blocks 40 --profile-name occupancy_stress_40b
+python3 benchmark/profile_block_sweep.py --workload occupancy_stress --repetitions 5 --warmup-runs 8
 ```
 
 The profiler first queries metrics supported by the installed Nsight Compute
-and then targets the production simulator kernel on exact-chain, mixed, and
-large workloads. It stores raw CSV plus parsed JSON. If NVIDIA performance-counter
+and then targets the production simulator kernel. The Boolean pair profiles
+the same netlist, zero input, cycle count, and block count on official upstream
+and modified GEM. The 16/40-block occupancy pair separates useful-partition
+scaling from artificial occupancy produced by idle blocks. Source, executable,
+and raw-CSV hashes are stored with the parsed JSON. If NVIDIA performance-counter
 permissions are disabled, it exits 2 and writes the exact blocker to
 `benchmark/nsight_boomerang_status.md`; it never substitutes invented values.
 

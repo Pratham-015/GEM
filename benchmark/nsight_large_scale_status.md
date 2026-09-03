@@ -8,11 +8,11 @@ VERIFIED on the production simulator kernel.
 - Resources: `124` registers/thread, `16640` shared bytes/block
 - Uniform branch targets: `98.92%`
 - Derived divergent branch targets: `1.08%`
-- Predicated-on threads per instruction: `75.57%`
+- Predicated-on threads per instruction: `75.58%`
 - DRAM peak utilization: `0.00%`
-- DRAM bandwidth: `2.96 MB/s`
+- DRAM bandwidth: `3.03 MB/s`
 - Global load/store sectors per request: `7.52` / `3.70`
-- Profiled kernel duration: `308.031 ms`
+- Profiled kernel duration: `308.035 ms`
 
 Metrics: `sm__warps_active.avg.pct_of_peak_sustained_active, sm__sass_average_branch_targets_threads_uniform.pct, sm__average_thread_inst_executed_pred_on_per_inst_executed_realtime.pct, sm__sass_branch_targets_threads_divergent.sum, sm__sass_branch_targets_threads_uniform.sum, dram__throughput.avg.pct_of_peak_sustained_elapsed, dram__bytes.sum, dram__bytes.sum.per_second, l1tex__average_t_sectors_per_request_pipe_lsu_mem_global_op_ld.ratio, l1tex__average_t_sectors_per_request_pipe_lsu_mem_global_op_st.ratio, gpu__time_duration.sum`
 

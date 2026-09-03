@@ -179,10 +179,38 @@ def main():
                   f"Observed DRAM utilization rounds to {min(dram_util):.2f}–{max(dram_util):.2f}% of peak while measured bandwidth is {min(bandwidths):.2f}–{max(bandwidths):.2f} MB/s, so these runs are not DRAM-bandwidth-bound. Achieved occupancy is {min(occupancies):.2f}–{max(occupancies):.2f}% versus {min(theoretical):.2f}–{max(theoretical):.2f}% theoretical. The launches use {registers[0]:.0f} registers/thread and {shared_bytes[0]:,.0f} shared bytes/block; registers limit residency to {register_limits[0]:.0f} blocks/SM.", "",
                   f"Branch-target divergence spans {min(p['summary']['derived_divergent_branch_targets_percent'] for p in profiles):.2f}–{max(p['summary']['derived_divergent_branch_targets_percent'] for p in profiles):.2f}%. Predicated lane utilization spans {min(p['summary']['predicated_thread_utilization_percent'] for p in profiles):.2f}–{max(p['summary']['predicated_thread_utilization_percent'] for p in profiles):.2f}%, so low branch divergence does not mean all lanes do useful work.", "",
                   "Sector/request values are measured transaction density, but mixed access widths prevent converting them into a defensible coalescing-efficiency percentage without instruction-level access classification."]
+        saturation_path = ROOT / "benchmark/nsight_occupancy_stress_40b.json"
+        if saturation_path.exists():
+            saturation = json.loads(saturation_path.read_text())
+            if profile_is_current(saturation):
+                base = next((p for p in profiles if p["workload"] == "occupancy_stress"), None)
+                if base:
+                    base_s, sat_s = base["summary"], saturation["summary"]
+                    duration_ratio = sat_s["kernel_duration_ns"] / base_s["kernel_duration_ns"]
+                    lines += ["", "### Controlled occupancy saturation", "",
+                              f"On the same occupancy-stress graph, increasing the grid from {base_s['grid_blocks']:.0f} to {sat_s['grid_blocks']:.0f} blocks raises achieved occupancy from {base_s['achieved_occupancy_percent']:.2f}% to {sat_s['achieved_occupancy_percent']:.2f}% (the {sat_s['theoretical_occupancy_percent']:.2f}% register-limited ceiling). Kernel duration simultaneously grows by {duration_ratio:.2f}x, because only nine partitions perform useful work. This control proves the low 16-block occupancy is grid undersubscription; it does not claim that padding with idle blocks improves throughput."]
         if stale_profiles:
             lines += ["", "Excluded stale profiles whose recorded kernel/macro source hashes do not match the current files: " + ", ".join(stale_profiles) + "."]
     else:
         lines.append("NOT MEASURED with current production source hashes.")
+    upstream_profile_path = ROOT / "benchmark/nsight_upstream_boolean.json"
+    modified_profile_path = ROOT / "benchmark/nsight_boolean_heavy.json"
+    lines += ["", "### Identical-Boolean baseline profile", ""]
+    if upstream_profile_path.exists() and modified_profile_path.exists():
+        upstream_profile = json.loads(upstream_profile_path.read_text())
+        modified_profile = json.loads(modified_profile_path.read_text())
+        if profile_is_current(modified_profile):
+            u, m = upstream_profile["summary"], modified_profile["summary"]
+            lines += ["Both profiles use the same Boolean netlist, zero inputs, 2,000 cycles, four blocks, and the production simulator kernel. Nsight reports the final measured launch after each implementation's warm-up launch.", "",
+                      "| Implementation | Kernel ms | Occupancy | Divergent targets | Predicated threads | DRAM MB/s | Registers/thread | Shared bytes/block |",
+                      "|---|---:|---:|---:|---:|---:|---:|---:|",
+                      f"| Official upstream `{upstream_profile['environment']['commit'][:9]}` | {u['kernel_duration_ns']/1e6:.3f} | {u['achieved_occupancy_percent']:.2f}% | {u['derived_divergent_branch_targets_percent']:.2f}% | {u['predicated_thread_utilization_percent']:.2f}% | {u['dram_bytes_per_second']/1e6:.2f} | {u['registers_per_thread']:.0f} | {u['shared_memory_per_block_bytes']:.0f} |",
+                      f"| Modified `{modified_profile['environment']['commit'][:9]}` | {m['kernel_duration_ns']/1e6:.3f} | {m['achieved_occupancy_percent']:.2f}% | {m['derived_divergent_branch_targets_percent']:.2f}% | {m['predicated_thread_utilization_percent']:.2f}% | {m['dram_bytes_per_second']/1e6:.2f} | {m['registers_per_thread']:.0f} | {m['shared_memory_per_block_bytes']:.0f} |", "",
+                      f"The modified kernel is {u['kernel_duration_ns']/m['kernel_duration_ns']:.3f}x as fast by profiled kernel duration on this macro-free control. It consumes 124 registers/thread and 16,640 shared bytes/block versus 90 and 4,352 upstream; the four-block grid is too small to expose the resulting residency difference in achieved occupancy."]
+        else:
+            lines.append("NOT REPORTED: the modified baseline profile is stale relative to current production sources.")
+    else:
+        lines.append("NOT MEASURED")
     sweep_path = RESULTS / "block_sweep.json"
     lines += ["", "## Cooperative block-count sweep", ""]
     if sweep_path.exists():
@@ -199,7 +227,7 @@ def main():
               "- Cross-category throughput is not a macro speedup ratio because the workloads contain different graphs.",
               "- The upstream comparison is intentionally restricted to the identical Boolean netlist that both official upstream and modified GEM can execute.",
               "- Macro-preserved versus shredded measurements require different legal netlist representations and must be reported separately from implementation-only speedup.",
-              "- Nsight counter values apply to the three named production workloads and this RTX 4050; they are not universal GPU claims.", ""]
+              "- Nsight counter values apply to the four named production workloads and this RTX 4050; they are not universal GPU claims.", ""]
     (RESULTS / "performance_report.md").write_text("\n".join(lines), encoding="utf-8")
     print("report:", RESULTS / "performance_report.md")
 
