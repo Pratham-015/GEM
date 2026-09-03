@@ -23,25 +23,25 @@
       "kernel": "simulate_v1_noninteractive_simple_scan(unsigned long, unsigned long, unsigned long, const unsigned long *, const unsigned int *, unsigned int *, unsigned long, unsigned long, unsigned int *, unsigned long, unsigned long, unsigned long, const unsigned int *, const unsigned int *, unsigned long *, unsigned long *)",
       "metric": "sm__sass_average_branch_targets_threads_uniform.pct",
       "unit": "%",
-      "value": "96.24"
+      "value": "98.69"
     },
     {
       "kernel": "simulate_v1_noninteractive_simple_scan(unsigned long, unsigned long, unsigned long, const unsigned long *, const unsigned int *, unsigned int *, unsigned long, unsigned long, unsigned int *, unsigned long, unsigned long, unsigned long, const unsigned int *, const unsigned int *, unsigned long *, unsigned long *)",
       "metric": "sm__average_thread_inst_executed_pred_on_per_inst_executed_realtime.pct",
       "unit": "%",
-      "value": "70.09"
+      "value": "83.23"
     },
     {
       "kernel": "simulate_v1_noninteractive_simple_scan(unsigned long, unsigned long, unsigned long, const unsigned long *, const unsigned int *, unsigned int *, unsigned long, unsigned long, unsigned int *, unsigned long, unsigned long, unsigned long, const unsigned int *, const unsigned int *, unsigned long *, unsigned long *)",
       "metric": "sm__sass_branch_targets_threads_divergent.sum",
       "unit": "",
-      "value": "40133"
+      "value": "518016"
     },
     {
       "kernel": "simulate_v1_noninteractive_simple_scan(unsigned long, unsigned long, unsigned long, const unsigned long *, const unsigned int *, unsigned int *, unsigned long, unsigned long, unsigned int *, unsigned long, unsigned long, unsigned long, const unsigned int *, const unsigned int *, unsigned long *, unsigned long *)",
       "metric": "sm__sass_branch_targets_threads_uniform.sum",
       "unit": "",
-      "value": "1025992"
+      "value": "39154200"
     },
     {
       "kernel": "simulate_v1_noninteractive_simple_scan(unsigned long, unsigned long, unsigned long, const unsigned long *, const unsigned int *, unsigned int *, unsigned long, unsigned long, unsigned int *, unsigned long, unsigned long, unsigned long, const unsigned int *, const unsigned int *, unsigned long *, unsigned long *)",
@@ -53,31 +53,31 @@
       "kernel": "simulate_v1_noninteractive_simple_scan(unsigned long, unsigned long, unsigned long, const unsigned long *, const unsigned int *, unsigned int *, unsigned long, unsigned long, unsigned int *, unsigned long, unsigned long, unsigned long, const unsigned int *, const unsigned int *, unsigned long *, unsigned long *)",
       "metric": "dram__bytes.sum",
       "unit": "byte",
-      "value": "423424"
+      "value": "1498112"
     },
     {
       "kernel": "simulate_v1_noninteractive_simple_scan(unsigned long, unsigned long, unsigned long, const unsigned long *, const unsigned int *, unsigned int *, unsigned long, unsigned long, unsigned int *, unsigned long, unsigned long, unsigned long, const unsigned int *, const unsigned int *, unsigned long *, unsigned long *)",
       "metric": "dram__bytes.sum.per_second",
       "unit": "byte/s",
-      "value": "11852403.89"
+      "value": "15340520.16"
     },
     {
       "kernel": "simulate_v1_noninteractive_simple_scan(unsigned long, unsigned long, unsigned long, const unsigned long *, const unsigned int *, unsigned int *, unsigned long, unsigned long, unsigned int *, unsigned long, unsigned long, unsigned long, const unsigned int *, const unsigned int *, unsigned long *, unsigned long *)",
       "metric": "l1tex__average_t_sectors_per_request_pipe_lsu_mem_global_op_ld.ratio",
       "unit": "sector",
-      "value": "6.63"
+      "value": "9.72"
     },
     {
       "kernel": "simulate_v1_noninteractive_simple_scan(unsigned long, unsigned long, unsigned long, const unsigned long *, const unsigned int *, unsigned int *, unsigned long, unsigned long, unsigned int *, unsigned long, unsigned long, unsigned long, const unsigned int *, const unsigned int *, unsigned long *, unsigned long *)",
       "metric": "l1tex__average_t_sectors_per_request_pipe_lsu_mem_global_op_st.ratio",
       "unit": "sector",
-      "value": "2.89"
+      "value": "4.06"
     },
     {
       "kernel": "simulate_v1_noninteractive_simple_scan(unsigned long, unsigned long, unsigned long, const unsigned long *, const unsigned int *, unsigned int *, unsigned long, unsigned long, unsigned int *, unsigned long, unsigned long, unsigned long, const unsigned int *, const unsigned int *, unsigned long *, unsigned long *)",
       "metric": "gpu__time_duration.sum",
       "unit": "ns",
-      "value": "35724736"
+      "value": "97657184"
     },
     {
       "kernel": "simulate_v1_noninteractive_simple_scan(unsigned long, unsigned long, unsigned long, const unsigned long *, const unsigned int *, unsigned int *, unsigned long, unsigned long, unsigned int *, unsigned long, unsigned long, unsigned long, const unsigned int *, const unsigned int *, unsigned long *, unsigned long *)",
@@ -89,7 +89,7 @@
       "kernel": "simulate_v1_noninteractive_simple_scan(unsigned long, unsigned long, unsigned long, const unsigned long *, const unsigned int *, unsigned int *, unsigned long, unsigned long, unsigned int *, unsigned long, unsigned long, unsigned long, const unsigned int *, const unsigned int *, unsigned long *, unsigned long *)",
       "metric": "launch__grid_size",
       "unit": "",
-      "value": "1"
+      "value": "16"
     },
     {
       "kernel": "simulate_v1_noninteractive_simple_scan(unsigned long, unsigned long, unsigned long, const unsigned long *, const unsigned int *, unsigned int *, unsigned long, unsigned long, unsigned int *, unsigned long, unsigned long, unsigned long, const unsigned int *, const unsigned int *, unsigned long *, unsigned long *)",
@@ -137,10 +137,10 @@
       "kernel": "simulate_v1_noninteractive_simple_scan(unsigned long, unsigned long, unsigned long, const unsigned long *, const unsigned int *, unsigned int *, unsigned long, unsigned long, unsigned int *, unsigned long, unsigned long, unsigned long, const unsigned int *, const unsigned int *, unsigned long *, unsigned long *)",
       "metric": "launch__waves_per_multiprocessor",
       "unit": "",
-      "value": "0.03"
+      "value": "0.40"
     }
   ],
-  "raw_csv": "benchmark/nsight_boomerang.csv",
+  "raw_csv": "benchmark/profiles/nsight_occupancy_stress.csv",
   "command": [
     "ncu",
     "--target-processes",
@@ -154,51 +154,54 @@
     "--csv",
     "--page",
     "raw",
-    "target/release/cuda_test",
-    "/tmp/gem_exact_chain.gv",
-    "/tmp/gem_exact_chain.gemparts",
-    "/tmp/gem_exact_chain_golden.vcd",
-    "/tmp/gem_exact_chain_ncu.vcd",
-    "1",
+    "target/release/cuda_dummy_test",
+    "/home/pratham_sharma/gem/benchmark/generated/artifacts/occupancy_stress.gv",
+    "/home/pratham_sharma/gem/benchmark/generated/artifacts/occupancy_stress.gemparts",
+    "16",
+    "1000",
     "--top-module",
-    "exact_macro_chain",
-    "--input-vcd-scope",
-    "tb_exact_macro_chain/dut"
+    "occupancy_stress",
+    "--warmup-runs",
+    "0",
+    "--repetitions",
+    "1",
+    "--seed",
+    "20260902"
   ],
   "summary": {
     "achieved_occupancy_percent": 16.67,
-    "uniform_branch_targets_percent": 96.24,
-    "derived_divergent_branch_targets_percent": 3.764380349396178,
-    "predicated_thread_utilization_percent": 70.09,
+    "uniform_branch_targets_percent": 98.69,
+    "derived_divergent_branch_targets_percent": 1.3057400171444922,
+    "predicated_thread_utilization_percent": 83.23,
     "dram_peak_utilization_percent": 0.01,
-    "dram_bytes": 423424.0,
-    "dram_bytes_per_second": 11852403.89,
-    "global_load_sectors_per_request": 6.63,
-    "global_store_sectors_per_request": 2.89,
-    "kernel_duration_ns": 35724736.0,
+    "dram_bytes": 1498112.0,
+    "dram_bytes_per_second": 15340520.16,
+    "global_load_sectors_per_request": 9.72,
+    "global_store_sectors_per_request": 4.06,
+    "kernel_duration_ns": 97657184.0,
     "theoretical_occupancy_percent": 33.33,
-    "grid_blocks": 1.0,
+    "grid_blocks": 16.0,
     "threads_per_block": 256.0,
     "registers_per_thread": 124.0,
     "shared_memory_per_block_bytes": 16640.0,
     "resident_block_limit_registers": 2.0,
     "resident_block_limit_shared_memory": 3.0,
     "resident_block_limit_warps": 6.0,
-    "waves_per_sm": 0.03
+    "waves_per_sm": 0.4
   },
-  "workload": "exact-chain",
+  "workload": "occupancy_stress",
   "profiled_kernel": "simulate_v1_noninteractive_simple_scan(unsigned long, unsigned long, unsigned long, const unsigned long *, const unsigned int *, unsigned int *, unsigned long, unsigned long, unsigned int *, unsigned long, unsigned long, unsigned long, const unsigned int *, const unsigned int *, unsigned long *, unsigned long *)",
   "environment": {
-    "timestamp_utc": "2026-09-03T14:08:57.684561+00:00",
-    "commit": "ea1f6b38db51ff6c733d33748b190b3436228680",
+    "timestamp_utc": "2026-09-03T07:33:54.585228+00:00",
+    "commit": "8c48130c29a46b486bda34432881711b84b0886e",
     "dirty": true,
     "ncu": "NVIDIA (R) Nsight Compute Command Line Profiler\nCopyright (c) 2018-2025 NVIDIA Corporation\nVersion 2025.2.1.0 (build 35987062) (public-release)",
     "gpu": "NVIDIA GeForce RTX 4050 Laptop GPU, 596.49, 8.9"
   },
   "sha256": {
-    "raw_csv": "f537de8baad62bc20fb48f5ccae41e74c7837b8bc83dd16950c9443edbdc5056",
+    "raw_csv": "9c0f847dd4307a2ab1cac2598f60208ce8033740d61d49411a7798d896367410",
     "kernel_source": "b143dd34355e12a45204675d859c981457a259e556060fad19578c753fe44d58",
-    "executable": "939a34cd9d6004052f115cbc1e5236538f3785ad269c3b358d8f118aca8d11fd",
+    "executable": "fc5440f819313936e9dfd344c8ac3098dddc2d9ee132bc8520d54f6fad9beb28",
     "macro_source": "dc3068629b94f62aace20765d4ac6bfdc28aafca4770d560d50945e0a519c62c"
   }
 }

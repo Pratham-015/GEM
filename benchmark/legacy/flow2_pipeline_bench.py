@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-benchmark/flow2_pipeline_bench.py
+benchmark/legacy/flow2_pipeline_bench.py
 Flow 2: Full End-to-End GEM Pipeline Benchmark.
 - Uses real GEM binaries (cut_map_interactive + cuda_test).
 - Compares:
@@ -20,9 +20,9 @@ import csv
 import re
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-GEM_ROOT = os.path.abspath(os.path.join(HERE, ".."))
-SIM_OUT = os.path.join(GEM_ROOT, "verif", "sim_out")
-CSV_PIPELINE = os.path.join(HERE, "flow2_pipeline_bench.csv")
+GEM_ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
+SIM_OUT = os.path.join(GEM_ROOT, "benchmark", "temporary", "legacy_sim")
+CSV_PIPELINE = os.path.join(GEM_ROOT, "benchmark", "temporary", "legacy", "flow2_pipeline_bench.csv")
 
 def run_cmd(cmd, cwd=GEM_ROOT):
     p = subprocess.run(cmd, shell=True, capture_output=True, text=True, cwd=cwd)

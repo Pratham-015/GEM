@@ -125,7 +125,7 @@ def carry_representation_rtl():
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--output-dir", default="benchmark/generated/workloads")
+    ap.add_argument("--output-dir", default="benchmark/temporary/generated/workloads")
     args = ap.parse_args()
     out = Path(args.output_dir)
     out.mkdir(parents=True, exist_ok=True)

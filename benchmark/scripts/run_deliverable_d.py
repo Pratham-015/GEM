@@ -14,12 +14,14 @@ import subprocess
 import sys
 import time
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 BENCH = ROOT / "benchmark"
-GENERATED = BENCH / "generated"
+GENERATED = BENCH / "temporary/generated"
 RESULTS = BENCH / "results"
-if str(BENCH) not in sys.path:
-    sys.path.insert(0, str(BENCH))
+TEMP_RESULTS = BENCH / "temporary/results"
+WORKLOADS = BENCH / "workloads"
+if str(WORKLOADS) not in sys.path:
+    sys.path.insert(0, str(WORKLOADS))
 UPSTREAM_COMMIT = "9e913f9b5efc8b12027bfb374be8b1a0028df00a"
 SAMPLE_RE = re.compile(r"GEM_BENCH_SAMPLE repetition=(\d+) cycles=(\d+) elapsed_ms=([0-9.]+) cycles_per_second=([0-9.]+)")
 OLD_TIMER_RE = re.compile(r"simulation, Elapsed=([0-9.]+)ms")
@@ -234,12 +236,12 @@ def verify_prepared_workload(item):
         "result_width": width,
         "checked_values": int(match.group(1)),
         "mismatches": int(match.group(2)),
-        "reference_model": "benchmark/generated_workload_reference.py",
+        "reference_model": "benchmark/workloads/generated_workload_reference.py",
         "cuda_command": [str(x) for x in cuda_command],
         "compare_command": [str(x) for x in compare_command],
         "cuda_stdout": cuda_result.stdout,
         "compare_stdout": compare_result.stdout,
-        "sha256": {"reference_model": sha256_file(BENCH / "generated_workload_reference.py"),
+        "sha256": {"reference_model": sha256_file(WORKLOADS / "generated_workload_reference.py"),
                    "golden_vcd": sha256_file(golden),
                    "gpu_vcd": sha256_file(gpu)},
     }
@@ -530,10 +532,10 @@ def verify_correctness():
 
 
 def write_results(payload, publish=True):
-    destination = RESULTS if publish else RESULTS / "development"
+    destination = RESULTS if publish else TEMP_RESULTS / "development"
     destination.mkdir(parents=True, exist_ok=True)
     run_id = payload["environment"]["recorded_utc"].replace(":", "-")
-    run_dir = destination / "runs" / run_id
+    run_dir = TEMP_RESULTS / "runs" / run_id
     run_dir.mkdir(parents=True)
     raw = json.dumps(payload, indent=2) + "\n"
     (run_dir / "results.json").write_text(raw)

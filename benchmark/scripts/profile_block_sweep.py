@@ -10,7 +10,8 @@ import statistics
 import subprocess
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
+GENERATED = ROOT / "benchmark/temporary/generated"
 SAMPLE = re.compile(r"GEM_BENCH_SAMPLE .* cycles_per_second=([0-9.]+)")
 
 
@@ -22,12 +23,12 @@ def main():
     parser.add_argument("--repetitions", type=int, default=3)
     parser.add_argument("--warmup-runs", type=int, default=12)
     args = parser.parse_args()
-    manifest = json.loads((ROOT / "benchmark/generated/workloads/manifest.json").read_text())
+    manifest = json.loads((GENERATED / "workloads/manifest.json").read_text())
     item = next((item for item in manifest if item["name"] == args.workload), None)
     if item is None:
         raise SystemExit(f"unknown workload: {args.workload}")
-    netlist = ROOT / f"benchmark/generated/artifacts/{args.workload}.gv"
-    parts = ROOT / f"benchmark/generated/artifacts/{args.workload}.gemparts"
+    netlist = GENERATED / f"artifacts/{args.workload}.gv"
+    parts = GENERATED / f"artifacts/{args.workload}.gemparts"
     if not netlist.exists() or not parts.exists():
         raise SystemExit("run the Deliverable D benchmark or mixed Nsight preparation first")
     results = []

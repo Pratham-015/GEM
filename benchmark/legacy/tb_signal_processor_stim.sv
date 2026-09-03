@@ -44,4 +44,3 @@ module tb_signal_processor_stim;
         $finish;
     end
 endmodule
-

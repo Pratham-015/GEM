@@ -6,13 +6,13 @@ import sys
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 
 def main():
-    runner = [sys.executable, str(ROOT / "benchmark/run_deliverable_d.py"), *sys.argv[1:]]
+    runner = [sys.executable, str(ROOT / "benchmark/scripts/run_deliverable_d.py"), *sys.argv[1:]]
     subprocess.run(runner, cwd=ROOT, check=True)
-    subprocess.run([sys.executable, str(ROOT / "benchmark/analyze_deliverable_d.py")],
+    subprocess.run([sys.executable, str(ROOT / "benchmark/scripts/analyze_deliverable_d.py")],
                    cwd=ROOT, check=True)
 
 

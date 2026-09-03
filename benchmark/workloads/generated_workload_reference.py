@@ -11,7 +11,7 @@ import random
 import sys
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "verif/golden"))
 
 from carry4 import CARRY4  # noqa: E402
@@ -212,4 +212,3 @@ def write_reference_vcd(item, cycles, path):
             stream.write(f"b{event_data:064b} \"\n")
             stream.write(f"b{event_result:0{width}b} #\n")
         stream.write("$end\n")
-

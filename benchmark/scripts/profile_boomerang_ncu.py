@@ -17,7 +17,9 @@ import subprocess
 import sys
 import time
 
-ROOT = pathlib.Path(__file__).resolve().parents[1]
+ROOT = pathlib.Path(__file__).resolve().parents[2]
+GENERATED = ROOT / "benchmark/temporary/generated"
+PROFILES = ROOT / "benchmark/profiles"
 UPSTREAM_COMMIT = "9e913f9b5efc8b12027bfb374be8b1a0028df00a"
 UPSTREAM_ROOT = pathlib.Path("/tmp/gem-deliverable-d-upstream")
 CANDIDATE_METRICS = [
@@ -144,8 +146,8 @@ def prepare():
 
 
 def prepare_generated(name):
-    workloads = ROOT / "benchmark/generated/workloads"
-    artifacts = ROOT / "benchmark/generated/artifacts"
+    workloads = GENERATED / "workloads"
+    artifacts = GENERATED / "artifacts"
     workloads.mkdir(parents=True, exist_ok=True)
     artifacts.mkdir(parents=True, exist_ok=True)
     run([sys.executable, "benchmark/workloads/generate_workloads.py",
@@ -197,10 +199,11 @@ def main():
     ap.add_argument("--output")
     args = ap.parse_args()
     stem = args.profile_name or ("boomerang" if args.workload == "exact-chain" else args.workload)
-    status = ROOT / f"benchmark/nsight_{stem}_status.md"
-    output_path = pathlib.Path(args.output or f"benchmark/nsight_{stem}.csv")
+    output_path = pathlib.Path(args.output or f"benchmark/profiles/nsight_{stem}.csv")
     if not output_path.is_absolute():
         output_path = ROOT / output_path
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    status = output_path.parent / f"nsight_{stem}_status.md"
     if shutil.which("ncu") is None:
         status.write_text("# Nsight Boomerang Profile\n\nBLOCKED: `ncu` is not installed.\n")
         print("BLOCKED: ncu is not installed")
@@ -223,14 +226,14 @@ def main():
                        "--input-vcd-scope", "tb_exact_macro_chain/dut"]
     elif args.workload == "upstream_boolean":
         upstream = ensure_upstream()
-        gv = ROOT / "benchmark/generated/artifacts/boolean_heavy.gv"
-        parts = ROOT / "benchmark/generated/artifacts/boolean_heavy.upstream.gemparts"
+        gv = GENERATED / "artifacts/boolean_heavy.gv"
+        parts = GENERATED / "artifacts/boolean_heavy.upstream.gemparts"
         if not args.skip_prepare:
             item, gv, _ = prepare_generated("boolean_heavy")
             run([upstream / "target/release/cut_map_interactive", gv, parts,
                  "--top-module", item["top"]], cwd=upstream, check=True)
         else:
-            manifest = json.loads((ROOT / "benchmark/generated/workloads/manifest.json").read_text())
+            manifest = json.loads((GENERATED / "workloads/manifest.json").read_text())
             item = next(item for item in manifest if item["name"] == "boolean_heavy")
             require_files([upstream / "target/release/cuda_dummy_test", gv, parts],
                           "Run the full Deliverable-D benchmark first.")
@@ -239,10 +242,10 @@ def main():
                        str(blocks), str(item["cycles"]), "--top-module", item["top"]]
     else:
         if args.skip_prepare:
-            manifest = json.loads((ROOT / "benchmark/generated/workloads/manifest.json").read_text())
+            manifest = json.loads((GENERATED / "workloads/manifest.json").read_text())
             item = next(item for item in manifest if item["name"] == args.workload)
-            gv = ROOT / f"benchmark/generated/artifacts/{args.workload}.gv"
-            parts = ROOT / f"benchmark/generated/artifacts/{args.workload}.gemparts"
+            gv = GENERATED / f"artifacts/{args.workload}.gv"
+            parts = GENERATED / f"artifacts/{args.workload}.gemparts"
             if args.parts:
                 parts = pathlib.Path(args.parts).resolve()
             require_files([ROOT / "target/release/cuda_dummy_test", gv, parts],
@@ -262,7 +265,7 @@ def main():
             status.write_text(
                 "# Nsight Boomerang Profile\n\nBLOCKED: `ERR_NVGPUCTRPERM` prevents metric discovery and collection.\n\n"
                 "IMPACT: production-kernel occupancy, warp divergence, bandwidth, and coalescing remain unmeasured.\n\n"
-                "REQUIRED ACTION: enable NVIDIA performance counters and run `python3 benchmark/profile_boomerang_ncu.py`.\n")
+                "REQUIRED ACTION: enable NVIDIA performance counters and run `python3 benchmark/scripts/profile_boomerang_ncu.py`.\n")
             print("BLOCKED: ERR_NVGPUCTRPERM during metric discovery")
             return 2
         status.write_text("# Nsight Boomerang Profile\n\nFAILED: none of the requested metrics are supported.\n")
@@ -289,10 +292,10 @@ def main():
             "IMPACT: warp occupancy, branch uniformity, DRAM utilization, and "
             "global-load/store sectors per request remain unmeasured.\n\n"
             "REQUIRED ACTION: enable non-admin NVIDIA performance counters, then run:\n\n"
-            "```shell\npython3 benchmark/profile_boomerang_ncu.py\n```\n",
+            "```shell\npython3 benchmark/scripts/profile_boomerang_ncu.py\n```\n",
             encoding="utf-8",
         )
-        print("BLOCKED: ERR_NVGPUCTRPERM (details in benchmark/nsight_boomerang_status.md)")
+        print(f"BLOCKED: ERR_NVGPUCTRPERM (details in {display_path(status)})")
         return 2
     if result.returncode != 0:
         status.write_text(f"# Nsight Boomerang Profile\n\nFAILED (exit {result.returncode}).\n\n```\n{output[-4000:]}\n```\n")
@@ -370,7 +373,7 @@ def main():
     macro_source = ROOT / "csrc/gem_macros.cuh"
     if args.workload != "upstream_boolean" and macro_source.exists():
         metadata["sha256"]["macro_source"] = sha256_file(macro_source)
-    metadata_path = ROOT / f"benchmark/nsight_{stem}.json"
+    metadata_path = output_path.parent / f"nsight_{stem}.json"
     metadata_path.write_text(json.dumps(metadata, indent=2) + "\n")
     status.write_text(
         f"# Nsight {args.workload} Profile\n\nVERIFIED on the production simulator kernel.\n\n"

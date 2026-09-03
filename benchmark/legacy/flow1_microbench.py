@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-benchmark/flow1_microbench.py
+benchmark/legacy/flow1_microbench.py
 Flow 1: GPU CUDA Device Micro-Benchmark Suite for Deliverable D.
 - Measures raw hardware kernel execution speed of native 64-bit CUDA device functions (gem_macros.cuh)
   vs 1-bit boolean loop simulation on NVIDIA GPU.
@@ -15,9 +15,10 @@ import csv
 import shutil
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-GEM_ROOT = os.path.abspath(os.path.join(HERE, ".."))
-ENGINE_BIN = os.path.join(HERE, "bench_engine")
-CSV_MICRO = os.path.join(HERE, "flow1_microbench.csv")
+GEM_ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
+TEMP_DIR = os.path.join(GEM_ROOT, "benchmark", "temporary", "legacy")
+ENGINE_BIN = os.path.join(TEMP_DIR, "bench_engine")
+CSV_MICRO = os.path.join(TEMP_DIR, "flow1_microbench.csv")
 
 def cuda_arch():
     override = os.environ.get("GEM_CUDA_ARCH")
@@ -40,6 +41,7 @@ def run_cmd(cmd, cwd=GEM_ROOT):
 
 def build_engine():
     print("=== Flow 1: Compiling CUDA Device Micro-Benchmark Engine ===")
+    os.makedirs(TEMP_DIR, exist_ok=True)
     arch = cuda_arch()
     nvcc = shutil.which("nvcc") or os.path.join(os.environ.get("CUDA_HOME", "/usr/local/cuda"), "bin", "nvcc")
     cmd = (

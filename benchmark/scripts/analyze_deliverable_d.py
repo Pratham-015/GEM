@@ -5,8 +5,9 @@ import json
 import hashlib
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 RESULTS = ROOT / "benchmark/results"
+PROFILES = ROOT / "benchmark/profiles"
 
 
 def fmt(value):
@@ -57,7 +58,7 @@ def main():
     else:
         lines += ["NOT RUN — these measurements are development-only and must not be published as final results.", ""]
     lines += ["## Per-workload differential gates", "",
-              "Every timed workload is separately checked against the independent Python event model in `benchmark/generated_workload_reference.py`. The model uses the literal golden primitive models, not CUDA implementation code.", "",
+              "Every timed workload is separately checked against the independent Python event model in `benchmark/workloads/generated_workload_reference.py`. The model uses the literal golden primitive models, not CUDA implementation code.", "",
               "| Workload | Status | Random cycles | Result bits | Checked event values | Mismatches |",
               "|---|---|---:|---:|---:|---:|"]
     for row in data["results"]:
@@ -151,7 +152,7 @@ def main():
     profiles = []
     stale_profiles = []
     for stem in ("boomerang", "mixed_heterogeneous", "large_scale", "occupancy_stress"):
-        path = ROOT / f"benchmark/nsight_{stem}.json"
+        path = PROFILES / f"nsight_{stem}.json"
         if path.exists():
             profile = json.loads(path.read_text())
             if profile_is_current(profile):
@@ -179,7 +180,7 @@ def main():
                   f"Observed DRAM utilization rounds to {min(dram_util):.2f}–{max(dram_util):.2f}% of peak while measured bandwidth is {min(bandwidths):.2f}–{max(bandwidths):.2f} MB/s, so these runs are not DRAM-bandwidth-bound. Achieved occupancy is {min(occupancies):.2f}–{max(occupancies):.2f}% versus {min(theoretical):.2f}–{max(theoretical):.2f}% theoretical. The launches use {registers[0]:.0f} registers/thread and {shared_bytes[0]:,.0f} shared bytes/block; registers limit residency to {register_limits[0]:.0f} blocks/SM.", "",
                   f"Branch-target divergence spans {min(p['summary']['derived_divergent_branch_targets_percent'] for p in profiles):.2f}–{max(p['summary']['derived_divergent_branch_targets_percent'] for p in profiles):.2f}%. Predicated lane utilization spans {min(p['summary']['predicated_thread_utilization_percent'] for p in profiles):.2f}–{max(p['summary']['predicated_thread_utilization_percent'] for p in profiles):.2f}%, so low branch divergence does not mean all lanes do useful work.", "",
                   "Sector/request values are measured transaction density, but mixed access widths prevent converting them into a defensible coalescing-efficiency percentage without instruction-level access classification."]
-        saturation_path = ROOT / "benchmark/nsight_occupancy_stress_40b.json"
+        saturation_path = PROFILES / "nsight_occupancy_stress_40b.json"
         if saturation_path.exists():
             saturation = json.loads(saturation_path.read_text())
             if profile_is_current(saturation):
@@ -193,8 +194,8 @@ def main():
             lines += ["", "Excluded stale profiles whose recorded kernel/macro source hashes do not match the current files: " + ", ".join(stale_profiles) + "."]
     else:
         lines.append("NOT MEASURED with current production source hashes.")
-    upstream_profile_path = ROOT / "benchmark/nsight_upstream_boolean.json"
-    modified_profile_path = ROOT / "benchmark/nsight_boolean_heavy.json"
+    upstream_profile_path = PROFILES / "nsight_upstream_boolean.json"
+    modified_profile_path = PROFILES / "nsight_boolean_heavy.json"
     lines += ["", "### Identical-Boolean baseline profile", ""]
     if upstream_profile_path.exists() and modified_profile_path.exists():
         upstream_profile = json.loads(upstream_profile_path.read_text())

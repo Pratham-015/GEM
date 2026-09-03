@@ -140,7 +140,7 @@
       "value": "0.10"
     }
   ],
-  "raw_csv": "benchmark/nsight/nsight_mixed_heterogeneous.csv",
+  "raw_csv": "benchmark/profiles/nsight_mixed_heterogeneous.csv",
   "command": [
     "ncu",
     "--target-processes",

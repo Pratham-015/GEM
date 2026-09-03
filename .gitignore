@@ -11,7 +11,6 @@ EClub-High-Prep-2026.pdf
 High-Prep-report-unfinished-LaTeX.pdf
 High-Prep-Report.tex
 folder_structure.txt
-/benchmark/generated/
-/benchmark/results/runs/
-/benchmark/results/development/
+/benchmark/temporary/*
+!/benchmark/temporary/README.md
 /verif/sim_out/

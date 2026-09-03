@@ -431,7 +431,8 @@ def phase_nsight():
         print("  [SKIPPED] exact chain netlist not generated (requires Yosys 0.68)")
         return False
     result = subprocess.run(
-        [sys.executable, "benchmark/profile_boomerang_ncu.py", "--skip-prepare"],
+        [sys.executable, "benchmark/scripts/profile_boomerang_ncu.py", "--skip-prepare",
+         "--output", "benchmark/temporary/profiles/nsight_boomerang.csv"],
         cwd=GEM_ROOT, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
         timeout=300,
     )

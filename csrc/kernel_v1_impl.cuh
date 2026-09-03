@@ -566,17 +566,20 @@ __global__ void simulate_v1_noninteractive_simple_scan(
     // publish the old DSP PREG values before any AIG consumer runs.  The
     // descriptor level UINT_MAX uniquely selects purely registered DSPs;
     // no input gather is needed when state is not committed.
-    evaluate_macro_range<GEM_MACRO_DSP48E2>(dsp_first, num_dsp_macros,
-      macro_program_offsets, macro_program_data,
-      states_noninteractive + cycle_i * state_size,
-      states_noninteractive + (cycle_i + 1) * state_size,
-      macro_state_data, macro_io_data, shared_macro_fields, 0xffffffffu, false);
-    cooperative_groups::this_grid().sync();
+    if(num_dsp_macros != 0u) {
+      evaluate_macro_range<GEM_MACRO_DSP48E2>(dsp_first, num_dsp_macros,
+        macro_program_offsets, macro_program_data,
+        states_noninteractive + cycle_i * state_size,
+        states_noninteractive + (cycle_i + 1) * state_size,
+        macro_state_data, macro_io_data, shared_macro_fields, 0xffffffffu, false);
+      cooperative_groups::this_grid().sync();
+    }
 
     // Explicit heterogeneous schedule: settle every same-cycle macro level
     // in dependency order, commit all sequential state from one snapshot, and
     // repeat the level walk so new registered outputs become visible.
-    for(u32 edge_phase = 0; edge_phase < 2u; ++edge_phase) {
+    u32 edge_phases = (num_dsp_macros + num_srl_macros) != 0u ? 2u : 1u;
+    for(u32 edge_phase = 0; edge_phase < edge_phases; ++edge_phase) {
       for(usize macro_level = 0; macro_level <= num_macro_levels; ++macro_level) {
         for(usize stage_i = 0; stage_i < num_major_stages; ++stage_i) {
           simulate_block_v1(

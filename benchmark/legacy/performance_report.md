@@ -7,5 +7,5 @@ production-GEM/upstream speedup evidence. The current generated report is
 Reproduce it with:
 
 ```shell
-python3 benchmark/run_benchmarks.py --repetitions 7
+python3 benchmark/scripts/run_benchmarks.py --repetitions 7
 ```

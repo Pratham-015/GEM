@@ -266,7 +266,7 @@
       "value": "0.10"
     }
   ],
-  "raw_csv": "benchmark/nsight/nsight_boolean_heavy.csv",
+  "raw_csv": "benchmark/profiles/nsight_boolean_heavy.csv",
   "command": [
     "ncu",
     "--target-processes",
