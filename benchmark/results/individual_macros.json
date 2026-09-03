@@ -1,0 +1,547 @@
+{
+  "schema_version": 1,
+  "recorded_utc": "2026-09-03T17:13:46.612065+00:00",
+  "comparison": "same circuit behavior; shredded upstream versus macro-preserved Big-GEM",
+  "experimental_factor": "representation plus implementation",
+  "results": [
+    {
+      "name": "dsp_multiply_bank",
+      "macro": "DSP48E2",
+      "source": "benchmark/circuits/dsp48e2/multiply_bank/circuit.sv",
+      "cycles": 5000,
+      "blocks": 1,
+      "netlist_stats": {
+        "shredded": {
+          "cells": 37487,
+          "aig_cells": 36216,
+          "dsp": 0,
+          "carry4": 0,
+          "srlc32e": 0,
+          "cell_types": {
+            "AND2_11_1": 14025,
+            "AND2_01_0": 2135,
+            "AND2_00_0": 11403,
+            "AND2_11_0": 3738,
+            "AND2_10_0": 4915,
+            "INV": 927,
+            "DFF": 344
+          }
+        },
+        "preserved": {
+          "cells": 1118,
+          "aig_cells": 1008,
+          "dsp": 8,
+          "carry4": 0,
+          "srlc32e": 0,
+          "cell_types": {
+            "AND2_11_1": 336,
+            "AND2_00_0": 288,
+            "AND2_01_0": 336,
+            "AND2_10_0": 48,
+            "INV": 102,
+            "GEM_DSP48E2": 8
+          }
+        }
+      },
+      "sha256": {
+        "source": "3658daa0fde4f2a4018a8bea031593865ea9a4d44a4298fb73de5f382ad1eb0e",
+        "shredded_netlist": "c75eccaec32849af2bc6bdf6889f2fe967cdf8e45a553d4bb88547310c462a63",
+        "preserved_netlist": "9561e66b83df837e02b5fcdaedd5e15e36eeae2452b6f45e32e46c9b66b92517"
+      },
+      "upstream": {
+        "commit": "9e913f9b5efc8b12027bfb374be8b1a0028df00a",
+        "command": [
+          "/tmp/gem-deliverable-d-upstream/target/release/cuda_dummy_test",
+          "/home/pratham_sharma/gem/benchmark/temporary/generated/individual_macros/dsp_multiply_bank/shredded.gv",
+          "/home/pratham_sharma/gem/benchmark/temporary/generated/individual_macros/dsp_multiply_bank/shredded.upstream.gemparts",
+          "1",
+          "5000",
+          "--top-module",
+          "dsp_multiply_bank"
+        ],
+        "samples": [
+          {
+            "repetition": 0,
+            "cycles": 5000,
+            "elapsed_ms": 102.263472,
+            "cycles_per_second": 48893.31353819084
+          },
+          {
+            "repetition": 1,
+            "cycles": 5000,
+            "elapsed_ms": 102.271238,
+            "cycles_per_second": 48889.60080839151
+          },
+          {
+            "repetition": 2,
+            "cycles": 5000,
+            "elapsed_ms": 103.148882,
+            "cycles_per_second": 48473.6228163869
+          },
+          {
+            "repetition": 3,
+            "cycles": 5000,
+            "elapsed_ms": 103.144752,
+            "cycles_per_second": 48475.56373978194
+          },
+          {
+            "repetition": 4,
+            "cycles": 5000,
+            "elapsed_ms": 103.108618,
+            "cycles_per_second": 48492.55180590239
+          },
+          {
+            "repetition": 5,
+            "cycles": 5000,
+            "elapsed_ms": 103.143496,
+            "cycles_per_second": 48476.154036896325
+          },
+          {
+            "repetition": 6,
+            "cycles": 5000,
+            "elapsed_ms": 114.398994,
+            "cycles_per_second": 43706.67804998355
+          }
+        ],
+        "summary": {
+          "samples": 7,
+          "mean_cps": 47915.3549707905,
+          "median_cps": 48476.154036896325,
+          "min_cps": 43706.67804998355,
+          "max_cps": 48893.31353819084,
+          "stdev_cps": 1865.9969617096458,
+          "mean_elapsed_ms": 104.49706457142857
+        }
+      },
+      "modified": {
+        "commit": "906bf78e3fa17a57082731df9ea76782cee057d4",
+        "command": [
+          "/home/pratham_sharma/gem/target/release/cuda_dummy_test",
+          "/home/pratham_sharma/gem/benchmark/temporary/generated/individual_macros/dsp_multiply_bank/preserved.gv",
+          "/home/pratham_sharma/gem/benchmark/temporary/generated/individual_macros/dsp_multiply_bank/preserved.modified.gemparts",
+          "1",
+          "5000",
+          "--top-module",
+          "dsp_multiply_bank",
+          "--warmup-runs",
+          "1",
+          "--repetitions",
+          "1",
+          "--seed",
+          "0"
+        ],
+        "samples": [
+          {
+            "repetition": 0,
+            "cycles": 5000,
+            "elapsed_ms": 227.184926,
+            "cycles_per_second": 22008.502
+          },
+          {
+            "repetition": 1,
+            "cycles": 5000,
+            "elapsed_ms": 227.096991,
+            "cycles_per_second": 22017.024
+          },
+          {
+            "repetition": 2,
+            "cycles": 5000,
+            "elapsed_ms": 229.090324,
+            "cycles_per_second": 21825.453
+          },
+          {
+            "repetition": 3,
+            "cycles": 5000,
+            "elapsed_ms": 229.050919,
+            "cycles_per_second": 21829.207
+          },
+          {
+            "repetition": 4,
+            "cycles": 5000,
+            "elapsed_ms": 229.062945,
+            "cycles_per_second": 21828.061
+          },
+          {
+            "repetition": 5,
+            "cycles": 5000,
+            "elapsed_ms": 229.047119,
+            "cycles_per_second": 21829.569
+          },
+          {
+            "repetition": 6,
+            "cycles": 5000,
+            "elapsed_ms": 226.938929,
+            "cycles_per_second": 22032.359
+          }
+        ],
+        "summary": {
+          "samples": 7,
+          "mean_cps": 21910.025,
+          "median_cps": 21829.569,
+          "min_cps": 21825.453,
+          "max_cps": 22032.359,
+          "stdev_cps": 102.45922003899916,
+          "mean_elapsed_ms": 228.2103075714286
+        }
+      },
+      "ratio": 0.4503156125666448
+    },
+    {
+      "name": "carry4_independent_bank",
+      "macro": "CARRY4",
+      "source": "benchmark/circuits/carry4/independent_bank/circuit.sv",
+      "cycles": 5000,
+      "blocks": 1,
+      "netlist_stats": {
+        "shredded": {
+          "cells": 1389,
+          "aig_cells": 1324,
+          "dsp": 0,
+          "carry4": 0,
+          "srlc32e": 0,
+          "cell_types": {
+            "INV": 64,
+            "AND2_11_1": 560,
+            "AND2_01_0": 253,
+            "AND2_10_0": 247,
+            "AND2_00_0": 264,
+            "DFF": 1
+          }
+        },
+        "preserved": {
+          "cells": 129,
+          "aig_cells": 0,
+          "dsp": 0,
+          "carry4": 128,
+          "srlc32e": 0,
+          "cell_types": {
+            "DFF": 1,
+            "CARRY4": 128
+          }
+        }
+      },
+      "sha256": {
+        "source": "a771fa61ddc4f5d22204baa186160c4df72361434b1e5242a797453a02d637de",
+        "shredded_netlist": "be55224f2c9701fd11cf2922e65842781b9e42da4b48fc6ccfb2e87f38448a9b",
+        "preserved_netlist": "be988380bb409168f8c89c9089b16d0fe84a5a4588a3a6bf872eb53a3450c381"
+      },
+      "upstream": {
+        "commit": "9e913f9b5efc8b12027bfb374be8b1a0028df00a",
+        "command": [
+          "/tmp/gem-deliverable-d-upstream/target/release/cuda_dummy_test",
+          "/home/pratham_sharma/gem/benchmark/temporary/generated/individual_macros/carry4_independent_bank/shredded.gv",
+          "/home/pratham_sharma/gem/benchmark/temporary/generated/individual_macros/carry4_independent_bank/shredded.upstream.gemparts",
+          "1",
+          "5000",
+          "--top-module",
+          "carry4_independent_bank"
+        ],
+        "samples": [
+          {
+            "repetition": 0,
+            "cycles": 5000,
+            "elapsed_ms": 17.626059,
+            "cycles_per_second": 283670.89886627515
+          },
+          {
+            "repetition": 1,
+            "cycles": 5000,
+            "elapsed_ms": 17.521985,
+            "cycles_per_second": 285355.7973026458
+          },
+          {
+            "repetition": 2,
+            "cycles": 5000,
+            "elapsed_ms": 17.576911,
+            "cycles_per_second": 284464.0904195282
+          },
+          {
+            "repetition": 3,
+            "cycles": 5000,
+            "elapsed_ms": 17.647936,
+            "cycles_per_second": 283319.25047778955
+          },
+          {
+            "repetition": 4,
+            "cycles": 5000,
+            "elapsed_ms": 17.591329,
+            "cycles_per_second": 284230.9412779443
+          },
+          {
+            "repetition": 5,
+            "cycles": 5000,
+            "elapsed_ms": 17.659919,
+            "cycles_per_second": 283127.00641492184
+          },
+          {
+            "repetition": 6,
+            "cycles": 5000,
+            "elapsed_ms": 17.530158,
+            "cycles_per_second": 285222.75726208516
+          }
+        ],
+        "summary": {
+          "samples": 7,
+          "mean_cps": 284198.6774315986,
+          "median_cps": 284230.9412779443,
+          "min_cps": 283127.00641492184,
+          "max_cps": 285355.7973026458,
+          "stdev_cps": 881.2464330150179,
+          "mean_elapsed_ms": 17.593471
+        }
+      },
+      "modified": {
+        "commit": "906bf78e3fa17a57082731df9ea76782cee057d4",
+        "command": [
+          "/home/pratham_sharma/gem/target/release/cuda_dummy_test",
+          "/home/pratham_sharma/gem/benchmark/temporary/generated/individual_macros/carry4_independent_bank/preserved.gv",
+          "/home/pratham_sharma/gem/benchmark/temporary/generated/individual_macros/carry4_independent_bank/preserved.modified.gemparts",
+          "1",
+          "5000",
+          "--top-module",
+          "carry4_independent_bank",
+          "--warmup-runs",
+          "1",
+          "--repetitions",
+          "1",
+          "--seed",
+          "0"
+        ],
+        "samples": [
+          {
+            "repetition": 0,
+            "cycles": 5000,
+            "elapsed_ms": 58.670814,
+            "cycles_per_second": 85221.248
+          },
+          {
+            "repetition": 1,
+            "cycles": 5000,
+            "elapsed_ms": 58.661807,
+            "cycles_per_second": 85234.333
+          },
+          {
+            "repetition": 2,
+            "cycles": 5000,
+            "elapsed_ms": 77.297207,
+            "cycles_per_second": 64685.39
+          },
+          {
+            "repetition": 3,
+            "cycles": 5000,
+            "elapsed_ms": 58.721744,
+            "cycles_per_second": 85147.335
+          },
+          {
+            "repetition": 4,
+            "cycles": 5000,
+            "elapsed_ms": 58.632119,
+            "cycles_per_second": 85277.491
+          },
+          {
+            "repetition": 5,
+            "cycles": 5000,
+            "elapsed_ms": 58.693641,
+            "cycles_per_second": 85188.104
+          },
+          {
+            "repetition": 6,
+            "cycles": 5000,
+            "elapsed_ms": 58.641005,
+            "cycles_per_second": 85264.569
+          }
+        ],
+        "summary": {
+          "samples": 7,
+          "mean_cps": 82288.35285714286,
+          "median_cps": 85221.248,
+          "min_cps": 64685.39,
+          "max_cps": 85277.491,
+          "stdev_cps": 7762.303343948227,
+          "mean_elapsed_ms": 61.331191000000004
+        }
+      },
+      "ratio": 0.2998310022717185
+    },
+    {
+      "name": "srlc32e_parallel_bank",
+      "macro": "SRLC32E",
+      "source": "benchmark/circuits/srlc32e/parallel_bank/circuit.sv",
+      "cycles": 5000,
+      "blocks": 1,
+      "netlist_stats": {
+        "shredded": {
+          "cells": 20295,
+          "aig_cells": 17977,
+          "dsp": 0,
+          "carry4": 0,
+          "srlc32e": 0,
+          "cell_types": {
+            "INV": 270,
+            "AND2_11_1": 6487,
+            "AND2_01_0": 4283,
+            "AND2_00_0": 5853,
+            "AND2_10_0": 61,
+            "AND2_11_0": 1293,
+            "DFF": 2048
+          }
+        },
+        "preserved": {
+          "cells": 704,
+          "aig_cells": 576,
+          "dsp": 0,
+          "carry4": 0,
+          "srlc32e": 128,
+          "cell_types": {
+            "AND2_01_0": 256,
+            "AND2_11_1": 192,
+            "AND2_00_0": 128,
+            "SRLC32E": 128
+          }
+        }
+      },
+      "sha256": {
+        "source": "3f1bcf8ec3523316eecafea916543c64f58d7c4be9b0f6ab52968af3d10b775f",
+        "shredded_netlist": "6c9820ec27e7b9485b2a092d68bc9f0a893d11ee13b53d6be1dc66c1fe6702c5",
+        "preserved_netlist": "7a48b39ce8439df877632f8ecf2d9cb9b0555a4081f3719033d066aad3bbd9de"
+      },
+      "upstream": {
+        "commit": "9e913f9b5efc8b12027bfb374be8b1a0028df00a",
+        "command": [
+          "/tmp/gem-deliverable-d-upstream/target/release/cuda_dummy_test",
+          "/home/pratham_sharma/gem/benchmark/temporary/generated/individual_macros/srlc32e_parallel_bank/shredded.gv",
+          "/home/pratham_sharma/gem/benchmark/temporary/generated/individual_macros/srlc32e_parallel_bank/shredded.upstream.gemparts",
+          "1",
+          "5000",
+          "--top-module",
+          "srlc32e_parallel_bank"
+        ],
+        "samples": [
+          {
+            "repetition": 0,
+            "cycles": 5000,
+            "elapsed_ms": 60.951213,
+            "cycles_per_second": 82032.82188986131
+          },
+          {
+            "repetition": 1,
+            "cycles": 5000,
+            "elapsed_ms": 60.976382,
+            "cycles_per_second": 81998.9614995524
+          },
+          {
+            "repetition": 2,
+            "cycles": 5000,
+            "elapsed_ms": 60.960386,
+            "cycles_per_second": 82020.47801993905
+          },
+          {
+            "repetition": 3,
+            "cycles": 5000,
+            "elapsed_ms": 60.991225,
+            "cycles_per_second": 81979.00599635439
+          },
+          {
+            "repetition": 4,
+            "cycles": 5000,
+            "elapsed_ms": 61.003439,
+            "cycles_per_second": 81962.59230565674
+          },
+          {
+            "repetition": 5,
+            "cycles": 5000,
+            "elapsed_ms": 61.06559,
+            "cycles_per_second": 81879.17286969634
+          },
+          {
+            "repetition": 6,
+            "cycles": 5000,
+            "elapsed_ms": 60.999397,
+            "cycles_per_second": 81968.02338882137
+          }
+        ],
+        "summary": {
+          "samples": 7,
+          "mean_cps": 81977.29370998309,
+          "median_cps": 81979.00599635439,
+          "min_cps": 81879.17286969634,
+          "max_cps": 82032.82188986131,
+          "stdev_cps": 50.58072402701818,
+          "mean_elapsed_ms": 60.992518857142855
+        }
+      },
+      "modified": {
+        "commit": "906bf78e3fa17a57082731df9ea76782cee057d4",
+        "command": [
+          "/home/pratham_sharma/gem/target/release/cuda_dummy_test",
+          "/home/pratham_sharma/gem/benchmark/temporary/generated/individual_macros/srlc32e_parallel_bank/preserved.gv",
+          "/home/pratham_sharma/gem/benchmark/temporary/generated/individual_macros/srlc32e_parallel_bank/preserved.modified.gemparts",
+          "1",
+          "5000",
+          "--top-module",
+          "srlc32e_parallel_bank",
+          "--warmup-runs",
+          "1",
+          "--repetitions",
+          "1",
+          "--seed",
+          "0"
+        ],
+        "samples": [
+          {
+            "repetition": 0,
+            "cycles": 5000,
+            "elapsed_ms": 112.795752,
+            "cycles_per_second": 44327.911
+          },
+          {
+            "repetition": 1,
+            "cycles": 5000,
+            "elapsed_ms": 112.759698,
+            "cycles_per_second": 44342.084
+          },
+          {
+            "repetition": 2,
+            "cycles": 5000,
+            "elapsed_ms": 112.885409,
+            "cycles_per_second": 44292.704
+          },
+          {
+            "repetition": 3,
+            "cycles": 5000,
+            "elapsed_ms": 112.85544,
+            "cycles_per_second": 44304.466
+          },
+          {
+            "repetition": 4,
+            "cycles": 5000,
+            "elapsed_ms": 112.798917,
+            "cycles_per_second": 44326.667
+          },
+          {
+            "repetition": 5,
+            "cycles": 5000,
+            "elapsed_ms": 112.888182,
+            "cycles_per_second": 44291.616
+          },
+          {
+            "repetition": 6,
+            "cycles": 5000,
+            "elapsed_ms": 112.781172,
+            "cycles_per_second": 44333.641
+          }
+        ],
+        "summary": {
+          "samples": 7,
+          "mean_cps": 44317.012714285716,
+          "median_cps": 44326.667,
+          "min_cps": 44291.616,
+          "max_cps": 44342.084,
+          "stdev_cps": 20.454721718260373,
+          "mean_elapsed_ms": 112.82351
+        }
+      },
+      "ratio": 0.540707544099415
+    }
+  ]
+}
