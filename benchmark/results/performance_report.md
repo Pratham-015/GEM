@@ -135,37 +135,11 @@ The result is a measured regression, not a claimed gain: macro dispatch and coop
 
 ## Nsight Compute
 
-| Workload | Occupancy | Theoretical | Divergent targets | Uniform targets | Predicated threads | DRAM peak | DRAM MB/s | Load/store sectors/request |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| exact-chain | 16.65% | 33.33% | 3.76% | 96.24% | 70.09% | 0.00% | 5.58 | 6.63 / 2.89 |
-| mixed_heterogeneous | 16.67% | 33.33% | 1.21% | 98.79% | 75.16% | 0.00% | 1.90 | 7.36 / 3.73 |
-| large_scale | 16.67% | 33.33% | 1.08% | 98.92% | 75.59% | 0.00% | 2.77 | 7.52 / 3.70 |
-| occupancy_stress | 16.67% | 33.33% | 1.31% | 98.69% | 83.23% | 0.01% | 15.34 | 9.72 / 4.06 |
-
-All rows profile `simulate_v1_noninteractive_simple_scan`, the production simulator kernel. Raw CSV and parsed JSON are stored beside this report.
-
-Profiled commit(s): `8c48130c2`.
-
-Observed DRAM utilization rounds to 0.00–0.01% of peak while measured bandwidth is 1.90–15.34 MB/s, so these runs are not DRAM-bandwidth-bound. Achieved occupancy is 16.65–16.67% versus 33.33–33.33% theoretical. The launches use 124 registers/thread and 16,640 shared bytes/block; registers limit residency to 2 blocks/SM.
-
-Branch-target divergence spans 1.08–3.76%. Predicated lane utilization spans 70.09–83.23%, so low branch divergence does not mean all lanes do useful work.
-
-Sector/request values are measured transaction density, but mixed access widths prevent converting them into a defensible coalescing-efficiency percentage without instruction-level access classification.
-
-### Controlled occupancy saturation
-
-On the same occupancy-stress graph, increasing the grid from 16 to 40 blocks raises achieved occupancy from 16.67% to 33.29% (the 33.33% register-limited ceiling). Kernel duration simultaneously grows by 1.45x, because only nine partitions perform useful work. This control proves the low 16-block occupancy is grid undersubscription; it does not claim that padding with idle blocks improves throughput.
+NOT MEASURED with current production source hashes.
 
 ### Identical-Boolean baseline profile
 
-Both profiles use the same Boolean netlist, zero inputs, 2,000 cycles, four blocks, and the production simulator kernel. Nsight reports the final measured launch after each implementation's warm-up launch.
-
-| Implementation | Kernel ms | Occupancy | Divergent targets | Predicated threads | DRAM MB/s | Registers/thread | Shared bytes/block |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| Official upstream `9e913f9b5` | 41.848 | 16.78% | 1.94% | 88.53% | 11.82 | 90 | 4352 |
-| Modified `8c48130c2` | 41.430 | 16.67% | 1.89% | 88.61% | 13.55 | 124 | 16640 |
-
-The modified kernel is 1.010x as fast by profiled kernel duration on this macro-free control. It consumes 124 registers/thread and 16,640 shared bytes/block versus 90 and 4,352 upstream; the four-block grid is too small to expose the resulting residency difference in achieved occupancy.
+NOT MEASURED
 
 ## Cooperative block-count sweep
 

@@ -16,4 +16,4 @@ VERIFIED on the production simulator kernel.
 
 Metrics: `sm__warps_active.avg.pct_of_peak_sustained_active, sm__sass_average_branch_targets_threads_uniform.pct, sm__average_thread_inst_executed_pred_on_per_inst_executed_realtime.pct, sm__sass_branch_targets_threads_divergent.sum, sm__sass_branch_targets_threads_uniform.sum, dram__throughput.avg.pct_of_peak_sustained_elapsed, dram__bytes.sum, dram__bytes.sum.per_second, l1tex__average_t_sectors_per_request_pipe_lsu_mem_global_op_ld.ratio, l1tex__average_t_sectors_per_request_pipe_lsu_mem_global_op_st.ratio, gpu__time_duration.sum`
 
-Raw counters: [benchmark/nsight_upstream_boolean.csv](nsight_upstream_boolean.csv)
+Raw counters: [benchmark/nsight/nsight_upstream_boolean.csv](nsight_upstream_boolean.csv)

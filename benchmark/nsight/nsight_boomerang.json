@@ -17,67 +17,67 @@
       "kernel": "simulate_v1_noninteractive_simple_scan(unsigned long, unsigned long, unsigned long, const unsigned long *, const unsigned int *, unsigned int *, unsigned long, unsigned long, unsigned int *, unsigned long, unsigned long, unsigned long, const unsigned int *, const unsigned int *, unsigned long *, unsigned long *)",
       "metric": "sm__warps_active.avg.pct_of_peak_sustained_active",
       "unit": "%",
-      "value": "33.29"
+      "value": "16.65"
     },
     {
       "kernel": "simulate_v1_noninteractive_simple_scan(unsigned long, unsigned long, unsigned long, const unsigned long *, const unsigned int *, unsigned int *, unsigned long, unsigned long, unsigned int *, unsigned long, unsigned long, unsigned long, const unsigned int *, const unsigned int *, unsigned long *, unsigned long *)",
       "metric": "sm__sass_average_branch_targets_threads_uniform.pct",
       "unit": "%",
-      "value": "99.16"
+      "value": "96.24"
     },
     {
       "kernel": "simulate_v1_noninteractive_simple_scan(unsigned long, unsigned long, unsigned long, const unsigned long *, const unsigned int *, unsigned int *, unsigned long, unsigned long, unsigned int *, unsigned long, unsigned long, unsigned long, const unsigned int *, const unsigned int *, unsigned long *, unsigned long *)",
       "metric": "sm__average_thread_inst_executed_pred_on_per_inst_executed_realtime.pct",
       "unit": "%",
-      "value": "73.26"
+      "value": "70.09"
     },
     {
       "kernel": "simulate_v1_noninteractive_simple_scan(unsigned long, unsigned long, unsigned long, const unsigned long *, const unsigned int *, unsigned int *, unsigned long, unsigned long, unsigned int *, unsigned long, unsigned long, unsigned long, const unsigned int *, const unsigned int *, unsigned long *, unsigned long *)",
       "metric": "sm__sass_branch_targets_threads_divergent.sum",
       "unit": "",
-      "value": "782040"
+      "value": "40133"
     },
     {
       "kernel": "simulate_v1_noninteractive_simple_scan(unsigned long, unsigned long, unsigned long, const unsigned long *, const unsigned int *, unsigned int *, unsigned long, unsigned long, unsigned int *, unsigned long, unsigned long, unsigned long, const unsigned int *, const unsigned int *, unsigned long *, unsigned long *)",
       "metric": "sm__sass_branch_targets_threads_uniform.sum",
       "unit": "",
-      "value": "92261367"
+      "value": "1025992"
     },
     {
       "kernel": "simulate_v1_noninteractive_simple_scan(unsigned long, unsigned long, unsigned long, const unsigned long *, const unsigned int *, unsigned int *, unsigned long, unsigned long, unsigned int *, unsigned long, unsigned long, unsigned long, const unsigned int *, const unsigned int *, unsigned long *, unsigned long *)",
       "metric": "dram__throughput.avg.pct_of_peak_sustained_elapsed",
       "unit": "%",
-      "value": "0.01"
+      "value": "0.00"
     },
     {
       "kernel": "simulate_v1_noninteractive_simple_scan(unsigned long, unsigned long, unsigned long, const unsigned long *, const unsigned int *, unsigned int *, unsigned long, unsigned long, unsigned int *, unsigned long, unsigned long, unsigned long, const unsigned int *, const unsigned int *, unsigned long *, unsigned long *)",
       "metric": "dram__bytes.sum",
       "unit": "byte",
-      "value": "1448576"
+      "value": "199936"
     },
     {
       "kernel": "simulate_v1_noninteractive_simple_scan(unsigned long, unsigned long, unsigned long, const unsigned long *, const unsigned int *, unsigned int *, unsigned long, unsigned long, unsigned int *, unsigned long, unsigned long, unsigned long, const unsigned int *, const unsigned int *, unsigned long *, unsigned long *)",
       "metric": "dram__bytes.sum.per_second",
       "unit": "byte/s",
-      "value": "10215740.61"
+      "value": "5583891.08"
     },
     {
       "kernel": "simulate_v1_noninteractive_simple_scan(unsigned long, unsigned long, unsigned long, const unsigned long *, const unsigned int *, unsigned int *, unsigned long, unsigned long, unsigned int *, unsigned long, unsigned long, unsigned long, const unsigned int *, const unsigned int *, unsigned long *, unsigned long *)",
       "metric": "l1tex__average_t_sectors_per_request_pipe_lsu_mem_global_op_ld.ratio",
       "unit": "sector",
-      "value": "5.22"
+      "value": "6.63"
     },
     {
       "kernel": "simulate_v1_noninteractive_simple_scan(unsigned long, unsigned long, unsigned long, const unsigned long *, const unsigned int *, unsigned int *, unsigned long, unsigned long, unsigned int *, unsigned long, unsigned long, unsigned long, const unsigned int *, const unsigned int *, unsigned long *, unsigned long *)",
       "metric": "l1tex__average_t_sectors_per_request_pipe_lsu_mem_global_op_st.ratio",
       "unit": "sector",
-      "value": "4.06"
+      "value": "2.89"
     },
     {
       "kernel": "simulate_v1_noninteractive_simple_scan(unsigned long, unsigned long, unsigned long, const unsigned long *, const unsigned int *, unsigned int *, unsigned long, unsigned long, unsigned int *, unsigned long, unsigned long, unsigned long, const unsigned int *, const unsigned int *, unsigned long *, unsigned long *)",
       "metric": "gpu__time_duration.sum",
       "unit": "ns",
-      "value": "141798432"
+      "value": "35805856"
     },
     {
       "kernel": "simulate_v1_noninteractive_simple_scan(unsigned long, unsigned long, unsigned long, const unsigned long *, const unsigned int *, unsigned int *, unsigned long, unsigned long, unsigned int *, unsigned long, unsigned long, unsigned long, const unsigned int *, const unsigned int *, unsigned long *, unsigned long *)",
@@ -89,7 +89,7 @@
       "kernel": "simulate_v1_noninteractive_simple_scan(unsigned long, unsigned long, unsigned long, const unsigned long *, const unsigned int *, unsigned int *, unsigned long, unsigned long, unsigned int *, unsigned long, unsigned long, unsigned long, const unsigned int *, const unsigned int *, unsigned long *, unsigned long *)",
       "metric": "launch__grid_size",
       "unit": "",
-      "value": "40"
+      "value": "1"
     },
     {
       "kernel": "simulate_v1_noninteractive_simple_scan(unsigned long, unsigned long, unsigned long, const unsigned long *, const unsigned int *, unsigned int *, unsigned long, unsigned long, unsigned int *, unsigned long, unsigned long, unsigned long, const unsigned int *, const unsigned int *, unsigned long *, unsigned long *)",
@@ -137,10 +137,10 @@
       "kernel": "simulate_v1_noninteractive_simple_scan(unsigned long, unsigned long, unsigned long, const unsigned long *, const unsigned int *, unsigned int *, unsigned long, unsigned long, unsigned int *, unsigned long, unsigned long, unsigned long, const unsigned int *, const unsigned int *, unsigned long *, unsigned long *)",
       "metric": "launch__waves_per_multiprocessor",
       "unit": "",
-      "value": "1"
+      "value": "0.03"
     }
   ],
-  "raw_csv": "benchmark/nsight_occupancy_stress_40b.csv",
+  "raw_csv": "benchmark/nsight/nsight_boomerang.csv",
   "command": [
     "ncu",
     "--target-processes",
@@ -154,54 +154,51 @@
     "--csv",
     "--page",
     "raw",
-    "target/release/cuda_dummy_test",
-    "/home/pratham_sharma/gem/benchmark/generated/artifacts/occupancy_stress.gv",
-    "/home/pratham_sharma/gem/benchmark/generated/artifacts/occupancy_stress.gemparts",
-    "40",
-    "1000",
-    "--top-module",
-    "occupancy_stress",
-    "--warmup-runs",
-    "0",
-    "--repetitions",
+    "target/release/cuda_test",
+    "/tmp/gem_exact_chain.gv",
+    "/tmp/gem_exact_chain.gemparts",
+    "/tmp/gem_exact_chain_golden.vcd",
+    "/tmp/gem_exact_chain_ncu.vcd",
     "1",
-    "--seed",
-    "20260902"
+    "--top-module",
+    "exact_macro_chain",
+    "--input-vcd-scope",
+    "tb_exact_macro_chain/dut"
   ],
   "summary": {
-    "achieved_occupancy_percent": 33.29,
-    "uniform_branch_targets_percent": 99.16,
-    "derived_divergent_branch_targets_percent": 0.8405109241109368,
-    "predicated_thread_utilization_percent": 73.26,
-    "dram_peak_utilization_percent": 0.01,
-    "dram_bytes": 1448576.0,
-    "dram_bytes_per_second": 10215740.61,
-    "global_load_sectors_per_request": 5.22,
-    "global_store_sectors_per_request": 4.06,
-    "kernel_duration_ns": 141798432.0,
+    "achieved_occupancy_percent": 16.65,
+    "uniform_branch_targets_percent": 96.24,
+    "derived_divergent_branch_targets_percent": 3.764380349396178,
+    "predicated_thread_utilization_percent": 70.09,
+    "dram_peak_utilization_percent": 0.0,
+    "dram_bytes": 199936.0,
+    "dram_bytes_per_second": 5583891.08,
+    "global_load_sectors_per_request": 6.63,
+    "global_store_sectors_per_request": 2.89,
+    "kernel_duration_ns": 35805856.0,
     "theoretical_occupancy_percent": 33.33,
-    "grid_blocks": 40.0,
+    "grid_blocks": 1.0,
     "threads_per_block": 256.0,
     "registers_per_thread": 124.0,
     "shared_memory_per_block_bytes": 16640.0,
     "resident_block_limit_registers": 2.0,
     "resident_block_limit_shared_memory": 3.0,
     "resident_block_limit_warps": 6.0,
-    "waves_per_sm": 1.0
+    "waves_per_sm": 0.03
   },
-  "workload": "occupancy_stress",
+  "workload": "exact-chain",
   "profiled_kernel": "simulate_v1_noninteractive_simple_scan(unsigned long, unsigned long, unsigned long, const unsigned long *, const unsigned int *, unsigned int *, unsigned long, unsigned long, unsigned int *, unsigned long, unsigned long, unsigned long, const unsigned int *, const unsigned int *, unsigned long *, unsigned long *)",
   "environment": {
-    "timestamp_utc": "2026-09-03T07:34:10.915062+00:00",
+    "timestamp_utc": "2026-09-03T07:28:30.052415+00:00",
     "commit": "8c48130c29a46b486bda34432881711b84b0886e",
     "dirty": true,
     "ncu": "NVIDIA (R) Nsight Compute Command Line Profiler\nCopyright (c) 2018-2025 NVIDIA Corporation\nVersion 2025.2.1.0 (build 35987062) (public-release)",
     "gpu": "NVIDIA GeForce RTX 4050 Laptop GPU, 596.49, 8.9"
   },
   "sha256": {
-    "raw_csv": "3a80028d55422c536a58630a1430df11338c65e5a9b3e249c594c147e53e11d4",
+    "raw_csv": "651d93888e863f4c62159bfb9096fc543a272663da1f9eeb7e026b689724af45",
     "kernel_source": "b143dd34355e12a45204675d859c981457a259e556060fad19578c753fe44d58",
-    "executable": "fc5440f819313936e9dfd344c8ac3098dddc2d9ee132bc8520d54f6fad9beb28",
+    "executable": "939a34cd9d6004052f115cbc1e5236538f3785ad269c3b358d8f118aca8d11fd",
     "macro_source": "dc3068629b94f62aace20765d4ac6bfdc28aafca4770d560d50945e0a519c62c"
   }
 }
