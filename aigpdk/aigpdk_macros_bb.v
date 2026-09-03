@@ -55,6 +55,8 @@ module DSP48E2 #(
     input [8:0] OPMODE,
     input [3:0] ALUMODE,
     input [4:0] INMODE,
+    input [1:0] STATE,
+    input USE_PRE,
     input [2:0] CARRYINSEL,
     input CARRYIN, CARRYCASCIN, MULTSIGNIN,
     input CEA1, CEA2, CEAD, CEALUMODE, CEB1, CEB2, CEC,

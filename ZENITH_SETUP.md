@@ -15,7 +15,8 @@ submission-specific setup.
 - Yosys **0.68** built with the Slang SystemVerilog frontend (`read_slang`);
 - Python 3.10 or newer;
 - Icarus Verilog (`iverilog` and `vvp`) for differential testbenches;
-- Nsight Compute (`ncu`) for profiling; access to NVIDIA performance counters  must be enabled for Deliverable D profiling.
+- Nsight Compute (`ncu`) for profiling; access to NVIDIA performance counters
+  must be enabled for Deliverable D profiling.
 
 Xilinx UNISIM sources are optional. When available, set `UNISIM_DIR` to their
 location to enable comparisons with the vendor models. The repository does not
@@ -49,14 +50,15 @@ macro graphs, Cargo tests, and available Nsight counters.
 ## Run the production benchmarks
 
 ```shell
-python3 benchmark/scripts/run_benchmarks.py --repetitions 7 --skip-upstream
+python3 benchmark/scripts/run_benchmarks.py --repetitions 7
+python3 benchmark/scripts/benchmark_carry4.py --repetitions 7 --blocks 4
 ```
 
 Generated netlists, partitions, caches, and raw run directories are placed in
 `benchmark/temporary/` and are intentionally ignored by Git. Published benchmark
 summaries live in `benchmark/results/`, while Nsight evidence lives in
-`benchmark/profiles/`. See `benchmark/README.md` for individual profiler and
-block-sweep commands.
+`benchmark/profiles/`. See `benchmark/README.md` for the three profiler
+commands.
 
 ## Typical setup checks
 

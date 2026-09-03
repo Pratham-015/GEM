@@ -16,6 +16,8 @@
 #ifndef GEM_MACROS_CUH
 #define GEM_MACROS_CUH
 
+#include <stdint.h>
+
 #if defined(__CUDACC__)
 #define GEM_MACRO_FN __device__ __forceinline__
 #else
@@ -24,10 +26,10 @@
 
 namespace gem {
 
-typedef unsigned int       gem_u32;
-typedef int                gem_i32;
-typedef unsigned long long gem_u64;
-typedef long long          gem_i64;
+typedef uint32_t gem_u32;
+typedef int32_t  gem_i32;
+typedef uint64_t gem_u64;
+typedef int64_t  gem_i64;
 
 // ---------------------------------------------------------------------------
 // Macro taxonomy

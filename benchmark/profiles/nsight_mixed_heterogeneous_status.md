@@ -1,12 +1,9 @@
-# Mixed Circuit Profile
+# Nsight mixed_heterogeneous Profile
 
-This circuit uses DSP48E2, CARRY4, SRLC32E, and Boolean logic.
+- Uniform branch targets: `98.81%`
+- Warp divergence: `1.19%`
+- DRAM use: `0.00%` of peak
+- DRAM bandwidth: `1.98 MB/s`
+- Kernel time: `472.534 ms`
 
-- Warp divergence: `1.21%`
-- Uniform branches: `98.79%`
-- DRAM use: less than `0.01%` of peak
-- DRAM bandwidth: `1.90 MB/s`
-- Kernel time: `457.811 ms`
-
-The full output is in `nsight_mixed_heterogeneous.csv` and
-`nsight_mixed_heterogeneous.json`.
+The full output is in `nsight_mixed_heterogeneous.csv` and `nsight_mixed_heterogeneous.json`.

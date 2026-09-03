@@ -14,3 +14,4 @@ folder_structure.txt
 /benchmark/temporary/*
 /verif/sim_out/
 /report/
+runner/output

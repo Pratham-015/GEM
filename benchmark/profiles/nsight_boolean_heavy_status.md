@@ -1,12 +1,9 @@
-# Modified GEM Boolean Profile
+# Nsight boolean_heavy Profile
 
-This profile uses the production CUDA kernel.
-
+- Uniform branch targets: `98.11%`
 - Warp divergence: `1.89%`
-- Uniform branches: `98.11%`
 - DRAM use: `0.01%` of peak
-- DRAM bandwidth: `13.55 MB/s`
-- Kernel time: `41.430 ms`
+- DRAM bandwidth: `13.01 MB/s`
+- Kernel time: `45.635 ms`
 
-The full output is in `nsight_boolean_heavy.csv` and
-`nsight_boolean_heavy.json`.
+The full output is in `nsight_boolean_heavy.csv` and `nsight_boolean_heavy.json`.

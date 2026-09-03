@@ -1,0 +1,164 @@
+{
+  "schema_version": 1,
+  "recorded_utc": "2026-09-03T16:31:00.437966+00:00",
+  "experiment": "same combinational CARRY4 RTL, different synthesis representation and simulator",
+  "experimental_factor": "representation plus implementation; not an implementation-only speedup",
+  "blocks": 4,
+  "repetitions": 7,
+  "source": "benchmark/temporary/generated/workloads/carry_representation.sv",
+  "netlist_stats": {
+    "shredded": {
+      "cells": 850,
+      "aig_cells": 785,
+      "dsp": 0,
+      "carry4": 0,
+      "srlc32e": 0,
+      "cell_types": {
+        "INV": 64,
+        "AND2_01_0": 209,
+        "AND2_00_0": 222,
+        "AND2_11_1": 327,
+        "AND2_10_0": 14,
+        "AND2_11_0": 13,
+        "DFF": 1
+      }
+    },
+    "preserved": {
+      "cells": 709,
+      "aig_cells": 628,
+      "dsp": 0,
+      "carry4": 15,
+      "srlc32e": 0,
+      "cell_types": {
+        "INV": 65,
+        "AND2_01_0": 262,
+        "AND2_11_1": 239,
+        "AND2_00_0": 112,
+        "AND2_11_0": 15,
+        "DFF": 1,
+        "CARRY4": 15
+      }
+    }
+  },
+  "upstream_commit": "9e913f9b5efc8b12027bfb374be8b1a0028df00a",
+  "modified_commit": "58e6d547843f9eef5e4890d6b7ebe8a99e4e10ea",
+  "upstream_median_cps": 80033.3290795619,
+  "modified_median_cps": 17733.525,
+  "ratio": 0.2215767506356125,
+  "historical_ratio": 0.117,
+  "ratio_improvement": 1.8938183815009615,
+  "upstream_samples": [
+    {
+      "repetition": 0,
+      "cycles": 2000,
+      "elapsed_ms": 25.10108,
+      "cycles_per_second": 79677.84653090623
+    },
+    {
+      "repetition": 1,
+      "cycles": 2000,
+      "elapsed_ms": 24.989589,
+      "cycles_per_second": 80033.3290795619
+    },
+    {
+      "repetition": 2,
+      "cycles": 2000,
+      "elapsed_ms": 24.920867,
+      "cycles_per_second": 80254.02968524328
+    },
+    {
+      "repetition": 3,
+      "cycles": 2000,
+      "elapsed_ms": 24.968628,
+      "cycles_per_second": 80100.51653619093
+    },
+    {
+      "repetition": 4,
+      "cycles": 2000,
+      "elapsed_ms": 24.952868,
+      "cycles_per_second": 80151.10727953196
+    },
+    {
+      "repetition": 5,
+      "cycles": 2000,
+      "elapsed_ms": 25.158338,
+      "cycles_per_second": 79496.50728120435
+    },
+    {
+      "repetition": 6,
+      "cycles": 2000,
+      "elapsed_ms": 25.083187,
+      "cycles_per_second": 79734.6844322454
+    }
+  ],
+  "modified_samples": [
+    {
+      "repetition": 0,
+      "cycles": 2000,
+      "elapsed_ms": 112.620963,
+      "cycles_per_second": 17758.683
+    },
+    {
+      "repetition": 1,
+      "cycles": 2000,
+      "elapsed_ms": 112.566333,
+      "cycles_per_second": 17767.302
+    },
+    {
+      "repetition": 2,
+      "cycles": 2000,
+      "elapsed_ms": 113.41756,
+      "cycles_per_second": 17633.954
+    },
+    {
+      "repetition": 3,
+      "cycles": 2000,
+      "elapsed_ms": 112.644518,
+      "cycles_per_second": 17754.97
+    },
+    {
+      "repetition": 4,
+      "cycles": 2000,
+      "elapsed_ms": 112.780736,
+      "cycles_per_second": 17733.525
+    },
+    {
+      "repetition": 5,
+      "cycles": 2000,
+      "elapsed_ms": 112.78531,
+      "cycles_per_second": 17732.806
+    },
+    {
+      "repetition": 6,
+      "cycles": 2000,
+      "elapsed_ms": 112.827246,
+      "cycles_per_second": 17726.215
+    }
+  ],
+  "commands": {
+    "upstream": [
+      "/tmp/gem-deliverable-d-upstream/target/release/cuda_dummy_test",
+      "/home/pratham_sharma/gem/benchmark/temporary/generated/representation/carry_shredded.gv",
+      "/home/pratham_sharma/gem/benchmark/temporary/generated/representation/shredded.upstream.gemparts",
+      "4",
+      "2000",
+      "--top-module",
+      "carry_representation"
+    ],
+    "modified": [
+      "/home/pratham_sharma/gem/target/release/cuda_dummy_test",
+      "/home/pratham_sharma/gem/benchmark/temporary/generated/representation/carry_preserved.gv",
+      "/home/pratham_sharma/gem/benchmark/temporary/generated/representation/preserved.modified.gemparts",
+      "4",
+      "2000",
+      "--top-module",
+      "carry_representation",
+      "--warmup-runs",
+      "1",
+      "--repetitions",
+      "1",
+      "--seed",
+      "0"
+    ]
+  }
+}

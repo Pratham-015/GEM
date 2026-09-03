@@ -71,11 +71,12 @@ impl LeafPinProvider for AIGPDKLeafPins {
             ("CARRY4", "DI" | "S", Some(0..=3)) => Direction::I,
             ("CARRY4", "CO" | "O", Some(0..=3)) => Direction::O,
 
-            ("GEM_DSP48E2", "CLK" | "USE_PRE", None) => Direction::I,
+            ("GEM_DSP48E2", "CLK", None) => Direction::I,
+            ("GEM_DSP48E2" | "DSP48E2", "USE_PRE", None) => Direction::I,
             ("GEM_DSP48E2", "A" | "D", Some(0..=26)) => Direction::I,
             ("GEM_DSP48E2", "B", Some(0..=17)) => Direction::I,
             ("GEM_DSP48E2", "C", Some(0..=47)) => Direction::I,
-            ("GEM_DSP48E2", "STATE", Some(0..=1)) => Direction::I,
+            ("GEM_DSP48E2" | "DSP48E2", "STATE", Some(0..=1)) => Direction::I,
             ("GEM_DSP48E2", "P", Some(0..=47)) => Direction::O,
 
             ("DSP48E2", "CLK" | "CARRYIN" | "CARRYCASCIN" | "MULTSIGNIN" |
