@@ -15,7 +15,7 @@ retain the original two-phase behavior.
 
 All four differential comparisons passed: 64 randomized vectors for the
 shredded and preserved forms, plus the exact constant-zero input timed by both
-binaries. Full commands, seven timing samples per implementation, commits, and
+binaries. Full commands, seven timing samples per implementation, and
 netlist statistics are in `carry4_optimization.json`.
 
 This remains a representation-plus-implementation comparison, not an

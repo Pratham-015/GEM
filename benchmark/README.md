@@ -20,13 +20,14 @@ scratch data, and historical experiments cannot be confused.
 Run from the repository root:
 
 ```shell
-python3 benchmark/scripts/run_benchmarks.py --repetitions 7 --require-clean
+python3 benchmark/scripts/run_benchmarks.py --repetitions 7 --skip-upstream
 ```
+*(Add `--require-clean` when releasing from a clean Git commit).*
 
 This runs the correctness gate, generates deterministic RTL under
 `benchmark/temporary/generated/`, synthesizes and partitions it, measures the
 production CUDA simulator, and compares an identical macro-free netlist against
-official upstream commit `9e913f9b5`. Every workload first runs for 48 randomized
+official upstream GEM. Every workload first runs for 48 randomized
 cycles against `workloads/generated_workload_reference.py`.
 
 Publishable summaries are written to `results/latest.json`, `latest.csv`, and

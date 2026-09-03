@@ -12,5 +12,4 @@ High-Prep-report-unfinished-LaTeX.pdf
 High-Prep-Report.tex
 folder_structure.txt
 /benchmark/temporary/*
-!/benchmark/temporary/README.md
 /verif/sim_out/
