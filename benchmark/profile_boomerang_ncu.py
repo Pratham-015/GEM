@@ -168,6 +168,7 @@ def prepare_generated(name):
 
 def ensure_upstream():
     if not UPSTREAM_ROOT.exists():
+        run(["git", "worktree", "prune"], check=True)
         run(["git", "worktree", "add", "--detach", UPSTREAM_ROOT,
              UPSTREAM_COMMIT], check=True)
     head = subprocess.check_output(

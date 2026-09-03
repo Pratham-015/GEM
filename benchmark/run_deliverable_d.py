@@ -268,6 +268,10 @@ def measure_current(item, repetitions, blocks, seed, warmup_runs=12):
 def ensure_upstream_worktree():
     path = Path("/tmp/gem-deliverable-d-upstream")
     if not path.exists():
+        # A temporary directory may be removed while Git still retains its
+        # worktree registration.  Prune only stale registrations so the
+        # reproducible upstream checkout can be recreated.
+        run(["git", "worktree", "prune"])
         run(["git", "worktree", "add", "--detach", path, UPSTREAM_COMMIT])
     head = run(["git", "rev-parse", "HEAD"], cwd=path).stdout.strip()
     if head != UPSTREAM_COMMIT:
