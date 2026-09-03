@@ -398,7 +398,9 @@ impl FlatteningPart {
                     // stages and must appear in writeout slots so the kernel
                     // can gather them into the macro evaluation call.
                     for pin in &m.inputs {
-                        if pin.signal_iv > 1 {
+                        if pin.signal_iv > 1
+                            && !matches!(aig.drivers[pin.signal_iv >> 1], DriverType::Macro(_, _, _))
+                        {
                             comb_outputs_activations
                                 .entry(pin.signal_iv >> 1)
                                 .or_default()

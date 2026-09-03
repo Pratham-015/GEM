@@ -112,4 +112,3 @@ module demo_circuit (
     end
 
 endmodule
-

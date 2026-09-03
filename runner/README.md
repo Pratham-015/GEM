@@ -38,16 +38,8 @@ python3 runner/run_circuit.py path/to/your_circuit.sv \
 ---
 
 ## Example Test
-## Example Demonstration
 
 Run on the realistic multi-macro signal processor pipeline:
-Run on the custom heterogeneous pipeline:
-
-```bash
-python3 runner/run_circuit.py runner/demo_circuit.sv --cycles 2000
-```
-
-Or on the realistic multi-macro signal processor pipeline:
 
 ```bash
 python3 runner/run_circuit.py test3/signal_processor.sv --top signal_processor --cycles 2000
