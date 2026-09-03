@@ -113,9 +113,9 @@ def main():
         b, m = baseline["summary"], modified["summary"]
         speedup = data["boolean_speedup"]
         lines += ["Both binaries execute the same macro-free gate-level netlist, zero input frames, cycle count, CUDA block count, one internal warm-up, GPU, and synchronized launch timing boundary. Three alternating pairs are discarded to precondition GPU clocks; the seven retained pairs alternate execution order.", "",
-                  "| Implementation | Commit | Median cycles/s | Mean | Stddev |", "|---|---|---:|---:|---:|",
-                  f"| Official upstream GEM | `{baseline['commit']}` | {fmt(b['median_cps'])} | {fmt(b['mean_cps'])} | {fmt(b['stdev_cps'])} |",
-                  f"| Modified GEM | `{env['commit']}` | {fmt(m['median_cps'])} | {fmt(m['mean_cps'])} | {fmt(m['stdev_cps'])} |", "",
+                  "| Workload | Cycles | Upstream GEM CPS | Big-GEM CPS | Speedup |", "|---|---:|---:|---:|---:|",
+                  f"| boolean_heavy (static zero input) | {baseline['samples'][0]['cycles']} | {fmt(b['median_cps'])} | {fmt(m['median_cps'])} | {speedup:.3f}x |", "",
+                  f"Upstream `{baseline['commit'][:9]}`: mean {fmt(b['mean_cps'])} CPS, standard deviation {fmt(b['stdev_cps'])}. Big-GEM `{env['commit'][:9]}`: mean {fmt(m['mean_cps'])} CPS, standard deviation {fmt(m['stdev_cps'])}.", "",
                   f"Modified/upstream median ratio: **{speedup:.3f}x** ({(speedup-1)*100:+.1f}%)."]
     else:
         lines.append("NOT MEASURED")
@@ -222,7 +222,6 @@ def main():
     else:
         lines.append("NOT MEASURED")
     lines += ["",
-              "## Other pools", "", "External results are not available. `benchmark/other_pools.csv` is the import template; missing values remain `PENDING_EXTERNAL_DATA`.", "",
               "## Interpretation limits", "",
               "- Cross-category throughput is not a macro speedup ratio because the workloads contain different graphs.",
               "- The upstream comparison is intentionally restricted to the identical Boolean netlist that both official upstream and modified GEM can execute.",

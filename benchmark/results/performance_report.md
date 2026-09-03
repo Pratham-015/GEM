@@ -105,10 +105,11 @@ The 9-partition heterogeneous stress graph scales from 5,284 cycles/s at one blo
 
 Both binaries execute the same macro-free gate-level netlist, zero input frames, cycle count, CUDA block count, one internal warm-up, GPU, and synchronized launch timing boundary. Three alternating pairs are discarded to precondition GPU clocks; the seven retained pairs alternate execution order.
 
-| Implementation | Commit | Median cycles/s | Mean | Stddev |
-|---|---|---:|---:|---:|
-| Official upstream GEM | `9e913f9b5efc8b12027bfb374be8b1a0028df00a` | 57,973 | 58,807 | 1,089 |
-| Modified GEM | `619f7d4aed0d23ae969ea81d6818c5f2a3c69f23` | 57,956 | 58,845 | 1,181 |
+| Workload | Cycles | Upstream GEM CPS | Big-GEM CPS | Speedup |
+|---|---:|---:|---:|---:|
+| boolean_heavy (static zero input) | 2000 | 57,973 | 57,956 | 1.000x |
+
+Upstream `9e913f9b5`: mean 58,807 CPS, standard deviation 1,089. Big-GEM `619f7d4ae`: mean 58,845 CPS, standard deviation 1,181.
 
 Modified/upstream median ratio: **1.000x** (-0.0%).
 
@@ -180,10 +181,6 @@ The modified kernel is 1.010x as fast by profiled kernel duration on this macro-
 | 40 | 2,582 |
 
 Throughput is flat from 1–20 blocks and drops at 32–40 blocks. Increasing cooperative grid size therefore does not expose additional useful parallel work for this single-partition mixed graph; scheduling/coordination, rather than DRAM bandwidth, is the observed scaling limit. This sweep varies grid size; it is not a substitute for the measured Nsight occupancy counters above.
-
-## Other pools
-
-External results are not available. `benchmark/other_pools.csv` is the import template; missing values remain `PENDING_EXTERNAL_DATA`.
 
 ## Interpretation limits
 

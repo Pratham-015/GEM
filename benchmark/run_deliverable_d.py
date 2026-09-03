@@ -600,8 +600,7 @@ def main():
     payload = {"schema_version": 2, "metric_definition": "simulated cycles / synchronized production-kernel elapsed seconds",
                "timing_scope": "one cooperative production simulation launch; excludes parsing, allocation, H2D/D2H, synthesis, partitioning, and output",
                "environment": env, "correctness_gate": correctness,
-               "results": results, "upstream_baseline": None,
-               "other_pools": "benchmark/other_pools.csv"}
+               "results": results, "upstream_baseline": None}
     if not args.skip_upstream:
         boolean = next((item for item in prepared if item["name"] == "boolean_heavy"), None)
         if boolean:
