@@ -1,19 +1,12 @@
-# Nsight mixed_heterogeneous Profile
+# Mixed Circuit Profile
 
-VERIFIED on the production simulator kernel.
+This circuit uses DSP48E2, CARRY4, SRLC32E, and Boolean logic.
 
-- Achieved occupancy: `16.67%`
-- Theoretical occupancy: `33.33%`
-- Launch: `4` blocks x `256` threads, `0.10` waves/SM
-- Resources: `124` registers/thread, `16640` shared bytes/block
-- Uniform branch targets: `98.79%`
-- Derived divergent branch targets: `1.21%`
-- Predicated-on threads per instruction: `75.16%`
-- DRAM peak utilization: `0.00%`
+- Warp divergence: `1.21%`
+- Uniform branches: `98.79%`
+- DRAM use: less than `0.01%` of peak
 - DRAM bandwidth: `1.90 MB/s`
-- Global load/store sectors per request: `7.36` / `3.73`
-- Profiled kernel duration: `457.811 ms`
+- Kernel time: `457.811 ms`
 
-Metrics: `sm__warps_active.avg.pct_of_peak_sustained_active, sm__sass_average_branch_targets_threads_uniform.pct, sm__average_thread_inst_executed_pred_on_per_inst_executed_realtime.pct, sm__sass_branch_targets_threads_divergent.sum, sm__sass_branch_targets_threads_uniform.sum, dram__throughput.avg.pct_of_peak_sustained_elapsed, dram__bytes.sum, dram__bytes.sum.per_second, l1tex__average_t_sectors_per_request_pipe_lsu_mem_global_op_ld.ratio, l1tex__average_t_sectors_per_request_pipe_lsu_mem_global_op_st.ratio, gpu__time_duration.sum`
-
-Raw counters: [benchmark/profiles/nsight_mixed_heterogeneous.csv](nsight_mixed_heterogeneous.csv)
+The full output is in `nsight_mixed_heterogeneous.csv` and
+`nsight_mixed_heterogeneous.json`.

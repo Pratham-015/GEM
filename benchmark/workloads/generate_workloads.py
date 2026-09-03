@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate deterministic RTL workloads for Deliverable D."""
+"""Create the RTL circuits used by the benchmarks."""
 
 import argparse
 import json
@@ -73,7 +73,7 @@ def macro_rtl(name, dsp, carry, srl, boolean_gates=0, deep=False):
 
 
 def occupancy_rtl(name, outputs=8192, seed=20260902):
-    """Wide independent cones that expose real inter-block parallelism."""
+    """Make many separate outputs so several GPU blocks have work."""
     rng = random.Random(seed)
     lines = [
         f"module {name}(input wire clk,input wire [63:0] data,output wire [{outputs-1}:0] result);",
@@ -103,13 +103,7 @@ def occupancy_rtl(name, outputs=8192, seed=20260902):
 
 
 def carry_representation_rtl():
-    """Combinational CARRY4 experiment with an unscored clock anchor.
-
-    Official upstream GEM discovers VCD cycles through sequential cells.  The
-    heartbeat output keeps one ordinary DFF alive so upstream consumes every
-    stimulus edge; correctness and performance conclusions use only `result`,
-    whose path remains entirely combinational.
-    """
+    """Make the CARRY4 circuit used for the upstream speed test."""
     rtl = macro_rtl("carry_representation", 0, 15, 0, 256)
     rtl = rtl.replace(
         "output wire [63:0] result);",
@@ -145,14 +139,9 @@ def main():
         path = out / f"{name}.sv"
         path.write_text(rtl, encoding="utf-8")
         manifest.append({"name": name, "top": name, "cycles": cycles,
-                         "correctness_cycles": 48, "result_width": result_width,
                          "seed": 20260902, "source": str(path), "requested": requested})
 
-    # A single fused-width combinational carry chain is used for the fair
-    # representation experiment.  Official upstream executes its shredded
-    # AIG form while modified GEM executes the preserved CARRY4 form.  Keeping
-    # sequential DSP/SRL state out of this comparison avoids conflating macro
-    # preservation with the historical upstream VCD clocking convention.
+    # Use the same CARRY4 circuit for both versions of GEM.
     comparison = out / "carry_representation.sv"
     comparison.write_text(
         carry_representation_rtl(), encoding="utf-8"

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run and record the focused CARRY4 representation experiment."""
+"""Run the CARRY4 speed test."""
 
 import argparse
 import datetime
@@ -8,7 +8,7 @@ import pathlib
 import subprocess
 import sys
 
-from run_deliverable_d import ROOT, measure_macro_representation
+from run_benchmarks import ROOT, measure_macro_representation
 
 
 def main():
@@ -48,13 +48,6 @@ def main():
         "experimental_factor": result["experimental_factor"],
         "blocks": args.blocks,
         "repetitions": args.repetitions,
-        "correctness_status": result["correctness"]["status"],
-        "correctness": {
-            "randomized_shredded_iverilog_diff": result["correctness"]["randomized_shredded_iverilog_diff"],
-            "randomized_preserved_cuda_diff": result["correctness"]["randomized_preserved_cuda_diff"],
-            "upstream_diff": result["correctness"]["upstream_diff"],
-            "modified_diff": result["correctness"]["modified_diff"],
-        },
         "source": result["source"],
         "netlist_stats": result["netlist_stats"],
         "upstream_commit": upstream["commit"],

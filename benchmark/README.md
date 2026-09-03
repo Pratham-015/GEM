@@ -1,74 +1,69 @@
-# Benchmark suite
+# The Big-GEM Theory Benchmark
 
-The benchmark tree is split by purpose so production measurements, generated
-scratch data, and historical experiments cannot be confused.
+Event: Takneek PS - Zenith
 
-## Directory layout
+This folder contains the performance tests required by the problem statement.
+It measures simulation speed and collects Nsight Compute data.
 
-- `scripts/` — production benchmark, report, block-sweep, and Nsight entry points.
-- `workloads/` — deterministic RTL generator and independent Python reference model.
-- `results/` — checked-in production throughput evidence and generated report.
-- `profiles/` — checked-in Nsight Compute CSV, JSON, and status evidence.
-- `legacy/` — older microbenchmarks and simulation artifacts retained for provenance;
-  these are not official GEM speedup results.
-- `temporary/` — all generated RTL, netlists, partitions, caches, development
-  results, raw run directories, and temporary profiler output. Its contents are
-  ignored except for its README.
+## Setup
 
-## Production benchmark
+Run the commands from the repository root. The project needs:
 
-Run from the repository root:
+- a Linux system with an NVIDIA GPU;
+- the CUDA toolkit and `nvcc`;
+- Rust and Cargo;
+- Python 3;
+- Yosys 0.68 with SystemVerilog support; and
+- Nsight Compute (`ncu`) for the profile commands.
 
-```shell
-python3 benchmark/scripts/run_benchmarks.py --repetitions 7 --skip-upstream
+Build GEM before running the tests:
+
+```bash
+cargo build --release --features cuda
 ```
-*(Add `--require-clean` when releasing from a clean Git commit).*
 
-This runs the correctness gate, generates deterministic RTL under
-`benchmark/temporary/generated/`, synthesizes and partitions it, measures the
-production CUDA simulator, and compares an identical macro-free netlist against
-official upstream GEM. Every workload first runs for 48 randomized
-cycles against `workloads/generated_workload_reference.py`.
+## Folder contents
 
-Publishable summaries are written to `results/latest.json`, `latest.csv`, and
-`performance_report.md`. Timestamped raw runs and development-only runs are kept
-under `temporary/results/`. `--skip-correctness` never overwrites publishable
-evidence.
+- `scripts/run_benchmarks.py` runs the main speed test.
+- `scripts/benchmark_carry4.py` compares the CARRY4 version with upstream GEM.
+- `scripts/profile_ncu.py` collects memory and warp data with Nsight Compute.
+- `workloads/` creates the input circuits used by the speed test.
+- `results/` contains the saved speed results.
+- `profiles/` contains the saved Nsight Compute results.
+- `temporary/` is created during a run. Git ignores this folder.
 
-## CARRY4 representation comparison
+## Run the speed test
 
-The production runner synthesizes the same CARRY4 RTL twice: a shredded AIG for
-official upstream and a macro-preserved form for this implementation. Both forms
-are correctness checked before timing. The ratio is representation plus
-implementation performance, not an implementation-only speedup.
+From the repository root, run:
 
-Run the focused, reproducible experiment with:
+```bash
+python3 benchmark/scripts/run_benchmarks.py --repetitions 7
+```
 
-```shell
+The script measures cycles per second and runs the same Boolean circuit on
+upstream GEM. Generated files are placed in
+`benchmark/temporary/`.
+
+## Run the CARRY4 comparison
+
+```bash
 python3 benchmark/scripts/benchmark_carry4.py --repetitions 7 --blocks 4
 ```
 
-Its compact evidence is written to `results/carry4_optimization.json`.
+## Run Nsight Compute
 
-## Nsight Compute
+Use these three commands:
 
-```shell
-python3 benchmark/scripts/profile_boomerang_ncu.py
-python3 benchmark/scripts/profile_boomerang_ncu.py --workload boolean_heavy
-python3 benchmark/scripts/profile_boomerang_ncu.py --workload upstream_boolean
-python3 benchmark/scripts/profile_boomerang_ncu.py --workload mixed_heterogeneous
-python3 benchmark/scripts/profile_boomerang_ncu.py --workload large_scale
-python3 benchmark/scripts/profile_boomerang_ncu.py --workload occupancy_stress
-python3 benchmark/scripts/profile_boomerang_ncu.py --workload occupancy_stress --blocks 40 --profile-name occupancy_stress_40b
-python3 benchmark/scripts/profile_block_sweep.py --workload occupancy_stress --repetitions 5 --warmup-runs 8
+```bash
+python3 benchmark/scripts/profile_ncu.py --workload upstream_boolean
+python3 benchmark/scripts/profile_ncu.py --workload boolean_heavy
+python3 benchmark/scripts/profile_ncu.py --workload mixed_heterogeneous
 ```
 
-Profiles are written to `profiles/`. The profiler records unsupported metrics or
-permission failures explicitly; it does not invent zero-valued counters.
+The first two commands compare upstream GEM and this project on the same
+Boolean circuit. The third command profiles a circuit that uses DSP48E2,
+CARRY4, SRLC32E, and Boolean logic.
 
-## Legacy material
-
-`legacy/flow1_microbench.py` and `legacy/bench_engine.cu` form a standalone CUDA
-microbenchmark. `legacy/flow2_pipeline_bench.py` is an older structural
-experiment. They are retained for auditability but are not the official
-Deliverable D comparison.
+Nsight Compute needs permission to read NVIDIA performance counters. If the
+permission is missing, the script reports the error instead of saving fake
+values.

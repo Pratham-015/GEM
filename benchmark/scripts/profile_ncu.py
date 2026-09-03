@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""Profile the production heterogeneous Boomerang kernel with Nsight Compute.
-
-The script uses the exact-chain integration artifacts produced by
-verif/full_integration_test.py.  It never substitutes a micro-kernel.  A
-counter-permission failure is recorded explicitly and returns exit status 2.
-"""
+"""Run Nsight Compute on the GEM kernel."""
 import argparse
 import csv
 import datetime
@@ -45,7 +40,7 @@ EXTRA_COLUMNS = [
 
 
 def display_path(path):
-    """Return a stable repo-relative path when possible."""
+    """Show a path from the repository root when possible."""
     try:
         return str(path.relative_to(ROOT))
     except ValueError:
@@ -130,21 +125,6 @@ def numeric_values(values):
     return parsed
 
 
-def prepare():
-    run([sys.executable, "scripts/synthesize_macros.py", "--top", "exact_macro_chain",
-         "--output", "/tmp/gem_exact_chain.gv", "--json", "/tmp/gem_exact_chain.json",
-         "verif/rtl/test_designs/exact_macro_chain.sv"], check=True)
-    run(["iverilog", "-g2012", "-DGOLDEN", "-s", "tb_exact_macro_chain",
-         "-o", "/tmp/gem_exact_chain_ref.out", "verif/rtl/xilinx_macros_ref.v",
-         "verif/rtl/test_designs/exact_macro_chain.sv",
-         "verif/tb/tb_exact_macro_chain.sv"], check=True)
-    run(["vvp", "/tmp/gem_exact_chain_ref.out"], check=True)
-    run(["cargo", "build", "--release", "--features", "cuda",
-         "--bin", "cut_map_interactive", "--bin", "cuda_test"], check=True)
-    run(["target/release/cut_map_interactive", "/tmp/gem_exact_chain.gv",
-         "/tmp/gem_exact_chain.gemparts", "--top-module", "exact_macro_chain"], check=True)
-
-
 def prepare_generated(name):
     workloads = GENERATED / "workloads"
     artifacts = GENERATED / "artifacts"
@@ -188,43 +168,23 @@ def ensure_upstream():
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--skip-prepare", action="store_true")
-    ap.add_argument("--workload", choices=["exact-chain", "boolean_heavy", "upstream_boolean",
-                                            "mixed_heterogeneous", "large_scale",
-                                            "occupancy_stress"],
-                    default="exact-chain")
-    ap.add_argument("--blocks", type=int,
-                    help="cooperative CUDA grid size (generated workloads only)")
-    ap.add_argument("--parts", help="override generated-workload .gemparts file")
-    ap.add_argument("--profile-name", help="output stem for a controlled profile variant")
+    ap.add_argument("--workload",
+                    choices=["boolean_heavy", "upstream_boolean", "mixed_heterogeneous"],
+                    default="mixed_heterogeneous")
+    ap.add_argument("--blocks", type=int, default=4)
     ap.add_argument("--output")
     args = ap.parse_args()
-    stem = args.profile_name or ("boomerang" if args.workload == "exact-chain" else args.workload)
+    stem = args.workload
     output_path = pathlib.Path(args.output or f"benchmark/profiles/nsight_{stem}.csv")
     if not output_path.is_absolute():
         output_path = ROOT / output_path
     output_path.parent.mkdir(parents=True, exist_ok=True)
     status = output_path.parent / f"nsight_{stem}_status.md"
     if shutil.which("ncu") is None:
-        status.write_text("# Nsight Boomerang Profile\n\nBLOCKED: `ncu` is not installed.\n")
+        status.write_text("# Nsight Profile\n\nThe `ncu` command is not installed.\n")
         print("BLOCKED: ncu is not installed")
         return 2
-    if args.workload == "exact-chain":
-        if args.blocks is not None or args.parts is not None:
-            raise SystemExit("--blocks/--parts are only supported for generated workloads")
-        if not args.skip_prepare:
-            prepare()
-        else:
-            require_files(
-                [ROOT / "target/release/cuda_test", pathlib.Path("/tmp/gem_exact_chain.gv"),
-                 pathlib.Path("/tmp/gem_exact_chain.gemparts"),
-                 pathlib.Path("/tmp/gem_exact_chain_golden.vcd")],
-                "Run without --skip-prepare first.",
-            )
-        application = ["target/release/cuda_test", "/tmp/gem_exact_chain.gv",
-                       "/tmp/gem_exact_chain.gemparts", "/tmp/gem_exact_chain_golden.vcd",
-                       "/tmp/gem_exact_chain_ncu.vcd", "1", "--top-module", "exact_macro_chain",
-                       "--input-vcd-scope", "tb_exact_macro_chain/dut"]
-    elif args.workload == "upstream_boolean":
+    if args.workload == "upstream_boolean":
         upstream = ensure_upstream()
         gv = GENERATED / "artifacts/boolean_heavy.gv"
         parts = GENERATED / "artifacts/boolean_heavy.upstream.gemparts"
@@ -237,38 +197,31 @@ def main():
             item = next(item for item in manifest if item["name"] == "boolean_heavy")
             require_files([upstream / "target/release/cuda_dummy_test", gv, parts],
                           "Run the full Deliverable-D benchmark first.")
-        blocks = args.blocks if args.blocks is not None else 4
         application = [upstream / "target/release/cuda_dummy_test", gv, parts,
-                       str(blocks), str(item["cycles"]), "--top-module", item["top"]]
+                       str(args.blocks), str(item["cycles"]), "--top-module", item["top"]]
     else:
         if args.skip_prepare:
             manifest = json.loads((GENERATED / "workloads/manifest.json").read_text())
             item = next(item for item in manifest if item["name"] == args.workload)
             gv = GENERATED / f"artifacts/{args.workload}.gv"
             parts = GENERATED / f"artifacts/{args.workload}.gemparts"
-            if args.parts:
-                parts = pathlib.Path(args.parts).resolve()
             require_files([ROOT / "target/release/cuda_dummy_test", gv, parts],
                           "Run without --skip-prepare first.")
         else:
             item, gv, parts = prepare_generated(args.workload)
-        blocks = args.blocks if args.blocks is not None else (
-            16 if args.workload == "occupancy_stress" else 4)
         profile_seed = 0 if args.workload == "boolean_heavy" else item["seed"]
         profile_warmups = 1 if args.workload == "boolean_heavy" else 0
-        application = ["target/release/cuda_dummy_test", gv, parts, str(blocks), str(item["cycles"]),
+        application = ["target/release/cuda_dummy_test", gv, parts, str(args.blocks), str(item["cycles"]),
                        "--top-module", item["top"], "--warmup-runs", str(profile_warmups),
                        "--repetitions", "1", "--seed", str(profile_seed)]
     metrics, query_output = supported_metrics()
     if not metrics:
         if "ERR_NVGPUCTRPERM" in query_output:
             status.write_text(
-                "# Nsight Boomerang Profile\n\nBLOCKED: `ERR_NVGPUCTRPERM` prevents metric discovery and collection.\n\n"
-                "IMPACT: production-kernel occupancy, warp divergence, bandwidth, and coalescing remain unmeasured.\n\n"
-                "REQUIRED ACTION: enable NVIDIA performance counters and run `python3 benchmark/scripts/profile_boomerang_ncu.py`.\n")
+                "# Nsight Profile\n\nNVIDIA performance-counter permission is missing.\n")
             print("BLOCKED: ERR_NVGPUCTRPERM during metric discovery")
             return 2
-        status.write_text("# Nsight Boomerang Profile\n\nFAILED: none of the requested metrics are supported.\n")
+        status.write_text("# Nsight Profile\n\nThe requested counters are not supported.\n")
         print("FAILED: no supported requested metrics")
         return 1
     command = [
@@ -282,38 +235,31 @@ def main():
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(output, encoding="utf-8")
     if "ERR_NVGPUCTRPERM" in output:
-        # The profiler output contains only application logs and the permission
-        # error, not counter data.  Keep the concise status report instead of
-        # leaving a misleading file named *.csv.
+        # Do not save a CSV when NVIDIA blocks the counters.
         output_path.unlink(missing_ok=True)
         status.write_text(
-            "# Nsight Boomerang Profile\n\n"
-            "BLOCKED: `ERR_NVGPUCTRPERM` prevents performance-counter access.\n\n"
-            "IMPACT: warp occupancy, branch uniformity, DRAM utilization, and "
-            "global-load/store sectors per request remain unmeasured.\n\n"
-            "REQUIRED ACTION: enable non-admin NVIDIA performance counters, then run:\n\n"
-            "```shell\npython3 benchmark/scripts/profile_boomerang_ncu.py\n```\n",
+            "# Nsight Profile\n\nNVIDIA performance-counter permission is missing.\n",
             encoding="utf-8",
         )
         print(f"BLOCKED: ERR_NVGPUCTRPERM (details in {display_path(status)})")
         return 2
     if result.returncode != 0:
-        status.write_text(f"# Nsight Boomerang Profile\n\nFAILED (exit {result.returncode}).\n\n```\n{output[-4000:]}\n```\n")
+        status.write_text(f"# Nsight Profile\n\nThe command failed with exit code {result.returncode}.\n")
         return result.returncode
     missing = [metric for metric in metrics if metric not in output]
     if missing:
-        status.write_text("# Nsight Boomerang Profile\n\nFAILED: missing counters: " + ", ".join(missing) + "\n")
+        status.write_text("# Nsight Profile\n\nMissing counters: " + ", ".join(missing) + "\n")
         return 1
     values = parse_raw_csv(output)
     found = {row["metric"] for row in values}
     missing_values = [metric for metric in metrics if metric not in found]
     if missing_values:
-        status.write_text("# Nsight Boomerang Profile\n\nFAILED: raw CSV did not contain values for: "
+        status.write_text("# Nsight Profile\n\nThe CSV is missing values for: "
                           + ", ".join(missing_values) + "\n")
         return 1
     kernel_names = sorted({row["kernel"] for row in values})
     if len(kernel_names) != 1 or "simulate_v1_noninteractive_simple_scan" not in kernel_names[0]:
-        status.write_text("# Nsight Boomerang Profile\n\nFAILED: counters are not from exactly one production kernel.\n")
+        status.write_text("# Nsight Profile\n\nThe result contains more than one kernel.\n")
         return 1
     metadata = {"metrics": metrics, "values": values,
                 "raw_csv": display_path(output_path),
@@ -376,19 +322,13 @@ def main():
     metadata_path = output_path.parent / f"nsight_{stem}.json"
     metadata_path.write_text(json.dumps(metadata, indent=2) + "\n")
     status.write_text(
-        f"# Nsight {args.workload} Profile\n\nVERIFIED on the production simulator kernel.\n\n"
-        f"- Achieved occupancy: `{summary['achieved_occupancy_percent']:.2f}%`\n"
-        f"- Theoretical occupancy: `{summary['theoretical_occupancy_percent']:.2f}%`\n"
-        f"- Launch: `{summary['grid_blocks']:.0f}` blocks x `{summary['threads_per_block']:.0f}` threads, `{summary['waves_per_sm']:.2f}` waves/SM\n"
-        f"- Resources: `{summary['registers_per_thread']:.0f}` registers/thread, `{summary['shared_memory_per_block_bytes']:.0f}` shared bytes/block\n"
+        f"# Nsight {args.workload} Profile\n\n"
         f"- Uniform branch targets: `{summary['uniform_branch_targets_percent']:.2f}%`\n"
-        f"- Derived divergent branch targets: `{summary['derived_divergent_branch_targets_percent']:.2f}%`\n"
-        f"- Predicated-on threads per instruction: `{summary['predicated_thread_utilization_percent']:.2f}%`\n"
-        f"- DRAM peak utilization: `{summary['dram_peak_utilization_percent']:.2f}%`\n"
+        f"- Warp divergence: `{summary['derived_divergent_branch_targets_percent']:.2f}%`\n"
+        f"- DRAM use: `{summary['dram_peak_utilization_percent']:.2f}%` of peak\n"
         f"- DRAM bandwidth: `{summary['dram_bytes_per_second']/1e6:.2f} MB/s`\n"
-        f"- Global load/store sectors per request: `{summary['global_load_sectors_per_request']:.2f}` / `{summary['global_store_sectors_per_request']:.2f}`\n"
-        f"- Profiled kernel duration: `{summary['kernel_duration_ns']/1e6:.3f} ms`\n\n"
-        f"Metrics: `{', '.join(metrics)}`\n\nRaw counters: [{output_path.relative_to(ROOT)}]({output_path.name})\n",
+        f"- Kernel time: `{summary['kernel_duration_ns']/1e6:.3f} ms`\n\n"
+        f"The full output is in `{output_path.name}` and `nsight_{stem}.json`.\n",
         encoding="utf-8",
     )
     print("PASS: production Nsight counters captured in", display_path(output_path))
