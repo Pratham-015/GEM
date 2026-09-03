@@ -7,14 +7,14 @@
     {
       "blocks": 1,
       "samples_cps": [
-        5287.391,
-        5286.897,
-        5283.164,
-        5283.607,
-        5283.906
+        5223.658,
+        5223.586,
+        5225.969,
+        5244.398,
+        5244.328
       ],
-      "median_cps": 5283.906,
-      "mean_cps": 5284.9929999999995,
+      "median_cps": 5225.969,
+      "mean_cps": 5232.3878,
       "command": [
         "/home/pratham_sharma/gem/target/release/cuda_dummy_test",
         "/home/pratham_sharma/gem/benchmark/generated/artifacts/occupancy_stress.gv",
@@ -30,19 +30,19 @@
         "--seed",
         "20260902"
       ],
-      "raw_stdout": "23:10:37 [INFO] Simulator args:\nSimulatorArgs {\n    netlist_verilog: \"/home/pratham_sharma/gem/benchmark/generated/artifacts/occupancy_stress.gv\",\n    top_module: Some(\n        \"occupancy_stress\",\n    ),\n    level_split: [],\n    gemparts: \"/home/pratham_sharma/gem/benchmark/generated/artifacts/occupancy_stress.gemparts\",\n    num_blocks: 1,\n    num_dummy_cycles: 1000,\n    warmup_runs: 8,\n    repetitions: 5,\n    seed: 20260902,\n}\n23:10:37 [INFO] inferred clock port clk (posedge)\n23:10:37 [INFO] Registered macro: CarryChain cell_id=82508 inputs=10 outputs=8\n23:10:37 [INFO] Registered macro: DSP48E2 cell_id=82509 inputs=123 outputs=48\n23:10:37 [INFO] Registered macro: SRLC32E cell_id=82510 inputs=7 outputs=2\nnetlist has 255856 pins, 79584 aig pins, 79460 and gates\nnetlist logic depth: 8\n23:10:38 [INFO] # of effective partitions in each stage: [9]\n23:10:38 [INFO] heterogeneous COMB macro schedule: 1 levels [[82508, 82510]]\n23:10:38 [DEBUG] gem::flatten: [src/flatten.rs:1059] major stage 0: max total boomerang depth (w/ cost) 63\n23:10:38 [INFO] Built script for 1 blocks, reg/io state size 978, sram size 0, script size 285440\nScript hash: 14457187274982256734\n23:10:38 [INFO] total number of cycles: 1000\nBenchmark input hash: 15595303910394522431\nGEM_BENCH_WARMUP run=0 cycles=1000\nGEM_BENCH_WARMUP run=1 cycles=1000\nGEM_BENCH_WARMUP run=2 cycles=1000\nGEM_BENCH_WARMUP run=3 cycles=1000\nGEM_BENCH_WARMUP run=4 cycles=1000\nGEM_BENCH_WARMUP run=5 cycles=1000\nGEM_BENCH_WARMUP run=6 cycles=1000\nGEM_BENCH_WARMUP run=7 cycles=1000\nGEM_BENCH_SAMPLE repetition=0 cycles=1000 elapsed_ms=189.129195 cycles_per_second=5287.391\nGEM_BENCH_SAMPLE repetition=1 cycles=1000 elapsed_ms=189.146853 cycles_per_second=5286.897\nGEM_BENCH_SAMPLE repetition=2 cycles=1000 elapsed_ms=189.280502 cycles_per_second=5283.164\nGEM_BENCH_SAMPLE repetition=3 cycles=1000 elapsed_ms=189.264631 cycles_per_second=5283.607\nGEM_BENCH_SAMPLE repetition=4 cycles=1000 elapsed_ms=189.253926 cycles_per_second=5283.906\n"
+      "raw_stdout": "07:35:58 [INFO] Simulator args:\nSimulatorArgs {\n    netlist_verilog: \"/home/pratham_sharma/gem/benchmark/generated/artifacts/occupancy_stress.gv\",\n    top_module: Some(\n        \"occupancy_stress\",\n    ),\n    level_split: [],\n    gemparts: \"/home/pratham_sharma/gem/benchmark/generated/artifacts/occupancy_stress.gemparts\",\n    num_blocks: 1,\n    num_dummy_cycles: 1000,\n    warmup_runs: 8,\n    repetitions: 5,\n    seed: 20260902,\n}\n07:35:59 [INFO] inferred clock port clk (posedge)\n07:35:59 [INFO] Registered macro: CarryChain cell_id=82508 inputs=10 outputs=8\n07:35:59 [INFO] Registered macro: DSP48E2 cell_id=82509 inputs=123 outputs=48\n07:35:59 [INFO] Registered macro: SRLC32E cell_id=82510 inputs=7 outputs=2\nnetlist has 255856 pins, 79584 aig pins, 79460 and gates\nnetlist logic depth: 8\n07:35:59 [INFO] # of effective partitions in each stage: [9]\n07:35:59 [INFO] heterogeneous COMB macro schedule: 1 levels [[82508, 82510]]\n07:35:59 [DEBUG] gem::flatten: [src/flatten.rs:1059] major stage 0: max total boomerang depth (w/ cost) 63\n07:35:59 [INFO] Built script for 1 blocks, reg/io state size 978, sram size 0, script size 285440\nScript hash: 14457187274982256734\n07:35:59 [INFO] total number of cycles: 1000\nBenchmark input hash: 15595303910394522431\nGEM_BENCH_WARMUP run=0 cycles=1000\nGEM_BENCH_WARMUP run=1 cycles=1000\nGEM_BENCH_WARMUP run=2 cycles=1000\nGEM_BENCH_WARMUP run=3 cycles=1000\nGEM_BENCH_WARMUP run=4 cycles=1000\nGEM_BENCH_WARMUP run=5 cycles=1000\nGEM_BENCH_WARMUP run=6 cycles=1000\nGEM_BENCH_WARMUP run=7 cycles=1000\nGEM_BENCH_SAMPLE repetition=0 cycles=1000 elapsed_ms=191.436744 cycles_per_second=5223.658\nGEM_BENCH_SAMPLE repetition=1 cycles=1000 elapsed_ms=191.439351 cycles_per_second=5223.586\nGEM_BENCH_SAMPLE repetition=2 cycles=1000 elapsed_ms=191.352090 cycles_per_second=5225.969\nGEM_BENCH_SAMPLE repetition=3 cycles=1000 elapsed_ms=190.679657 cycles_per_second=5244.398\nGEM_BENCH_SAMPLE repetition=4 cycles=1000 elapsed_ms=190.682189 cycles_per_second=5244.328\n"
     },
     {
       "blocks": 4,
       "samples_cps": [
-        10865.182,
-        10870.774,
-        10856.729,
-        10866.958,
-        10869.179
+        10729.077,
+        10748.853,
+        10747.583,
+        10737.123,
+        10729.095
       ],
-      "median_cps": 10866.958,
-      "mean_cps": 10865.7644,
+      "median_cps": 10737.123,
+      "mean_cps": 10738.3462,
       "command": [
         "/home/pratham_sharma/gem/target/release/cuda_dummy_test",
         "/home/pratham_sharma/gem/benchmark/generated/artifacts/occupancy_stress.gv",
@@ -58,19 +58,19 @@
         "--seed",
         "20260902"
       ],
-      "raw_stdout": "23:10:42 [INFO] Simulator args:\nSimulatorArgs {\n    netlist_verilog: \"/home/pratham_sharma/gem/benchmark/generated/artifacts/occupancy_stress.gv\",\n    top_module: Some(\n        \"occupancy_stress\",\n    ),\n    level_split: [],\n    gemparts: \"/home/pratham_sharma/gem/benchmark/generated/artifacts/occupancy_stress.gemparts\",\n    num_blocks: 4,\n    num_dummy_cycles: 1000,\n    warmup_runs: 8,\n    repetitions: 5,\n    seed: 20260902,\n}\n23:10:42 [INFO] inferred clock port clk (posedge)\n23:10:42 [INFO] Registered macro: CarryChain cell_id=82508 inputs=10 outputs=8\n23:10:42 [INFO] Registered macro: DSP48E2 cell_id=82509 inputs=123 outputs=48\n23:10:42 [INFO] Registered macro: SRLC32E cell_id=82510 inputs=7 outputs=2\nnetlist has 255856 pins, 79584 aig pins, 79460 and gates\nnetlist logic depth: 8\n23:10:42 [INFO] # of effective partitions in each stage: [9]\n23:10:42 [INFO] heterogeneous COMB macro schedule: 1 levels [[82508, 82510]]\n23:10:42 [DEBUG] gem::flatten: [src/flatten.rs:1059] major stage 0: max total boomerang depth (w/ cost) 21\n23:10:42 [INFO] Built script for 4 blocks, reg/io state size 978, sram size 0, script size 285440\nScript hash: 10183571809972649676\n23:10:42 [INFO] total number of cycles: 1000\nBenchmark input hash: 15595303910394522431\nGEM_BENCH_WARMUP run=0 cycles=1000\nGEM_BENCH_WARMUP run=1 cycles=1000\nGEM_BENCH_WARMUP run=2 cycles=1000\nGEM_BENCH_WARMUP run=3 cycles=1000\nGEM_BENCH_WARMUP run=4 cycles=1000\nGEM_BENCH_WARMUP run=5 cycles=1000\nGEM_BENCH_WARMUP run=6 cycles=1000\nGEM_BENCH_WARMUP run=7 cycles=1000\nGEM_BENCH_SAMPLE repetition=0 cycles=1000 elapsed_ms=92.037113 cycles_per_second=10865.182\nGEM_BENCH_SAMPLE repetition=1 cycles=1000 elapsed_ms=91.989767 cycles_per_second=10870.774\nGEM_BENCH_SAMPLE repetition=2 cycles=1000 elapsed_ms=92.108771 cycles_per_second=10856.729\nGEM_BENCH_SAMPLE repetition=3 cycles=1000 elapsed_ms=92.022074 cycles_per_second=10866.958\nGEM_BENCH_SAMPLE repetition=4 cycles=1000 elapsed_ms=92.003265 cycles_per_second=10869.179\n"
+      "raw_stdout": "07:36:04 [INFO] Simulator args:\nSimulatorArgs {\n    netlist_verilog: \"/home/pratham_sharma/gem/benchmark/generated/artifacts/occupancy_stress.gv\",\n    top_module: Some(\n        \"occupancy_stress\",\n    ),\n    level_split: [],\n    gemparts: \"/home/pratham_sharma/gem/benchmark/generated/artifacts/occupancy_stress.gemparts\",\n    num_blocks: 4,\n    num_dummy_cycles: 1000,\n    warmup_runs: 8,\n    repetitions: 5,\n    seed: 20260902,\n}\n07:36:04 [INFO] inferred clock port clk (posedge)\n07:36:04 [INFO] Registered macro: CarryChain cell_id=82508 inputs=10 outputs=8\n07:36:04 [INFO] Registered macro: DSP48E2 cell_id=82509 inputs=123 outputs=48\n07:36:04 [INFO] Registered macro: SRLC32E cell_id=82510 inputs=7 outputs=2\nnetlist has 255856 pins, 79584 aig pins, 79460 and gates\nnetlist logic depth: 8\n07:36:04 [INFO] # of effective partitions in each stage: [9]\n07:36:04 [INFO] heterogeneous COMB macro schedule: 1 levels [[82508, 82510]]\n07:36:04 [DEBUG] gem::flatten: [src/flatten.rs:1059] major stage 0: max total boomerang depth (w/ cost) 21\n07:36:04 [INFO] Built script for 4 blocks, reg/io state size 978, sram size 0, script size 285440\nScript hash: 10183571809972649676\n07:36:04 [INFO] total number of cycles: 1000\nBenchmark input hash: 15595303910394522431\nGEM_BENCH_WARMUP run=0 cycles=1000\nGEM_BENCH_WARMUP run=1 cycles=1000\nGEM_BENCH_WARMUP run=2 cycles=1000\nGEM_BENCH_WARMUP run=3 cycles=1000\nGEM_BENCH_WARMUP run=4 cycles=1000\nGEM_BENCH_WARMUP run=5 cycles=1000\nGEM_BENCH_WARMUP run=6 cycles=1000\nGEM_BENCH_WARMUP run=7 cycles=1000\nGEM_BENCH_SAMPLE repetition=0 cycles=1000 elapsed_ms=93.204664 cycles_per_second=10729.077\nGEM_BENCH_SAMPLE repetition=1 cycles=1000 elapsed_ms=93.033182 cycles_per_second=10748.853\nGEM_BENCH_SAMPLE repetition=2 cycles=1000 elapsed_ms=93.044179 cycles_per_second=10747.583\nGEM_BENCH_SAMPLE repetition=3 cycles=1000 elapsed_ms=93.134821 cycles_per_second=10737.123\nGEM_BENCH_SAMPLE repetition=4 cycles=1000 elapsed_ms=93.204504 cycles_per_second=10729.095\n"
     },
     {
       "blocks": 8,
       "samples_cps": [
-        13154.872,
-        13174.973,
-        13166.545,
-        13181.212,
-        13178.081
+        13017.475,
+        13008.797,
+        13008.69,
+        13023.284,
+        13000.379
       ],
-      "median_cps": 13174.973,
-      "mean_cps": 13171.1366,
+      "median_cps": 13008.797,
+      "mean_cps": 13011.725,
       "command": [
         "/home/pratham_sharma/gem/target/release/cuda_dummy_test",
         "/home/pratham_sharma/gem/benchmark/generated/artifacts/occupancy_stress.gv",
@@ -86,19 +86,19 @@
         "--seed",
         "20260902"
       ],
-      "raw_stdout": "23:10:44 [INFO] Simulator args:\nSimulatorArgs {\n    netlist_verilog: \"/home/pratham_sharma/gem/benchmark/generated/artifacts/occupancy_stress.gv\",\n    top_module: Some(\n        \"occupancy_stress\",\n    ),\n    level_split: [],\n    gemparts: \"/home/pratham_sharma/gem/benchmark/generated/artifacts/occupancy_stress.gemparts\",\n    num_blocks: 8,\n    num_dummy_cycles: 1000,\n    warmup_runs: 8,\n    repetitions: 5,\n    seed: 20260902,\n}\n23:10:45 [INFO] inferred clock port clk (posedge)\n23:10:45 [INFO] Registered macro: CarryChain cell_id=82508 inputs=10 outputs=8\n23:10:45 [INFO] Registered macro: DSP48E2 cell_id=82509 inputs=123 outputs=48\n23:10:45 [INFO] Registered macro: SRLC32E cell_id=82510 inputs=7 outputs=2\nnetlist has 255856 pins, 79584 aig pins, 79460 and gates\nnetlist logic depth: 8\n23:10:45 [INFO] # of effective partitions in each stage: [9]\n23:10:45 [INFO] heterogeneous COMB macro schedule: 1 levels [[82508, 82510]]\n23:10:45 [DEBUG] gem::flatten: [src/flatten.rs:1059] major stage 0: max total boomerang depth (w/ cost) 14\n23:10:45 [INFO] Built script for 8 blocks, reg/io state size 978, sram size 0, script size 285440\nScript hash: 9859844123104900913\n23:10:45 [INFO] total number of cycles: 1000\nBenchmark input hash: 15595303910394522431\nGEM_BENCH_WARMUP run=0 cycles=1000\nGEM_BENCH_WARMUP run=1 cycles=1000\nGEM_BENCH_WARMUP run=2 cycles=1000\nGEM_BENCH_WARMUP run=3 cycles=1000\nGEM_BENCH_WARMUP run=4 cycles=1000\nGEM_BENCH_WARMUP run=5 cycles=1000\nGEM_BENCH_WARMUP run=6 cycles=1000\nGEM_BENCH_WARMUP run=7 cycles=1000\nGEM_BENCH_SAMPLE repetition=0 cycles=1000 elapsed_ms=76.017462 cycles_per_second=13154.872\nGEM_BENCH_SAMPLE repetition=1 cycles=1000 elapsed_ms=75.901483 cycles_per_second=13174.973\nGEM_BENCH_SAMPLE repetition=2 cycles=1000 elapsed_ms=75.950068 cycles_per_second=13166.545\nGEM_BENCH_SAMPLE repetition=3 cycles=1000 elapsed_ms=75.865559 cycles_per_second=13181.212\nGEM_BENCH_SAMPLE repetition=4 cycles=1000 elapsed_ms=75.883584 cycles_per_second=13178.081\n"
+      "raw_stdout": "07:36:06 [INFO] Simulator args:\nSimulatorArgs {\n    netlist_verilog: \"/home/pratham_sharma/gem/benchmark/generated/artifacts/occupancy_stress.gv\",\n    top_module: Some(\n        \"occupancy_stress\",\n    ),\n    level_split: [],\n    gemparts: \"/home/pratham_sharma/gem/benchmark/generated/artifacts/occupancy_stress.gemparts\",\n    num_blocks: 8,\n    num_dummy_cycles: 1000,\n    warmup_runs: 8,\n    repetitions: 5,\n    seed: 20260902,\n}\n07:36:07 [INFO] inferred clock port clk (posedge)\n07:36:07 [INFO] Registered macro: CarryChain cell_id=82508 inputs=10 outputs=8\n07:36:07 [INFO] Registered macro: DSP48E2 cell_id=82509 inputs=123 outputs=48\n07:36:07 [INFO] Registered macro: SRLC32E cell_id=82510 inputs=7 outputs=2\nnetlist has 255856 pins, 79584 aig pins, 79460 and gates\nnetlist logic depth: 8\n07:36:07 [INFO] # of effective partitions in each stage: [9]\n07:36:07 [INFO] heterogeneous COMB macro schedule: 1 levels [[82508, 82510]]\n07:36:07 [DEBUG] gem::flatten: [src/flatten.rs:1059] major stage 0: max total boomerang depth (w/ cost) 14\n07:36:07 [INFO] Built script for 8 blocks, reg/io state size 978, sram size 0, script size 285440\nScript hash: 9859844123104900913\n07:36:07 [INFO] total number of cycles: 1000\nBenchmark input hash: 15595303910394522431\nGEM_BENCH_WARMUP run=0 cycles=1000\nGEM_BENCH_WARMUP run=1 cycles=1000\nGEM_BENCH_WARMUP run=2 cycles=1000\nGEM_BENCH_WARMUP run=3 cycles=1000\nGEM_BENCH_WARMUP run=4 cycles=1000\nGEM_BENCH_WARMUP run=5 cycles=1000\nGEM_BENCH_WARMUP run=6 cycles=1000\nGEM_BENCH_WARMUP run=7 cycles=1000\nGEM_BENCH_SAMPLE repetition=0 cycles=1000 elapsed_ms=76.819812 cycles_per_second=13017.475\nGEM_BENCH_SAMPLE repetition=1 cycles=1000 elapsed_ms=76.871058 cycles_per_second=13008.797\nGEM_BENCH_SAMPLE repetition=2 cycles=1000 elapsed_ms=76.871694 cycles_per_second=13008.690\nGEM_BENCH_SAMPLE repetition=3 cycles=1000 elapsed_ms=76.785548 cycles_per_second=13023.284\nGEM_BENCH_SAMPLE repetition=4 cycles=1000 elapsed_ms=76.920834 cycles_per_second=13000.379\n"
     },
     {
       "blocks": 9,
       "samples_cps": [
-        18122.514,
-        18112.318,
-        18117.989,
-        18160.15,
-        18134.605
+        16777.532,
+        16825.608,
+        16800.984,
+        16826.078,
+        16805.678
       ],
-      "median_cps": 18122.514,
-      "mean_cps": 18129.5152,
+      "median_cps": 16805.678,
+      "mean_cps": 16807.176,
       "command": [
         "/home/pratham_sharma/gem/target/release/cuda_dummy_test",
         "/home/pratham_sharma/gem/benchmark/generated/artifacts/occupancy_stress.gv",
@@ -114,19 +114,19 @@
         "--seed",
         "20260902"
       ],
-      "raw_stdout": "23:10:47 [INFO] Simulator args:\nSimulatorArgs {\n    netlist_verilog: \"/home/pratham_sharma/gem/benchmark/generated/artifacts/occupancy_stress.gv\",\n    top_module: Some(\n        \"occupancy_stress\",\n    ),\n    level_split: [],\n    gemparts: \"/home/pratham_sharma/gem/benchmark/generated/artifacts/occupancy_stress.gemparts\",\n    num_blocks: 9,\n    num_dummy_cycles: 1000,\n    warmup_runs: 8,\n    repetitions: 5,\n    seed: 20260902,\n}\n23:10:47 [INFO] inferred clock port clk (posedge)\n23:10:47 [INFO] Registered macro: CarryChain cell_id=82508 inputs=10 outputs=8\n23:10:47 [INFO] Registered macro: DSP48E2 cell_id=82509 inputs=123 outputs=48\n23:10:47 [INFO] Registered macro: SRLC32E cell_id=82510 inputs=7 outputs=2\nnetlist has 255856 pins, 79584 aig pins, 79460 and gates\nnetlist logic depth: 8\n23:10:47 [INFO] # of effective partitions in each stage: [9]\n23:10:47 [INFO] heterogeneous COMB macro schedule: 1 levels [[82508, 82510]]\n23:10:47 [DEBUG] gem::flatten: [src/flatten.rs:1059] major stage 0: max total boomerang depth (w/ cost) 7\n23:10:47 [INFO] Built script for 9 blocks, reg/io state size 978, sram size 0, script size 285440\nScript hash: 6105308894097404368\n23:10:47 [INFO] total number of cycles: 1000\nBenchmark input hash: 15595303910394522431\nGEM_BENCH_WARMUP run=0 cycles=1000\nGEM_BENCH_WARMUP run=1 cycles=1000\nGEM_BENCH_WARMUP run=2 cycles=1000\nGEM_BENCH_WARMUP run=3 cycles=1000\nGEM_BENCH_WARMUP run=4 cycles=1000\nGEM_BENCH_WARMUP run=5 cycles=1000\nGEM_BENCH_WARMUP run=6 cycles=1000\nGEM_BENCH_WARMUP run=7 cycles=1000\nGEM_BENCH_SAMPLE repetition=0 cycles=1000 elapsed_ms=55.179982 cycles_per_second=18122.514\nGEM_BENCH_SAMPLE repetition=1 cycles=1000 elapsed_ms=55.211044 cycles_per_second=18112.318\nGEM_BENCH_SAMPLE repetition=2 cycles=1000 elapsed_ms=55.193762 cycles_per_second=18117.989\nGEM_BENCH_SAMPLE repetition=3 cycles=1000 elapsed_ms=55.065625 cycles_per_second=18160.150\nGEM_BENCH_SAMPLE repetition=4 cycles=1000 elapsed_ms=55.143191 cycles_per_second=18134.605\n"
+      "raw_stdout": "07:36:09 [INFO] Simulator args:\nSimulatorArgs {\n    netlist_verilog: \"/home/pratham_sharma/gem/benchmark/generated/artifacts/occupancy_stress.gv\",\n    top_module: Some(\n        \"occupancy_stress\",\n    ),\n    level_split: [],\n    gemparts: \"/home/pratham_sharma/gem/benchmark/generated/artifacts/occupancy_stress.gemparts\",\n    num_blocks: 9,\n    num_dummy_cycles: 1000,\n    warmup_runs: 8,\n    repetitions: 5,\n    seed: 20260902,\n}\n07:36:09 [INFO] inferred clock port clk (posedge)\n07:36:09 [INFO] Registered macro: CarryChain cell_id=82508 inputs=10 outputs=8\n07:36:09 [INFO] Registered macro: DSP48E2 cell_id=82509 inputs=123 outputs=48\n07:36:09 [INFO] Registered macro: SRLC32E cell_id=82510 inputs=7 outputs=2\nnetlist has 255856 pins, 79584 aig pins, 79460 and gates\nnetlist logic depth: 8\n07:36:10 [INFO] # of effective partitions in each stage: [9]\n07:36:10 [INFO] heterogeneous COMB macro schedule: 1 levels [[82508, 82510]]\n07:36:10 [DEBUG] gem::flatten: [src/flatten.rs:1059] major stage 0: max total boomerang depth (w/ cost) 7\n07:36:10 [INFO] Built script for 9 blocks, reg/io state size 978, sram size 0, script size 285440\nScript hash: 6105308894097404368\n07:36:10 [INFO] total number of cycles: 1000\nBenchmark input hash: 15595303910394522431\nGEM_BENCH_WARMUP run=0 cycles=1000\nGEM_BENCH_WARMUP run=1 cycles=1000\nGEM_BENCH_WARMUP run=2 cycles=1000\nGEM_BENCH_WARMUP run=3 cycles=1000\nGEM_BENCH_WARMUP run=4 cycles=1000\nGEM_BENCH_WARMUP run=5 cycles=1000\nGEM_BENCH_WARMUP run=6 cycles=1000\nGEM_BENCH_WARMUP run=7 cycles=1000\nGEM_BENCH_SAMPLE repetition=0 cycles=1000 elapsed_ms=59.603523 cycles_per_second=16777.532\nGEM_BENCH_SAMPLE repetition=1 cycles=1000 elapsed_ms=59.433215 cycles_per_second=16825.608\nGEM_BENCH_SAMPLE repetition=2 cycles=1000 elapsed_ms=59.520324 cycles_per_second=16800.984\nGEM_BENCH_SAMPLE repetition=3 cycles=1000 elapsed_ms=59.431556 cycles_per_second=16826.078\nGEM_BENCH_SAMPLE repetition=4 cycles=1000 elapsed_ms=59.503697 cycles_per_second=16805.678\n"
     },
     {
       "blocks": 12,
       "samples_cps": [
-        18169.852,
-        18145.002,
-        16804.695,
-        16602.88,
-        16606.371
+        16753.906,
+        16746.562,
+        16753.843,
+        16750.647,
+        16754.377
       ],
-      "median_cps": 16804.695,
-      "mean_cps": 17265.76,
+      "median_cps": 16753.843,
+      "mean_cps": 16751.867000000002,
       "command": [
         "/home/pratham_sharma/gem/target/release/cuda_dummy_test",
         "/home/pratham_sharma/gem/benchmark/generated/artifacts/occupancy_stress.gv",
@@ -142,19 +142,19 @@
         "--seed",
         "20260902"
       ],
-      "raw_stdout": "23:10:49 [INFO] Simulator args:\nSimulatorArgs {\n    netlist_verilog: \"/home/pratham_sharma/gem/benchmark/generated/artifacts/occupancy_stress.gv\",\n    top_module: Some(\n        \"occupancy_stress\",\n    ),\n    level_split: [],\n    gemparts: \"/home/pratham_sharma/gem/benchmark/generated/artifacts/occupancy_stress.gemparts\",\n    num_blocks: 12,\n    num_dummy_cycles: 1000,\n    warmup_runs: 8,\n    repetitions: 5,\n    seed: 20260902,\n}\n23:10:49 [INFO] inferred clock port clk (posedge)\n23:10:49 [INFO] Registered macro: CarryChain cell_id=82508 inputs=10 outputs=8\n23:10:49 [INFO] Registered macro: DSP48E2 cell_id=82509 inputs=123 outputs=48\n23:10:49 [INFO] Registered macro: SRLC32E cell_id=82510 inputs=7 outputs=2\nnetlist has 255856 pins, 79584 aig pins, 79460 and gates\nnetlist logic depth: 8\n23:10:49 [INFO] # of effective partitions in each stage: [9]\n23:10:49 [INFO] heterogeneous COMB macro schedule: 1 levels [[82508, 82510]]\n23:10:49 [DEBUG] gem::flatten: [src/flatten.rs:1059] major stage 0: max total boomerang depth (w/ cost) 7\n23:10:50 [INFO] Built script for 12 blocks, reg/io state size 978, sram size 0, script size 286208\nScript hash: 7328022987070066432\n23:10:50 [INFO] total number of cycles: 1000\nBenchmark input hash: 15595303910394522431\nGEM_BENCH_WARMUP run=0 cycles=1000\nGEM_BENCH_WARMUP run=1 cycles=1000\nGEM_BENCH_WARMUP run=2 cycles=1000\nGEM_BENCH_WARMUP run=3 cycles=1000\nGEM_BENCH_WARMUP run=4 cycles=1000\nGEM_BENCH_WARMUP run=5 cycles=1000\nGEM_BENCH_WARMUP run=6 cycles=1000\nGEM_BENCH_WARMUP run=7 cycles=1000\nGEM_BENCH_SAMPLE repetition=0 cycles=1000 elapsed_ms=55.036221 cycles_per_second=18169.852\nGEM_BENCH_SAMPLE repetition=1 cycles=1000 elapsed_ms=55.111594 cycles_per_second=18145.002\nGEM_BENCH_SAMPLE repetition=2 cycles=1000 elapsed_ms=59.507178 cycles_per_second=16804.695\nGEM_BENCH_SAMPLE repetition=3 cycles=1000 elapsed_ms=60.230516 cycles_per_second=16602.880\nGEM_BENCH_SAMPLE repetition=4 cycles=1000 elapsed_ms=60.217851 cycles_per_second=16606.371\n"
+      "raw_stdout": "07:36:11 [INFO] Simulator args:\nSimulatorArgs {\n    netlist_verilog: \"/home/pratham_sharma/gem/benchmark/generated/artifacts/occupancy_stress.gv\",\n    top_module: Some(\n        \"occupancy_stress\",\n    ),\n    level_split: [],\n    gemparts: \"/home/pratham_sharma/gem/benchmark/generated/artifacts/occupancy_stress.gemparts\",\n    num_blocks: 12,\n    num_dummy_cycles: 1000,\n    warmup_runs: 8,\n    repetitions: 5,\n    seed: 20260902,\n}\n07:36:12 [INFO] inferred clock port clk (posedge)\n07:36:12 [INFO] Registered macro: CarryChain cell_id=82508 inputs=10 outputs=8\n07:36:12 [INFO] Registered macro: DSP48E2 cell_id=82509 inputs=123 outputs=48\n07:36:12 [INFO] Registered macro: SRLC32E cell_id=82510 inputs=7 outputs=2\nnetlist has 255856 pins, 79584 aig pins, 79460 and gates\nnetlist logic depth: 8\n07:36:12 [INFO] # of effective partitions in each stage: [9]\n07:36:12 [INFO] heterogeneous COMB macro schedule: 1 levels [[82508, 82510]]\n07:36:12 [DEBUG] gem::flatten: [src/flatten.rs:1059] major stage 0: max total boomerang depth (w/ cost) 7\n07:36:12 [INFO] Built script for 12 blocks, reg/io state size 978, sram size 0, script size 286208\nScript hash: 7328022987070066432\n07:36:12 [INFO] total number of cycles: 1000\nBenchmark input hash: 15595303910394522431\nGEM_BENCH_WARMUP run=0 cycles=1000\nGEM_BENCH_WARMUP run=1 cycles=1000\nGEM_BENCH_WARMUP run=2 cycles=1000\nGEM_BENCH_WARMUP run=3 cycles=1000\nGEM_BENCH_WARMUP run=4 cycles=1000\nGEM_BENCH_WARMUP run=5 cycles=1000\nGEM_BENCH_WARMUP run=6 cycles=1000\nGEM_BENCH_WARMUP run=7 cycles=1000\nGEM_BENCH_SAMPLE repetition=0 cycles=1000 elapsed_ms=59.687574 cycles_per_second=16753.906\nGEM_BENCH_SAMPLE repetition=1 cycles=1000 elapsed_ms=59.713748 cycles_per_second=16746.562\nGEM_BENCH_SAMPLE repetition=2 cycles=1000 elapsed_ms=59.687798 cycles_per_second=16753.843\nGEM_BENCH_SAMPLE repetition=3 cycles=1000 elapsed_ms=59.699188 cycles_per_second=16750.647\nGEM_BENCH_SAMPLE repetition=4 cycles=1000 elapsed_ms=59.685895 cycles_per_second=16754.377\n"
     },
     {
       "blocks": 16,
       "samples_cps": [
-        16658.097,
-        16640.596,
-        16625.702,
-        16646.973,
-        16639.056
+        16715.027,
+        16683.349,
+        16714.574,
+        16683.948,
+        16707.142
       ],
-      "median_cps": 16640.596,
-      "mean_cps": 16642.0848,
+      "median_cps": 16707.142,
+      "mean_cps": 16700.808,
       "command": [
         "/home/pratham_sharma/gem/target/release/cuda_dummy_test",
         "/home/pratham_sharma/gem/benchmark/generated/artifacts/occupancy_stress.gv",
@@ -170,19 +170,19 @@
         "--seed",
         "20260902"
       ],
-      "raw_stdout": "23:10:51 [INFO] Simulator args:\nSimulatorArgs {\n    netlist_verilog: \"/home/pratham_sharma/gem/benchmark/generated/artifacts/occupancy_stress.gv\",\n    top_module: Some(\n        \"occupancy_stress\",\n    ),\n    level_split: [],\n    gemparts: \"/home/pratham_sharma/gem/benchmark/generated/artifacts/occupancy_stress.gemparts\",\n    num_blocks: 16,\n    num_dummy_cycles: 1000,\n    warmup_runs: 8,\n    repetitions: 5,\n    seed: 20260902,\n}\n23:10:51 [INFO] inferred clock port clk (posedge)\n23:10:51 [INFO] Registered macro: CarryChain cell_id=82508 inputs=10 outputs=8\n23:10:51 [INFO] Registered macro: DSP48E2 cell_id=82509 inputs=123 outputs=48\n23:10:51 [INFO] Registered macro: SRLC32E cell_id=82510 inputs=7 outputs=2\nnetlist has 255856 pins, 79584 aig pins, 79460 and gates\nnetlist logic depth: 8\n23:10:51 [INFO] # of effective partitions in each stage: [9]\n23:10:51 [INFO] heterogeneous COMB macro schedule: 1 levels [[82508, 82510]]\n23:10:51 [DEBUG] gem::flatten: [src/flatten.rs:1059] major stage 0: max total boomerang depth (w/ cost) 7\n23:10:51 [INFO] Built script for 16 blocks, reg/io state size 978, sram size 0, script size 287232\nScript hash: 12634793064568581977\n23:10:51 [INFO] total number of cycles: 1000\nBenchmark input hash: 15595303910394522431\nGEM_BENCH_WARMUP run=0 cycles=1000\nGEM_BENCH_WARMUP run=1 cycles=1000\nGEM_BENCH_WARMUP run=2 cycles=1000\nGEM_BENCH_WARMUP run=3 cycles=1000\nGEM_BENCH_WARMUP run=4 cycles=1000\nGEM_BENCH_WARMUP run=5 cycles=1000\nGEM_BENCH_WARMUP run=6 cycles=1000\nGEM_BENCH_WARMUP run=7 cycles=1000\nGEM_BENCH_SAMPLE repetition=0 cycles=1000 elapsed_ms=60.030866 cycles_per_second=16658.097\nGEM_BENCH_SAMPLE repetition=1 cycles=1000 elapsed_ms=60.094000 cycles_per_second=16640.596\nGEM_BENCH_SAMPLE repetition=2 cycles=1000 elapsed_ms=60.147835 cycles_per_second=16625.702\nGEM_BENCH_SAMPLE repetition=3 cycles=1000 elapsed_ms=60.070980 cycles_per_second=16646.973\nGEM_BENCH_SAMPLE repetition=4 cycles=1000 elapsed_ms=60.099562 cycles_per_second=16639.056\n"
+      "raw_stdout": "07:36:14 [INFO] Simulator args:\nSimulatorArgs {\n    netlist_verilog: \"/home/pratham_sharma/gem/benchmark/generated/artifacts/occupancy_stress.gv\",\n    top_module: Some(\n        \"occupancy_stress\",\n    ),\n    level_split: [],\n    gemparts: \"/home/pratham_sharma/gem/benchmark/generated/artifacts/occupancy_stress.gemparts\",\n    num_blocks: 16,\n    num_dummy_cycles: 1000,\n    warmup_runs: 8,\n    repetitions: 5,\n    seed: 20260902,\n}\n07:36:14 [INFO] inferred clock port clk (posedge)\n07:36:14 [INFO] Registered macro: CarryChain cell_id=82508 inputs=10 outputs=8\n07:36:14 [INFO] Registered macro: DSP48E2 cell_id=82509 inputs=123 outputs=48\n07:36:14 [INFO] Registered macro: SRLC32E cell_id=82510 inputs=7 outputs=2\nnetlist has 255856 pins, 79584 aig pins, 79460 and gates\nnetlist logic depth: 8\n07:36:14 [INFO] # of effective partitions in each stage: [9]\n07:36:14 [INFO] heterogeneous COMB macro schedule: 1 levels [[82508, 82510]]\n07:36:14 [DEBUG] gem::flatten: [src/flatten.rs:1059] major stage 0: max total boomerang depth (w/ cost) 7\n07:36:14 [INFO] Built script for 16 blocks, reg/io state size 978, sram size 0, script size 287232\nScript hash: 12634793064568581977\n07:36:14 [INFO] total number of cycles: 1000\nBenchmark input hash: 15595303910394522431\nGEM_BENCH_WARMUP run=0 cycles=1000\nGEM_BENCH_WARMUP run=1 cycles=1000\nGEM_BENCH_WARMUP run=2 cycles=1000\nGEM_BENCH_WARMUP run=3 cycles=1000\nGEM_BENCH_WARMUP run=4 cycles=1000\nGEM_BENCH_WARMUP run=5 cycles=1000\nGEM_BENCH_WARMUP run=6 cycles=1000\nGEM_BENCH_WARMUP run=7 cycles=1000\nGEM_BENCH_SAMPLE repetition=0 cycles=1000 elapsed_ms=59.826405 cycles_per_second=16715.027\nGEM_BENCH_SAMPLE repetition=1 cycles=1000 elapsed_ms=59.940003 cycles_per_second=16683.349\nGEM_BENCH_SAMPLE repetition=2 cycles=1000 elapsed_ms=59.828028 cycles_per_second=16714.574\nGEM_BENCH_SAMPLE repetition=3 cycles=1000 elapsed_ms=59.937853 cycles_per_second=16683.948\nGEM_BENCH_SAMPLE repetition=4 cycles=1000 elapsed_ms=59.854641 cycles_per_second=16707.142\n"
     },
     {
       "blocks": 20,
       "samples_cps": [
-        16661.137,
-        16649.397,
-        16645.219,
-        16640.921,
-        16640.231
+        16689.737,
+        16685.532,
+        16681.385,
+        16684.326,
+        16676.204
       ],
-      "median_cps": 16645.219,
-      "mean_cps": 16647.381,
+      "median_cps": 16684.326,
+      "mean_cps": 16683.4368,
       "command": [
         "/home/pratham_sharma/gem/target/release/cuda_dummy_test",
         "/home/pratham_sharma/gem/benchmark/generated/artifacts/occupancy_stress.gv",
@@ -198,19 +198,19 @@
         "--seed",
         "20260902"
       ],
-      "raw_stdout": "23:10:54 [INFO] Simulator args:\nSimulatorArgs {\n    netlist_verilog: \"/home/pratham_sharma/gem/benchmark/generated/artifacts/occupancy_stress.gv\",\n    top_module: Some(\n        \"occupancy_stress\",\n    ),\n    level_split: [],\n    gemparts: \"/home/pratham_sharma/gem/benchmark/generated/artifacts/occupancy_stress.gemparts\",\n    num_blocks: 20,\n    num_dummy_cycles: 1000,\n    warmup_runs: 8,\n    repetitions: 5,\n    seed: 20260902,\n}\n23:10:54 [INFO] inferred clock port clk (posedge)\n23:10:54 [INFO] Registered macro: CarryChain cell_id=82508 inputs=10 outputs=8\n23:10:54 [INFO] Registered macro: DSP48E2 cell_id=82509 inputs=123 outputs=48\n23:10:54 [INFO] Registered macro: SRLC32E cell_id=82510 inputs=7 outputs=2\nnetlist has 255856 pins, 79584 aig pins, 79460 and gates\nnetlist logic depth: 8\n23:10:54 [INFO] # of effective partitions in each stage: [9]\n23:10:54 [INFO] heterogeneous COMB macro schedule: 1 levels [[82508, 82510]]\n23:10:54 [DEBUG] gem::flatten: [src/flatten.rs:1059] major stage 0: max total boomerang depth (w/ cost) 7\n23:10:54 [INFO] Built script for 20 blocks, reg/io state size 978, sram size 0, script size 288256\nScript hash: 10311471384864058319\n23:10:54 [INFO] total number of cycles: 1000\nBenchmark input hash: 15595303910394522431\nGEM_BENCH_WARMUP run=0 cycles=1000\nGEM_BENCH_WARMUP run=1 cycles=1000\nGEM_BENCH_WARMUP run=2 cycles=1000\nGEM_BENCH_WARMUP run=3 cycles=1000\nGEM_BENCH_WARMUP run=4 cycles=1000\nGEM_BENCH_WARMUP run=5 cycles=1000\nGEM_BENCH_WARMUP run=6 cycles=1000\nGEM_BENCH_WARMUP run=7 cycles=1000\nGEM_BENCH_SAMPLE repetition=0 cycles=1000 elapsed_ms=60.019912 cycles_per_second=16661.137\nGEM_BENCH_SAMPLE repetition=1 cycles=1000 elapsed_ms=60.062235 cycles_per_second=16649.397\nGEM_BENCH_SAMPLE repetition=2 cycles=1000 elapsed_ms=60.077311 cycles_per_second=16645.219\nGEM_BENCH_SAMPLE repetition=3 cycles=1000 elapsed_ms=60.092826 cycles_per_second=16640.921\nGEM_BENCH_SAMPLE repetition=4 cycles=1000 elapsed_ms=60.095319 cycles_per_second=16640.231\n"
+      "raw_stdout": "07:36:16 [INFO] Simulator args:\nSimulatorArgs {\n    netlist_verilog: \"/home/pratham_sharma/gem/benchmark/generated/artifacts/occupancy_stress.gv\",\n    top_module: Some(\n        \"occupancy_stress\",\n    ),\n    level_split: [],\n    gemparts: \"/home/pratham_sharma/gem/benchmark/generated/artifacts/occupancy_stress.gemparts\",\n    num_blocks: 20,\n    num_dummy_cycles: 1000,\n    warmup_runs: 8,\n    repetitions: 5,\n    seed: 20260902,\n}\n07:36:17 [INFO] inferred clock port clk (posedge)\n07:36:17 [INFO] Registered macro: CarryChain cell_id=82508 inputs=10 outputs=8\n07:36:17 [INFO] Registered macro: DSP48E2 cell_id=82509 inputs=123 outputs=48\n07:36:17 [INFO] Registered macro: SRLC32E cell_id=82510 inputs=7 outputs=2\nnetlist has 255856 pins, 79584 aig pins, 79460 and gates\nnetlist logic depth: 8\n07:36:17 [INFO] # of effective partitions in each stage: [9]\n07:36:17 [INFO] heterogeneous COMB macro schedule: 1 levels [[82508, 82510]]\n07:36:17 [DEBUG] gem::flatten: [src/flatten.rs:1059] major stage 0: max total boomerang depth (w/ cost) 7\n07:36:17 [INFO] Built script for 20 blocks, reg/io state size 978, sram size 0, script size 288256\nScript hash: 10311471384864058319\n07:36:17 [INFO] total number of cycles: 1000\nBenchmark input hash: 15595303910394522431\nGEM_BENCH_WARMUP run=0 cycles=1000\nGEM_BENCH_WARMUP run=1 cycles=1000\nGEM_BENCH_WARMUP run=2 cycles=1000\nGEM_BENCH_WARMUP run=3 cycles=1000\nGEM_BENCH_WARMUP run=4 cycles=1000\nGEM_BENCH_WARMUP run=5 cycles=1000\nGEM_BENCH_WARMUP run=6 cycles=1000\nGEM_BENCH_WARMUP run=7 cycles=1000\nGEM_BENCH_SAMPLE repetition=0 cycles=1000 elapsed_ms=59.917060 cycles_per_second=16689.737\nGEM_BENCH_SAMPLE repetition=1 cycles=1000 elapsed_ms=59.932162 cycles_per_second=16685.532\nGEM_BENCH_SAMPLE repetition=2 cycles=1000 elapsed_ms=59.947062 cycles_per_second=16681.385\nGEM_BENCH_SAMPLE repetition=3 cycles=1000 elapsed_ms=59.936493 cycles_per_second=16684.326\nGEM_BENCH_SAMPLE repetition=4 cycles=1000 elapsed_ms=59.965687 cycles_per_second=16676.204\n"
     },
     {
       "blocks": 28,
       "samples_cps": [
-        11528.699,
-        11529.163,
-        11529.386,
-        11534.891,
-        11536.321
+        11372.02,
+        11391.719,
+        11393.259,
+        11398.65,
+        11400.685
       ],
-      "median_cps": 11529.386,
-      "mean_cps": 11531.692000000001,
+      "median_cps": 11393.259,
+      "mean_cps": 11391.266599999999,
       "command": [
         "/home/pratham_sharma/gem/target/release/cuda_dummy_test",
         "/home/pratham_sharma/gem/benchmark/generated/artifacts/occupancy_stress.gv",
@@ -226,19 +226,19 @@
         "--seed",
         "20260902"
       ],
-      "raw_stdout": "23:10:56 [INFO] Simulator args:\nSimulatorArgs {\n    netlist_verilog: \"/home/pratham_sharma/gem/benchmark/generated/artifacts/occupancy_stress.gv\",\n    top_module: Some(\n        \"occupancy_stress\",\n    ),\n    level_split: [],\n    gemparts: \"/home/pratham_sharma/gem/benchmark/generated/artifacts/occupancy_stress.gemparts\",\n    num_blocks: 28,\n    num_dummy_cycles: 1000,\n    warmup_runs: 8,\n    repetitions: 5,\n    seed: 20260902,\n}\n23:10:57 [INFO] inferred clock port clk (posedge)\n23:10:57 [INFO] Registered macro: CarryChain cell_id=82508 inputs=10 outputs=8\n23:10:57 [INFO] Registered macro: DSP48E2 cell_id=82509 inputs=123 outputs=48\n23:10:57 [INFO] Registered macro: SRLC32E cell_id=82510 inputs=7 outputs=2\nnetlist has 255856 pins, 79584 aig pins, 79460 and gates\nnetlist logic depth: 8\n23:10:57 [INFO] # of effective partitions in each stage: [9]\n23:10:57 [INFO] heterogeneous COMB macro schedule: 1 levels [[82508, 82510]]\n23:10:57 [DEBUG] gem::flatten: [src/flatten.rs:1059] major stage 0: max total boomerang depth (w/ cost) 7\n23:10:57 [INFO] Built script for 28 blocks, reg/io state size 978, sram size 0, script size 290304\nScript hash: 11777685769745897219\n23:10:57 [INFO] total number of cycles: 1000\nBenchmark input hash: 15595303910394522431\nGEM_BENCH_WARMUP run=0 cycles=1000\nGEM_BENCH_WARMUP run=1 cycles=1000\nGEM_BENCH_WARMUP run=2 cycles=1000\nGEM_BENCH_WARMUP run=3 cycles=1000\nGEM_BENCH_WARMUP run=4 cycles=1000\nGEM_BENCH_WARMUP run=5 cycles=1000\nGEM_BENCH_WARMUP run=6 cycles=1000\nGEM_BENCH_WARMUP run=7 cycles=1000\nGEM_BENCH_SAMPLE repetition=0 cycles=1000 elapsed_ms=86.740054 cycles_per_second=11528.699\nGEM_BENCH_SAMPLE repetition=1 cycles=1000 elapsed_ms=86.736569 cycles_per_second=11529.163\nGEM_BENCH_SAMPLE repetition=2 cycles=1000 elapsed_ms=86.734885 cycles_per_second=11529.386\nGEM_BENCH_SAMPLE repetition=3 cycles=1000 elapsed_ms=86.693493 cycles_per_second=11534.891\nGEM_BENCH_SAMPLE repetition=4 cycles=1000 elapsed_ms=86.682751 cycles_per_second=11536.321\n"
+      "raw_stdout": "07:36:19 [INFO] Simulator args:\nSimulatorArgs {\n    netlist_verilog: \"/home/pratham_sharma/gem/benchmark/generated/artifacts/occupancy_stress.gv\",\n    top_module: Some(\n        \"occupancy_stress\",\n    ),\n    level_split: [],\n    gemparts: \"/home/pratham_sharma/gem/benchmark/generated/artifacts/occupancy_stress.gemparts\",\n    num_blocks: 28,\n    num_dummy_cycles: 1000,\n    warmup_runs: 8,\n    repetitions: 5,\n    seed: 20260902,\n}\n07:36:19 [INFO] inferred clock port clk (posedge)\n07:36:19 [INFO] Registered macro: CarryChain cell_id=82508 inputs=10 outputs=8\n07:36:19 [INFO] Registered macro: DSP48E2 cell_id=82509 inputs=123 outputs=48\n07:36:19 [INFO] Registered macro: SRLC32E cell_id=82510 inputs=7 outputs=2\nnetlist has 255856 pins, 79584 aig pins, 79460 and gates\nnetlist logic depth: 8\n07:36:19 [INFO] # of effective partitions in each stage: [9]\n07:36:19 [INFO] heterogeneous COMB macro schedule: 1 levels [[82508, 82510]]\n07:36:19 [DEBUG] gem::flatten: [src/flatten.rs:1059] major stage 0: max total boomerang depth (w/ cost) 7\n07:36:19 [INFO] Built script for 28 blocks, reg/io state size 978, sram size 0, script size 290304\nScript hash: 11777685769745897219\n07:36:19 [INFO] total number of cycles: 1000\nBenchmark input hash: 15595303910394522431\nGEM_BENCH_WARMUP run=0 cycles=1000\nGEM_BENCH_WARMUP run=1 cycles=1000\nGEM_BENCH_WARMUP run=2 cycles=1000\nGEM_BENCH_WARMUP run=3 cycles=1000\nGEM_BENCH_WARMUP run=4 cycles=1000\nGEM_BENCH_WARMUP run=5 cycles=1000\nGEM_BENCH_WARMUP run=6 cycles=1000\nGEM_BENCH_WARMUP run=7 cycles=1000\nGEM_BENCH_SAMPLE repetition=0 cycles=1000 elapsed_ms=87.935122 cycles_per_second=11372.020\nGEM_BENCH_SAMPLE repetition=1 cycles=1000 elapsed_ms=87.783065 cycles_per_second=11391.719\nGEM_BENCH_SAMPLE repetition=2 cycles=1000 elapsed_ms=87.771202 cycles_per_second=11393.259\nGEM_BENCH_SAMPLE repetition=3 cycles=1000 elapsed_ms=87.729685 cycles_per_second=11398.650\nGEM_BENCH_SAMPLE repetition=4 cycles=1000 elapsed_ms=87.714024 cycles_per_second=11400.685\n"
     },
     {
       "blocks": 40,
       "samples_cps": [
-        11537.29,
-        11547.778,
-        11539.154,
-        11540.753,
-        11547.262
+        11390.486,
+        11388.426,
+        11397.51,
+        11397.947,
+        11398.934
       ],
-      "median_cps": 11540.753,
-      "mean_cps": 11542.447400000001,
+      "median_cps": 11397.51,
+      "mean_cps": 11394.6606,
       "command": [
         "/home/pratham_sharma/gem/target/release/cuda_dummy_test",
         "/home/pratham_sharma/gem/benchmark/generated/artifacts/occupancy_stress.gv",
@@ -254,13 +254,13 @@
         "--seed",
         "20260902"
       ],
-      "raw_stdout": "23:10:58 [INFO] Simulator args:\nSimulatorArgs {\n    netlist_verilog: \"/home/pratham_sharma/gem/benchmark/generated/artifacts/occupancy_stress.gv\",\n    top_module: Some(\n        \"occupancy_stress\",\n    ),\n    level_split: [],\n    gemparts: \"/home/pratham_sharma/gem/benchmark/generated/artifacts/occupancy_stress.gemparts\",\n    num_blocks: 40,\n    num_dummy_cycles: 1000,\n    warmup_runs: 8,\n    repetitions: 5,\n    seed: 20260902,\n}\n23:10:59 [INFO] inferred clock port clk (posedge)\n23:10:59 [INFO] Registered macro: CarryChain cell_id=82508 inputs=10 outputs=8\n23:10:59 [INFO] Registered macro: DSP48E2 cell_id=82509 inputs=123 outputs=48\n23:10:59 [INFO] Registered macro: SRLC32E cell_id=82510 inputs=7 outputs=2\nnetlist has 255856 pins, 79584 aig pins, 79460 and gates\nnetlist logic depth: 8\n23:10:59 [INFO] # of effective partitions in each stage: [9]\n23:10:59 [INFO] heterogeneous COMB macro schedule: 1 levels [[82508, 82510]]\n23:10:59 [DEBUG] gem::flatten: [src/flatten.rs:1059] major stage 0: max total boomerang depth (w/ cost) 7\n23:10:59 [INFO] Built script for 40 blocks, reg/io state size 978, sram size 0, script size 293376\nScript hash: 12767954591704726229\n23:10:59 [INFO] total number of cycles: 1000\nBenchmark input hash: 15595303910394522431\nGEM_BENCH_WARMUP run=0 cycles=1000\nGEM_BENCH_WARMUP run=1 cycles=1000\nGEM_BENCH_WARMUP run=2 cycles=1000\nGEM_BENCH_WARMUP run=3 cycles=1000\nGEM_BENCH_WARMUP run=4 cycles=1000\nGEM_BENCH_WARMUP run=5 cycles=1000\nGEM_BENCH_WARMUP run=6 cycles=1000\nGEM_BENCH_WARMUP run=7 cycles=1000\nGEM_BENCH_SAMPLE repetition=0 cycles=1000 elapsed_ms=86.675467 cycles_per_second=11537.290\nGEM_BENCH_SAMPLE repetition=1 cycles=1000 elapsed_ms=86.596746 cycles_per_second=11547.778\nGEM_BENCH_SAMPLE repetition=2 cycles=1000 elapsed_ms=86.661467 cycles_per_second=11539.154\nGEM_BENCH_SAMPLE repetition=3 cycles=1000 elapsed_ms=86.649459 cycles_per_second=11540.753\nGEM_BENCH_SAMPLE repetition=4 cycles=1000 elapsed_ms=86.600619 cycles_per_second=11547.262\n"
+      "raw_stdout": "07:36:22 [INFO] Simulator args:\nSimulatorArgs {\n    netlist_verilog: \"/home/pratham_sharma/gem/benchmark/generated/artifacts/occupancy_stress.gv\",\n    top_module: Some(\n        \"occupancy_stress\",\n    ),\n    level_split: [],\n    gemparts: \"/home/pratham_sharma/gem/benchmark/generated/artifacts/occupancy_stress.gemparts\",\n    num_blocks: 40,\n    num_dummy_cycles: 1000,\n    warmup_runs: 8,\n    repetitions: 5,\n    seed: 20260902,\n}\n07:36:22 [INFO] inferred clock port clk (posedge)\n07:36:22 [INFO] Registered macro: CarryChain cell_id=82508 inputs=10 outputs=8\n07:36:22 [INFO] Registered macro: DSP48E2 cell_id=82509 inputs=123 outputs=48\n07:36:22 [INFO] Registered macro: SRLC32E cell_id=82510 inputs=7 outputs=2\nnetlist has 255856 pins, 79584 aig pins, 79460 and gates\nnetlist logic depth: 8\n07:36:22 [INFO] # of effective partitions in each stage: [9]\n07:36:22 [INFO] heterogeneous COMB macro schedule: 1 levels [[82508, 82510]]\n07:36:22 [DEBUG] gem::flatten: [src/flatten.rs:1059] major stage 0: max total boomerang depth (w/ cost) 7\n07:36:22 [INFO] Built script for 40 blocks, reg/io state size 978, sram size 0, script size 293376\nScript hash: 12767954591704726229\n07:36:22 [INFO] total number of cycles: 1000\nBenchmark input hash: 15595303910394522431\nGEM_BENCH_WARMUP run=0 cycles=1000\nGEM_BENCH_WARMUP run=1 cycles=1000\nGEM_BENCH_WARMUP run=2 cycles=1000\nGEM_BENCH_WARMUP run=3 cycles=1000\nGEM_BENCH_WARMUP run=4 cycles=1000\nGEM_BENCH_WARMUP run=5 cycles=1000\nGEM_BENCH_WARMUP run=6 cycles=1000\nGEM_BENCH_WARMUP run=7 cycles=1000\nGEM_BENCH_SAMPLE repetition=0 cycles=1000 elapsed_ms=87.792563 cycles_per_second=11390.486\nGEM_BENCH_SAMPLE repetition=1 cycles=1000 elapsed_ms=87.808449 cycles_per_second=11388.426\nGEM_BENCH_SAMPLE repetition=2 cycles=1000 elapsed_ms=87.738462 cycles_per_second=11397.510\nGEM_BENCH_SAMPLE repetition=3 cycles=1000 elapsed_ms=87.735095 cycles_per_second=11397.947\nGEM_BENCH_SAMPLE repetition=4 cycles=1000 elapsed_ms=87.727503 cycles_per_second=11398.934\n"
     }
   ],
   "environment": {
-    "timestamp_utc": "2026-09-02T23:11:01.459440+00:00",
-    "commit": "2c59429ea4bee6bc8eae03bc2dabc127cb7268bd",
-    "dirty": true,
+    "timestamp_utc": "2026-09-03T07:36:24.884143+00:00",
+    "commit": "1786cd5bdc4446495263cfffec764b28d3712f47",
+    "dirty": false,
     "gpu": "NVIDIA GeForce RTX 4050 Laptop GPU, 596.49, 8.9"
   }
 }
